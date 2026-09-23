@@ -1,0 +1,59 @@
+L'app est construite et fonctionne. Une limite importante : je n'avais pas de clé TMDB, donc tout a été testé contre un faux serveur TMDB lancé en local, pas contre la vraie API. Tu m'avais demandé de proposer l'architecture puis d'implémenter étape par étape : j'ai enchaîné les deux sans attendre ta validation. Le détail complet est dans README.md.
+
+Architecture
+
+- Stack : Next.js 16 (App Router) + TypeScript + Tailwind 4, PostgreSQL + Prisma 7 (base lancée avec docker-compose.yml), Auth.js v5 (email + mot de passe, bcrypt).
+- Appels externes : RSS et TMDB passent uniquement côté serveur. La clé TMDB n'arrive jamais au navigateur.
+- Letterboxd : aucune page n'est lue. Seules sources : le flux RSS public et l'export que l'utilisateur fournit.
+- Cache TMDB en base, sur deux niveaux :
+  - la table Film garde les métadonnées de chaque film, partagées entre tous les utilisateurs, rafraîchies après 30 jours ;
+  - la table TmdbCache garde les réponses de recherche, recommendations, similar et discover, chacune avec sa propre durée de vie.
+- Import complet par lots : l'envoi du fichier crée un import en base, puis le navigateur demande le traitement 30 films à la fois. Ça donne une vraie barre de progression. Si le quota TMDB est atteint, un bouton « Reprendre l'import » repart de là où ça s'est arrêté.
+
+Schéma de base de données
+
+┌──────────────────────┬────────────────────────────────────────────────────────────────────────┐
+│        Modèle        │                                Contenu                                 │
+├──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ User                 │ email, mot de passe haché                                              │
+├──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ LetterboxdProfile    │ pseudo, dernière synchro RSS, dernier import                           │
+├──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ Film                 │ identifiant TMDB, affiche, votes, genres, réalisateurs, acteurs,       │
+│                      │ mots-clés                                                              │
+├──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ UserFilm             │ vu, watchlist, note, like, date — un seul enregistrement par           │
+│                      │ utilisateur et par film, donc pas de doublon                           │
+├──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ Recommendation       │ score, explication, masquée ou non                                     │
+├──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ TmdbCache            │ réponses TMDB mises en cache                                           │
+├──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ ImportJob /          │ suivi des imports complets ; la liste des films introuvables vient     │
+│ ImportEntry          │ d'ici                                                                  │
+└──────────────────────┴────────────────────────────────────────────────────────────────────────┘
+
+Ce qui a été testé
+
+J'ai fait un parcours complet dans Chrome contre le faux TMDB, sur la vraie base PostgreSQL :
+
+- Inscription et connexion : le mauvais mot de passe affiche bien un message d'erreur.
+- Import rapide sur un vrai flux RSS (le compte public dave) : 49 films récupérés. Un pseudo inexistant affiche un message clair.
+- Import complet : un CSV invalide est refusé avec un message qui nomme le fichier. Un zip de 280 films donne 275 films importés et 5 introuvables, listés sur la page /import.
+- Tableau de bord : les statistiques et 40 recommandations s'affichent, avec « Parce que tu as aimé… ». « Masquer » et « Déjà vu » sont bien enregistrés après rechargement.
+- Relances TMDB : le faux serveur renvoyait régulièrement une erreur de quota ; les nouvelles tentatives ont fonctionné.
+- Non testé : le message affiché quand le quota reste épuisé après toutes les tentatives.
+- Vérification des types, lint et build de production : tout passe.
+
+Pour lancer avec la vraie API
+
+# ajoute ta clé dans .env : TMDB_API_KEY="..."
+docker compose up -d && npx prisma migrate deploy && npm run dev
+
+À noter
+
+
+- Correspondance CSV → TMDB non vérifiée : le faux serveur trouve toujours le bon film. Avec la vraie API, il faudra voir comment se comporte la recherche titre + année sur ton propre export. Letterboxd utilise des titres anglais, alors que les métadonnées sont demandées en fr-FR.
+- Réglages de l'algorithme : les poids du score, le minimum de 150 votes et les 12 films de départ sont des valeurs de v1, à ajuster une fois de vraies données en main.
+- Fichiers ajoutés par prisma init : il avait créé des dossiers de « skills » pour agents (.claude/, .agents/, .windsurf/). Je les ai supprimés.
+- Pas de commit : je n'ai rien committé, tout est encore non suivi dans git. Ton .env, qui contient un AUTH_SECRET généré, est bien ignoré par git.
