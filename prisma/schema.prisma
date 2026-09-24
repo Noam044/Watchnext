@@ -1,0 +1,197 @@
+// Watchnext — schéma de base de données
+// Prisma 7 : l'URL de connexion est lue dans prisma.config.ts (DATABASE_URL).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  /// Identifiant public (@pseudo), utilisé dans l'URL du profil : /u/{handle}
+  handle        String   @unique
+  bio           String?
+  /// Bibliothèque visible par tout utilisateur connecté (sinon : amis seulement)
+  publicProfile Boolean  @default(false)
+  /// Film fétiche : son image de fond sert de bannière au profil
+  emblemFilmId  String?
+
+  emblemFilm       Film?              @relation("UserEmblem", fields: [emblemFilmId], references: [id], onDelete: SetNull)
+  letterboxd       LetterboxdProfile?
+  films            UserFilm[]
+  recommendations  Recommendation[]
+  importJobs       ImportJob[]
+  sentRequests     Friendship[]       @relation("FriendshipRequester")
+  receivedRequests Friendship[]       @relation("FriendshipAddressee")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+/// Lien d'amitié entre deux utilisateurs. Une seule ligne par paire, quel que soit le sens.
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+}
+
+model LetterboxdProfile {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  username     String?
+  lastRssSync  DateTime?
+  lastImportAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Métadonnées TMDB mises en cache, partagées entre tous les utilisateurs.
+model Film {
+  id               String    @id @default(cuid())
+  tmdbId           Int       @unique
+  title            String
+  originalTitle    String?
+  year             Int?
+  releaseDate      String?
+  overview         String?
+  posterPath       String?
+  backdropPath     String?
+  runtime          Int?
+  voteAverage      Float     @default(0)
+  voteCount        Int       @default(0)
+  popularity       Float     @default(0)
+  /// [{ id, name }]
+  genres           Json      @default("[]")
+  /// [{ id, name }]
+  directors        Json      @default("[]")
+  /// [{ id, name }] — acteurs principaux, dans l'ordre du générique
+  cast             Json      @default("[]")
+  /// [{ id, name }]
+  keywords         Json      @default("[]")
+  /// null tant que seules les données "liste" (search/discover) sont connues.
+  detailsFetchedAt DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  userFilms       UserFilm[]
+  recommendations Recommendation[]
+  emblemOf        User[]           @relation("UserEmblem")
+}
+
+model UserFilm {
+  id          String    @id @default(cuid())
+  userId      String
+  filmId      String
+  watched     Boolean   @default(false)
+  inWatchlist Boolean   @default(false)
+  /// Note Letterboxd de 0.5 à 5
+  rating      Float?
+  liked       Boolean   @default(false)
+  watchedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  film Film @relation(fields: [filmId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, filmId])
+  @@index([userId, watched])
+}
+
+model Recommendation {
+  id        String   @id @default(cuid())
+  userId    String
+  filmId    String
+  score     Float
+  reason    String
+  /// Détail du score (debug / affichage)
+  details   Json     @default("{}")
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  film Film @relation(fields: [filmId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, filmId])
+  @@index([userId, hidden, score])
+}
+
+/// Cache générique des réponses TMDB (search, recommendations, similar, discover).
+model TmdbCache {
+  key       String   @id
+  data      Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum EntryStatus {
+  PENDING
+  MATCHED
+  NOT_FOUND
+  ERROR
+}
+
+/// Import d'un export Letterboxd, traité par lots pour rester compatible serverless.
+model ImportJob {
+  id         String       @id @default(cuid())
+  userId     String
+  status     ImportStatus @default(PENDING)
+  fileName   String?
+  total      Int          @default(0)
+  processed  Int          @default(0)
+  matched    Int          @default(0)
+  error      String?
+  createdAt  DateTime     @default(now())
+  finishedAt DateTime?
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries ImportEntry[]
+
+  @@index([userId, createdAt])
+}
+
+model ImportEntry {
+  id            String      @id @default(cuid())
+  jobId         String
+  title         String
+  year          Int?
+  letterboxdUri String?
+  watched       Boolean     @default(false)
+  inWatchlist   Boolean     @default(false)
+  rating        Float?
+  liked         Boolean     @default(false)
+  watchedAt     DateTime?
+  status        EntryStatus @default(PENDING)
+  tmdbId        Int?
+
+  job ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, status])
+}

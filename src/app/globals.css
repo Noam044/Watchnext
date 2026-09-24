@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+/*
+ * Identité « La salle » : velours bordeaux presque noir, lumière d'écran ivoire,
+ * ampoules tungstène pour l'accent. Le vert « sortie de secours » est réservé aux confirmations.
+ */
+@theme {
+  --color-velvet-950: #120809;
+  --color-velvet-900: #1a0d0f;
+  --color-velvet-850: #221215;
+  --color-velvet-800: #2d181c;
+  --color-velvet-700: #432529;
+  --color-velvet-600: #5c363b;
+  --color-dust-400: #a2877f;
+  --color-dust-300: #c6ada5;
+  --color-screen: #f6ecdc;
+  --color-tungsten: #f2b84b;
+  --color-tungsten-strong: #ffc965;
+  --color-tungsten-soft: rgb(242 184 75 / 0.13);
+  --color-curtain: #9b1c2e;
+  --color-curtain-soft: rgb(155 28 46 / 0.3);
+  --color-exit: #3fcf8e;
+  --color-bad: #ff7b6e;
+
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-shoulders), "Arial Narrow", ui-sans-serif, sans-serif;
+  --font-mono: var(--font-courier), ui-monospace, "Courier New", monospace;
+
+  --animate-projector: projector 1.6s ease-out both;
+  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-cut-in: cut-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes projector {
+    0% {
+      opacity: 0;
+      filter: brightness(2.4) saturate(0);
+    }
+    7% {
+      opacity: 0.7;
+    }
+    11% {
+      opacity: 0.25;
+    }
+    18% {
+      opacity: 0.9;
+      filter: brightness(1.6) saturate(0.4);
+    }
+    100% {
+      opacity: 1;
+      filter: none;
+    }
+  }
+  /* La lettre monte depuis sous sa ligne, découpée par un masque (marges négatives : accents et jambages restent visibles) */
+  @keyframes cut-in {
+    from {
+      clip-path: inset(0 -0.1em 100% -0.1em);
+      transform: translateY(0.45em);
+    }
+    to {
+      clip-path: inset(-0.3em -0.1em -0.3em -0.1em);
+      transform: none;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Pas de mot seul en fin de paragraphe */
+p {
+  text-wrap: pretty;
+}
+
+body {
+  background: var(--color-velvet-950);
+  color: var(--color-screen);
+  font-optical-sizing: auto;
+}
+
+/* Grain de pellicule, très léger */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+::selection {
+  background: var(--color-curtain);
+  color: var(--color-screen);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-tungsten);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Titres façon lettres de marquise */
+@utility marquee {
+  @apply font-display font-extrabold uppercase leading-[0.9] tracking-[0.005em];
+}
+/* Surtitres et fiches techniques : machine à écrire de scénario */
+@utility eyebrow {
+  @apply font-mono text-[11px] uppercase tracking-[0.2em] text-dust-400;
+}
+@utility meta {
+  @apply font-mono text-xs text-dust-300 tabular-nums;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition
+    disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
+}
+@utility btn-primary {
+  @apply btn bg-tungsten text-velvet-950 hover:bg-tungsten-strong;
+}
+@utility btn-ghost {
+  @apply btn border border-velvet-700 text-screen hover:border-velvet-600 hover:bg-velvet-800;
+}
+@utility btn-quiet {
+  @apply btn px-3 font-medium text-dust-300 hover:bg-velvet-800 hover:text-screen;
+}
+@utility btn-danger {
+  @apply btn border border-bad/30 text-bad hover:bg-bad/10;
+}
+@utility input {
+  @apply w-full rounded-xl border border-velvet-700 bg-velvet-900 px-4 py-3 text-sm text-screen placeholder:text-dust-400
+    transition focus:border-tungsten focus:outline-none disabled:opacity-60;
+}
+@utility card {
+  @apply rounded-2xl border border-velvet-800 bg-velvet-900/80;
+}
+@utility field-label {
+  @apply text-sm font-medium text-dust-300;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1.5 rounded-full border border-velvet-700 px-3 py-1 text-xs font-medium text-dust-300 transition
+    hover:border-velvet-600 hover:text-screen;
+}
+@utility chip-active {
+  @apply chip border-tungsten/60 bg-tungsten-soft text-tungsten hover:border-tungsten hover:text-tungsten;
+}
+
+/* Squelette de chargement : un faisceau de projecteur balaie la forme à venir */
+@utility skeleton {
+  @apply relative overflow-hidden rounded-md bg-velvet-850;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    translate: -100% 0;
+    background: linear-gradient(90deg, transparent, rgb(242 184 75 / 0.07), transparent);
+    animation: beam 1.6s ease-in-out infinite;
+  }
+}
+
+/* Lumière du projecteur qui déborde de l'écran sur le velours */
+@utility screen-glow {
+  box-shadow:
+    0 0 0 1px rgb(246 236 220 / 0.06),
+    0 40px 120px -30px rgb(242 184 75 / 0.22),
+    0 10px 40px -10px rgb(0 0 0 / 0.8);
+}
+
+@keyframes reel {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes beam {
+  to {
+    translate: 100% 0;
+  }
+}
