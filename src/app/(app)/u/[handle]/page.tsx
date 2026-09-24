@@ -6,12 +6,20 @@ import { Avatar } from "@/components/avatar";
 import { CutReveal } from "@/components/cut-reveal";
 import { Filmstrip } from "@/components/filmstrip";
 import { FriendButton } from "@/components/friend-button";
+import { FullImportReminder } from "@/components/full-import-reminder";
 import { ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
 import { Library } from "@/components/library";
 import { ScopeScreen } from "@/components/scope-screen";
 import { prisma } from "@/lib/db";
 import { canViewLibrary, favoritesNotSeenBy, getRelation, tasteMatch } from "@/lib/friends";
-import { getLibraryCounts, getLibraryPage, parseLibraryQuery, publicUserSelect, resolveEmblem } from "@/lib/profile";
+import {
+  getLibraryCounts,
+  getLibraryPage,
+  needsFullImport,
+  parseLibraryQuery,
+  publicUserSelect,
+  resolveEmblem,
+} from "@/lib/profile";
 import { requireUser } from "@/lib/session";
 import { getProfileSummary } from "@/lib/stats";
 import { displayName } from "@/lib/users";
@@ -37,13 +45,14 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
   const visible = canViewLibrary(relation, owner.publicProfile);
   const query = parseLibraryQuery(await searchParams);
 
-  const [emblem, summary, counts, page, match, favorites] = await Promise.all([
+  const [emblem, summary, counts, page, match, favorites, rssOnly] = await Promise.all([
     resolveEmblem(owner),
     visible ? getProfileSummary(owner.id) : null,
     visible ? getLibraryCounts(owner.id) : null,
     visible ? getLibraryPage(owner.id, query) : null,
     !isSelf && visible ? tasteMatch(me.id, owner.id) : null,
     !isSelf && visible ? favoritesNotSeenBy(owner.id, me.id) : null,
+    isSelf ? needsFullImport(owner.id) : false,
   ]);
 
   return (
@@ -113,6 +122,8 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           </dl>
         )}
       </header>
+
+      {rssOnly && summary && <FullImportReminder filmCount={counts?.watched ?? summary.watchedCount} />}
 
       {!visible && (
         <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">

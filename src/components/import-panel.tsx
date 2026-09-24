@@ -14,9 +14,15 @@ type Status =
 
 type Progress = { id: string; status: string; total: number; processed: number; matched: number; notFound: number };
 
-export function ImportPanel({ defaultUsername }: { defaultUsername?: string | null }) {
+export function ImportPanel({
+  defaultUsername,
+  defaultTab = "quick",
+}: {
+  defaultUsername?: string | null;
+  defaultTab?: Tab;
+}) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("quick");
+  const [tab, setTab] = useState<Tab>(defaultTab);
   const [username, setUsername] = useState(defaultUsername ?? "");
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);

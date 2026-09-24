@@ -9,7 +9,8 @@ export const maxDuration = 60;
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 
-export default async function ImportPage() {
+export default async function ImportPage({ searchParams }: PageProps<"/import">) {
+  const { onglet } = await searchParams;
   const user = await requireUser();
   const [profile, filmCount, unmatched] = await Promise.all([
     prisma.letterboxdProfile.findUnique({ where: { userId: user.id } }),
@@ -38,7 +39,7 @@ export default async function ImportPage() {
         </p>
       </header>
 
-      <ImportPanel defaultUsername={profile?.username} />
+      <ImportPanel defaultUsername={profile?.username} defaultTab={onglet === "complet" ? "full" : "quick"} />
 
       {(profile?.lastRssSync || profile?.lastImportAt) && (
         <dl className="flex flex-wrap gap-x-10 gap-y-4 border-y border-velvet-800 py-5 text-sm">

@@ -113,3 +113,12 @@ export async function getLibraryCounts(userId: string): Promise<Record<LibraryTa
   );
   return { rated, watched, liked, watchlist };
 }
+
+/** Vrai tant que la bibliothèque ne vient que du flux RSS (aucun import complet réussi). */
+export async function needsFullImport(userId: string) {
+  const lb = await prisma.letterboxdProfile.findUnique({
+    where: { userId },
+    select: { lastRssSync: true, lastImportAt: true },
+  });
+  return !!lb?.lastRssSync && !lb.lastImportAt;
+}

@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardActions } from "@/components/dashboard-actions";
+import { FullImportReminder } from "@/components/full-import-reminder";
 import { ArrowRightIcon } from "@/components/icons";
 import { RecoProgramme, type RecoItem } from "@/components/reco-grid";
 import { prisma } from "@/lib/db";
 import { refs } from "@/lib/films";
+import { needsFullImport } from "@/lib/profile";
 import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "À voir" };
@@ -13,7 +15,7 @@ export const maxDuration = 60;
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [watchedCount, libraryCount, recos, hiddenCount, profile] = await Promise.all([
+  const [watchedCount, libraryCount, recos, hiddenCount, profile, rssOnly] = await Promise.all([
     prisma.userFilm.count({ where: { userId: user.id, watched: true } }),
     prisma.userFilm.count({ where: { userId: user.id } }),
     prisma.recommendation.findMany({
@@ -23,6 +25,7 @@ export default async function DashboardPage() {
     }),
     prisma.recommendation.count({ where: { userId: user.id, hidden: true } }),
     prisma.letterboxdProfile.findUnique({ where: { userId: user.id } }),
+    needsFullImport(user.id),
   ]);
 
   if (libraryCount === 0) redirect("/import?welcome=1");
@@ -61,6 +64,8 @@ export default async function DashboardPage() {
         </div>
         <DashboardActions username={profile?.username ?? null} hiddenCount={hiddenCount} />
       </div>
+
+      {rssOnly && <FullImportReminder filmCount={watchedCount} />}
 
       {items.length > 0 ? (
         <RecoProgramme items={items} />
