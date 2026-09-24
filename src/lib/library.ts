@@ -30,12 +30,21 @@ export async function mergeUserFilm(userId: string, filmId: string, inc: Incomin
     liked: (old?.liked ?? false) || inc.liked,
     watchedAt: maxDate(old?.watchedAt ?? null, inc.watchedAt),
   };
-  const uf = await prisma.userFilm.upsert({
-    where: { userId_filmId: { userId, filmId } },
-    create: { userId, filmId, ...data },
-    update: data,
-  });
+  const changed =
+    !old ||
+    old.watched !== data.watched ||
+    old.inWatchlist !== data.inWatchlist ||
+    old.rating !== data.rating ||
+    old.liked !== data.liked ||
+    old.watchedAt?.getTime() !== data.watchedAt?.getTime();
+  const uf = changed
+    ? await prisma.userFilm.upsert({
+        where: { userId_filmId: { userId, filmId } },
+        create: { userId, filmId, ...data },
+        update: data,
+      })
+    : old;
   // Un film vu ne doit plus être recommandé.
-  if (watched) await prisma.recommendation.deleteMany({ where: { userId, filmId, hidden: false } });
-  return uf;
+  if (watched && changed) await prisma.recommendation.deleteMany({ where: { userId, filmId, hidden: false } });
+  return { userFilm: uf, changed };
 }

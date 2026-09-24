@@ -13,10 +13,11 @@ export async function syncRss(userId: string, rawUsername: string) {
   const entries = await fetchLetterboxdRss(username);
 
   let imported = 0;
+  let changed = 0;
   await mapLimit(entries, 6, async (e) => {
     const film = await ensureFilmDetails(e.tmdbId);
     if (!film) return;
-    await mergeUserFilm(userId, film.id, {
+    const merged = await mergeUserFilm(userId, film.id, {
       watched: true,
       inWatchlist: false,
       rating: e.rating,
@@ -24,14 +25,16 @@ export async function syncRss(userId: string, rawUsername: string) {
       watchedAt: e.watchedAt,
     });
     imported++;
+    if (merged.changed) changed++;
   });
 
   await prisma.letterboxdProfile.upsert({
     where: { userId },
     create: { userId, username, lastRssSync: new Date() },
-    update: { username, lastRssSync: new Date() },
+    update: { username, lastRssSync: new Date(), lastSyncError: null },
   });
-  return { username, found: entries.length, imported };
+  /** changed : entrées nouvelles ou modifiées depuis la dernière synchronisation */
+  return { username, found: entries.length, imported, changed };
 }
 
 /** Import complet, étape 1 : enregistre les entrées à rapprocher de TMDB. */

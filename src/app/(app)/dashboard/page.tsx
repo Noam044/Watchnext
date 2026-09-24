@@ -1,21 +1,37 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { DashboardActions } from "@/components/dashboard-actions";
 import { FullImportReminder } from "@/components/full-import-reminder";
 import { ArrowRightIcon } from "@/components/icons";
 import { RecoProgramme, type RecoItem } from "@/components/reco-grid";
+import { SyncStatus } from "@/components/sync-status";
 import { prisma } from "@/lib/db";
 import { refs } from "@/lib/films";
-import { needsFullImport } from "@/lib/profile";
 import { requireUser } from "@/lib/session";
+import {
+  AUTO_SYNC_INTERVAL,
+  EXPORT_REMINDER_COOKIE,
+  claimSync,
+  getSyncState,
+  isFullImportStale,
+  runClaimedSync,
+} from "@/lib/sync";
 
 export const metadata: Metadata = { title: "À voir" };
 export const maxDuration = 60;
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [watchedCount, libraryCount, recos, hiddenCount, profile, rssOnly] = await Promise.all([
+
+  // Synchronisation automatique du journal Letterboxd (au plus toutes les 6 h), lancée
+  // après l'envoi de la page pour ne pas la ralentir ; SyncStatus suit son avancement.
+  const syncUsername = await claimSync(user.id, AUTO_SYNC_INTERVAL);
+  if (syncUsername) after(() => runClaimedSync(user.id, syncUsername));
+
+  const [watchedCount, libraryCount, recos, hiddenCount, sync, cookieStore] = await Promise.all([
     prisma.userFilm.count({ where: { userId: user.id, watched: true } }),
     prisma.userFilm.count({ where: { userId: user.id } }),
     prisma.recommendation.findMany({
@@ -24,9 +40,11 @@ export default async function DashboardPage() {
       include: { film: true },
     }),
     prisma.recommendation.count({ where: { userId: user.id, hidden: true } }),
-    prisma.letterboxdProfile.findUnique({ where: { userId: user.id } }),
-    needsFullImport(user.id),
+    getSyncState(user.id),
+    cookies(),
   ]);
+  const rssOnly = !!sync.lastRssSync && !sync.lastImportAt;
+  const exportStale = isFullImportStale(sync.lastImportAt) && !cookieStore.has(EXPORT_REMINDER_COOKIE);
 
   if (libraryCount === 0) redirect("/import?welcome=1");
 
@@ -61,11 +79,19 @@ export default async function DashboardPage() {
               Voir mes goûts <ArrowRightIcon className="size-3.5" />
             </Link>
           </p>
+          {sync.username && (
+            <div className="mt-1.5">
+              <SyncStatus
+                initial={{ running: sync.running, lastRssSync: sync.lastRssSync?.toISOString() ?? null, error: sync.error }}
+              />
+            </div>
+          )}
         </div>
-        <DashboardActions username={profile?.username ?? null} hiddenCount={hiddenCount} />
+        <DashboardActions username={sync.username} hiddenCount={hiddenCount} />
       </div>
 
-      {rssOnly && <FullImportReminder filmCount={watchedCount} />}
+      {rssOnly && <FullImportReminder kind="rss-only" filmCount={watchedCount} />}
+      {exportStale && sync.lastImportAt && <FullImportReminder kind="stale" lastImportAt={sync.lastImportAt} />}
 
       {items.length > 0 ? (
         <RecoProgramme items={items} />

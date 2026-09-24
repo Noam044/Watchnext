@@ -23,7 +23,9 @@ Production : `npm run build && npm start`.
 1. Sur vercel.com, importe le dépôt GitHub (framework détecté : Next.js).
 2. Onglet **Storage** du projet : ajoute une base **Neon** (PostgreSQL). Elle renseigne `DATABASE_URL` (via le pooler) et `DATABASE_URL_UNPOOLED` (connexion directe, utilisée par les migrations).
 3. Ajoute `AUTH_SECRET` (un secret propre à la production : `openssl rand -base64 32`), `TMDB_API_KEY` et `TMDB_LANGUAGE`.
-4. Déploie. Le script `vercel-build` lance `prisma migrate deploy` puis `next build` : la base est migrée à chaque déploiement.
+4. Ajoute `CRON_SECRET` (`openssl rand -hex 32`) : Vercel l'envoie à la tâche planifiée de synchronisation, qui refuse tout appel sans lui.
+5. Déploie. Le script `vercel-build` lance `prisma migrate deploy` puis `next build` : la base est migrée à chaque déploiement.
+6. Dans les réglages du projet (Functions), place les fonctions dans la même région que la base (ex. `fra1` pour une base Neon à Francfort).
 
 Les images sont servies directement par le CDN de TMDB, dans la taille la plus proche de celle demandée (`src/lib/tmdb-image-loader.ts`) : l'optimiseur d'images de Vercel et son quota ne sont pas utilisés.
 
@@ -36,6 +38,7 @@ Les images sont servies directement par le CDN de TMDB, dans la taille la plus p
 | `AUTH_SECRET` | oui | Secret de signature des sessions. Générer avec `npx auth secret` ou `openssl rand -base64 32`. |
 | `TMDB_API_KEY` | oui | Clé TMDB v3 **ou** jeton de lecture v4 (détecté automatiquement). À obtenir sur https://www.themoviedb.org/settings/api |
 | `TMDB_LANGUAGE` | non | Langue des titres et synopsis (`fr-FR` par défaut). |
+| `CRON_SECRET` | en production | Secret de la tâche planifiée `/api/cron/sync` (envoyé par Vercel dans `Authorization: Bearer …`). |
 | `TMDB_API_BASE` | non | Autre URL pour l'API TMDB (proxy ou serveur factice pour les tests). |
 
 ## Parcours
@@ -46,6 +49,8 @@ Les images sont servies directement par le CDN de TMDB, dans la taille la plus p
    - **Import complet** : export `.zip` (Settings → Data → Export your data) ou CSV séparés. Les fichiers lus sont `watched.csv`, `ratings.csv`, `diary.csv`, `watchlist.csv` et `likes/films.csv`. Les dossiers `deleted/` et `orphaned/` sont ignorés. Chaque film est retrouvé sur TMDB par titre et année. Les films introuvables sont listés sur la page.
 3. **À voir** (`/dashboard`) : la recommandation n°1 en grand, puis le reste de la sélection, filtrable par genre. Chaque film affiche son explication.
 4. **Mettre à jour** : resynchroniser le RSS, recalculer, réimporter un export ou réafficher les films masqués. Les imports se fusionnent sans doublon.
+   - **Synchronisation automatique** du flux RSS (nouvelles entrées de journal, avec note et like) : à l'ouverture de « À voir » si la dernière tentative date de plus de 6 h (lancée après l'envoi de la page avec `after()`, suivie par `SyncStatus`), et chaque jour à 5 h UTC pour tous les comptes via la tâche planifiée Vercel (`vercel.json` → `/api/cron/sync`). Un verrou en base (`syncStartedAt`) empêche deux synchronisations simultanées ; les recommandations ne sont recalculées que si des entrées ont changé.
+   - Le flux ne contient ni la watchlist, ni les notes modifiées ou données sans entrée de journal : un rappel propose de refaire un export complet quand le dernier date de plus de 30 jours (« Plus tard » le masque 14 jours).
 5. **Profil** (`/profile` → `/u/{pseudo}`) : bannière du film fétiche, statistiques, goûts (genres, réalisateurs, acteurs), puis toute la bibliothèque. Elle est découpée en onglets (notes, vus, coups de cœur, watchlist), filtrable par note depuis l'histogramme, triable et paginée.
 6. **Modifier le profil** (`/profile/edit`) : nom, pseudo, bio, pseudo Letterboxd, visibilité de la bibliothèque, film fétiche, email (mot de passe demandé) et mot de passe.
 7. **Amis** (`/friends`) : recherche par nom ou @pseudo, demandes reçues et envoyées, liste d'amis triée par affinité. Sur le profil d'un ami : affinité de notes, films en commun et ses coups de cœur que tu n'as pas vus.

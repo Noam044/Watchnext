@@ -123,7 +123,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
         )}
       </header>
 
-      {rssOnly && summary && <FullImportReminder filmCount={counts?.watched ?? summary.watchedCount} />}
+      {rssOnly && summary && <FullImportReminder kind="rss-only" filmCount={counts?.watched ?? summary.watchedCount} />}
 
       {!visible && (
         <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">

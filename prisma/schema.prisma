@@ -55,11 +55,15 @@ model Friendship {
 }
 
 model LetterboxdProfile {
-  id           String    @id @default(cuid())
-  userId       String    @unique
-  username     String?
-  lastRssSync  DateTime?
-  lastImportAt DateTime?
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  username          String?
+  lastRssSync       DateTime?
+  lastImportAt      DateTime?
+  /// Synchronisation RSS automatique : verrou (non nul pendant l'exécution), dernière tentative, dernière erreur
+  syncStartedAt     DateTime?
+  lastSyncAttemptAt DateTime?
+  lastSyncError     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
