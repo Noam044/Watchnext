@@ -29,61 +29,63 @@ export default async function Home() {
 
   return (
     <div className="relative z-10 flex flex-1 flex-col">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+      <header className="absolute inset-x-0 top-0 z-20 mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
         <Link href="/login" className="btn-quiet">
           Se connecter
         </Link>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 sm:px-6 sm:pt-14">
-        <div className="max-w-4xl">
-          <p className="eyebrow animate-rise">Recommandations de films pour Letterboxd</p>
-          <h1 className="marquee mt-4 text-[3.4rem] text-balance sm:text-8xl lg:text-[7.5rem]">
-            <CutReveal text="Ton prochain film préféré est" delay={150} stagger={18} />{" "}
-            <CutReveal text="déjà dans tes notes." delay={150 + 25 * 18} stagger={18} className="text-tungsten" />
-          </h1>
-          <p className="mt-6 max-w-xl animate-rise text-lg leading-relaxed text-dust-300 [animation-delay:700ms]">
-            Watchnext lit ce que tu as vu et noté sur Letterboxd et te propose des films qui te ressemblent, chacun avec
-            sa raison.
-          </p>
-          <div className="mt-8 flex animate-rise flex-wrap gap-3 [animation-delay:850ms]">
-            <Link href="/register" className="btn-primary px-7 py-3.5 text-base">
-              Créer mon compte
-            </Link>
-            <Link href="/login" className="btn-ghost px-7 py-3.5 text-base">
-              J&apos;ai déjà un compte
-            </Link>
-          </div>
-        </div>
-
-      </main>
-
-      {films.length > 0 && (
-        <div className="mt-16 sm:mt-20">
-          <ExpandingScreen
-            caption={
-              <div>
-                <p className="marquee text-5xl text-screen [text-shadow:0_2px_30px_rgb(0_0_0/0.9)] sm:text-7xl lg:text-8xl">La salle s&apos;éteint.</p>
-                <p className="mt-3 text-base text-screen/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.9)] sm:text-lg">
-                  Parmi tous ces films, lequel est fait pour toi ?
-                </p>
-                <Link href="/register" className="btn-primary mt-6 px-7 py-3.5 text-base">
-                  Trouver mon film
+      <main>
+        <ExpandingScreen
+          intro={
+            <div className="max-w-4xl">
+              <p className="eyebrow animate-rise text-screen/75 [text-shadow:0_1px_10px_rgb(0_0_0/0.9)]">Recommandations de films pour Letterboxd</p>
+              <h1 className="marquee mt-3 text-[2.9rem] text-balance [text-shadow:0_2px_30px_rgb(0_0_0/0.6)] sm:text-7xl lg:text-8xl">
+                <CutReveal text="Ton prochain film préféré est" delay={350} stagger={18} />{" "}
+                <CutReveal text="déjà dans tes notes." delay={350 + 25 * 18} stagger={18} className="text-tungsten" />
+              </h1>
+              <p className="mt-4 max-w-xl animate-rise text-base leading-relaxed text-screen/85 [animation-delay:900ms] sm:text-lg">
+                Watchnext lit ce que tu as vu et noté sur Letterboxd et te propose des films qui te ressemblent, chacun
+                avec sa raison.
+              </p>
+              <div className="mt-6 flex animate-rise flex-wrap gap-3 [animation-delay:1050ms]">
+                <Link href="/register" className="btn-primary px-7 py-3.5 text-base">
+                  Créer mon compte
+                </Link>
+                <Link href="/login" className="btn-ghost bg-velvet-950/40 px-7 py-3.5 text-base backdrop-blur">
+                  J&apos;ai déjà un compte
                 </Link>
               </div>
-            }
-          >
-            <div className="absolute inset-0 flex flex-col justify-center gap-[3%] py-[2%]">
-              <PosterRow films={films.slice(0, half)} />
-              <PosterRow films={films.slice(half)} reverse />
             </div>
-          </ExpandingScreen>
-          <p className="meta mx-auto mt-3 w-full max-w-6xl px-4 text-right text-[11px] text-dust-400 sm:px-6">
-            À l&apos;affiche cette semaine · données TMDB
-          </p>
-        </div>
-      )}
+          }
+          caption={
+            <div>
+              <p className="marquee text-6xl tracking-[0.04em] text-screen [text-shadow:0_2px_30px_rgb(0_0_0/0.9)] sm:text-8xl lg:text-9xl">
+                Watch<span className="text-tungsten">next</span>
+              </p>
+              <p className="mt-3 text-base text-screen/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.9)] sm:text-lg">
+                Parmi tous ces films, lequel est fait pour toi ?
+              </p>
+              <Link href="/register" className="btn-primary mt-6 px-7 py-3.5 text-base">
+                Trouver mon film
+              </Link>
+            </div>
+          }
+        >
+          {films.length > 0 && (
+            <>
+              <div className="absolute inset-0 flex flex-col justify-start gap-3 pt-12 sm:justify-center sm:gap-[2.5%] sm:py-[2%]">
+                <PosterRow films={films.slice(0, half)} />
+                <PosterRow films={films.slice(half)} reverse />
+              </div>
+              <p className="meta absolute top-4 right-5 z-10 text-[10px] text-screen/60">
+                À l&apos;affiche cette semaine · TMDB
+              </p>
+            </>
+          )}
+        </ExpandingScreen>
+      </main>
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
         <ol className="mt-20 grid gap-10 md:grid-cols-3 md:gap-8">
@@ -109,7 +111,7 @@ export default async function Home() {
 function PosterRow({ films, reverse = false }: { films: ShowcaseFilm[]; reverse?: boolean }) {
   return (
     <div
-      className="flex h-[44%] w-max gap-3 motion-safe:animate-[reel_90s_linear_infinite] sm:gap-4"
+      className="flex h-[27%] w-max gap-3 sm:h-[44%] motion-safe:animate-[reel_90s_linear_infinite] sm:gap-4"
       style={reverse ? { animationDirection: "reverse" } : undefined}
     >
       {[...films, ...films].map((f, i) => (

@@ -142,7 +142,7 @@ Thème « la salle » : velours bordeaux presque noir (`velvet-*`), texte ivoire
 - Élément signature : l'écran au format Cinémascope 2.39:1 (`ScopeScreen`). Il sert pour la recommandation n°1, la bannière du profil et les cartes d'amis. Il « s'allume » au chargement, sauf si l'utilisateur a demandé à réduire les animations.
 - Mobile : barre d'onglets fixée en bas de l'écran.
 - Animations (toutes désactivées si l'utilisateur réduit les animations) :
-  - `ExpandingScreen` (accueil) : au défilement, l'écran grandit jusqu'à remplir la fenêtre et la salle s'assombrit autour.
+  - `ExpandingScreen` (hero de l'accueil) : l'écran d'affiches remplit la première vue avec l'accroche posée dessus ; au défilement, l'accroche s'efface, l'écran grandit jusqu'aux bords et la salle s'assombrit.
   - `CutReveal` : titres révélés lettre par lettre, en CSS seul.
   - `AnimatedNumber` : chiffres qui défilent (pourcentages, affinité, statistiques), avec [Number Flow](https://number-flow.barvian.me).
   - `Filmstrip` (profil d'un ami) : pellicule 35 mm, les images restent en négatif et se développent au centre.
