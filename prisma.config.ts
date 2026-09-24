@@ -9,6 +9,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Les migrations passent par une connexion directe quand elle existe (Neon : DATABASE_URL_UNPOOLED),
+    // l'app garde la connexion via le pooler (DATABASE_URL, lue dans src/lib/db.ts).
+    url: process.env["DATABASE_URL_UNPOOLED"] || process.env["DATABASE_URL"],
   },
 });

@@ -18,11 +18,21 @@ npm run dev                      # http://localhost:3000
 
 Production : `npm run build && npm start`.
 
+### Déploiement (Vercel + Neon)
+
+1. Sur vercel.com, importe le dépôt GitHub (framework détecté : Next.js).
+2. Onglet **Storage** du projet : ajoute une base **Neon** (PostgreSQL). Elle renseigne `DATABASE_URL` (via le pooler) et `DATABASE_URL_UNPOOLED` (connexion directe, utilisée par les migrations).
+3. Ajoute `AUTH_SECRET` (un secret propre à la production : `openssl rand -base64 32`), `TMDB_API_KEY` et `TMDB_LANGUAGE`.
+4. Déploie. Le script `vercel-build` lance `prisma migrate deploy` puis `next build` : la base est migrée à chaque déploiement.
+
+Les images sont servies directement par le CDN de TMDB, dans la taille la plus proche de celle demandée (`src/lib/tmdb-image-loader.ts`) : l'optimiseur d'images de Vercel et son quota ne sont pas utilisés.
+
 ### Variables d'environnement
 
 | Variable | Obligatoire | Description |
 |---|---|---|
 | `DATABASE_URL` | oui | URL PostgreSQL. Celle de `.env.example` correspond au `docker-compose.yml`. |
+| `DATABASE_URL_UNPOOLED` | non | Connexion directe pour les migrations, si `DATABASE_URL` passe par un pooler (Neon). |
 | `AUTH_SECRET` | oui | Secret de signature des sessions. Générer avec `npx auth secret` ou `openssl rand -base64 32`. |
 | `TMDB_API_KEY` | oui | Clé TMDB v3 **ou** jeton de lecture v4 (détecté automatiquement). À obtenir sur https://www.themoviedb.org/settings/api |
 | `TMDB_LANGUAGE` | non | Langue des titres et synopsis (`fr-FR` par défaut). |
