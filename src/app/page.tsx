@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CutReveal } from "@/components/cut-reveal";
+import { ExpandingScreen } from "@/components/expanding-screen";
 import { Logo } from "@/components/logo";
 import { Poster } from "@/components/poster";
 import { getCurrentUser } from "@/lib/session";
@@ -34,17 +36,18 @@ export default async function Home() {
         </Link>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-20 sm:px-6 sm:pt-14">
-        <div className="max-w-4xl animate-rise">
-          <p className="eyebrow">Recommandations de films pour Letterboxd</p>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 sm:px-6 sm:pt-14">
+        <div className="max-w-4xl">
+          <p className="eyebrow animate-rise">Recommandations de films pour Letterboxd</p>
           <h1 className="marquee mt-4 text-[3.4rem] text-balance sm:text-8xl lg:text-[7.5rem]">
-            Ton prochain film préféré est <span className="text-tungsten">déjà dans tes notes.</span>
+            <CutReveal text="Ton prochain film préféré est" delay={150} stagger={18} />{" "}
+            <CutReveal text="déjà dans tes notes." delay={150 + 25 * 18} stagger={18} className="text-tungsten" />
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-dust-300">
+          <p className="mt-6 max-w-xl animate-rise text-lg leading-relaxed text-dust-300 [animation-delay:700ms]">
             Watchnext lit ce que tu as vu et noté sur Letterboxd et te propose des films qui te ressemblent, chacun avec
             sa raison.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex animate-rise flex-wrap gap-3 [animation-delay:850ms]">
             <Link href="/register" className="btn-primary px-7 py-3.5 text-base">
               Créer mon compte
             </Link>
@@ -54,19 +57,35 @@ export default async function Home() {
           </div>
         </div>
 
-        {films.length > 0 && (
-          <div className="relative mt-16 sm:mt-20">
-            <div className="screen-glow relative aspect-[4/3] animate-projector overflow-hidden rounded-md bg-black sm:aspect-[2.39/1]">
-              <div className="absolute inset-0 flex flex-col justify-center gap-3 py-3 sm:gap-4">
-                <PosterRow films={films.slice(0, half)} />
-                <PosterRow films={films.slice(half)} reverse />
-              </div>
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgb(0_0_0/0.7))]" />
-            </div>
-            <p className="meta mt-3 text-right text-[11px] text-dust-400">À l&apos;affiche cette semaine · données TMDB</p>
-          </div>
-        )}
+      </main>
 
+      {films.length > 0 && (
+        <div className="mt-16 sm:mt-20">
+          <ExpandingScreen
+            caption={
+              <div>
+                <p className="marquee text-5xl text-screen [text-shadow:0_2px_30px_rgb(0_0_0/0.9)] sm:text-7xl lg:text-8xl">La salle s&apos;éteint.</p>
+                <p className="mt-3 text-base text-screen/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.9)] sm:text-lg">
+                  Parmi tous ces films, lequel est fait pour toi ?
+                </p>
+                <Link href="/register" className="btn-primary mt-6 px-7 py-3.5 text-base">
+                  Trouver mon film
+                </Link>
+              </div>
+            }
+          >
+            <div className="absolute inset-0 flex flex-col justify-center gap-[3%] py-[2%]">
+              <PosterRow films={films.slice(0, half)} />
+              <PosterRow films={films.slice(half)} reverse />
+            </div>
+          </ExpandingScreen>
+          <p className="meta mx-auto mt-3 w-full max-w-6xl px-4 text-right text-[11px] text-dust-400 sm:px-6">
+            À l&apos;affiche cette semaine · données TMDB
+          </p>
+        </div>
+      )}
+
+      <section className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
         <ol className="mt-20 grid gap-10 md:grid-cols-3 md:gap-8">
           {STEPS.map((s, i) => (
             <li key={s.title} className="border-t border-velvet-700 pt-5">
@@ -76,7 +95,7 @@ export default async function Home() {
             </li>
           ))}
         </ol>
-      </main>
+      </section>
 
       <footer className="mx-auto w-full max-w-6xl border-t border-velvet-800 px-4 py-8 text-xs text-dust-400 sm:px-6">
         Données de films fournies par TMDB. Ce produit utilise l&apos;API TMDB sans être approuvé ni certifié par TMDB.
@@ -89,15 +108,18 @@ export default async function Home() {
 /** Rangée d'affiches qui défile en boucle (la liste est doublée pour un raccord invisible). */
 function PosterRow({ films, reverse = false }: { films: ShowcaseFilm[]; reverse?: boolean }) {
   return (
-    <div className="flex w-max gap-3 motion-safe:animate-[reel_90s_linear_infinite] sm:gap-4" style={reverse ? { animationDirection: "reverse" } : undefined}>
+    <div
+      className="flex h-[44%] w-max gap-3 motion-safe:animate-[reel_90s_linear_infinite] sm:gap-4"
+      style={reverse ? { animationDirection: "reverse" } : undefined}
+    >
       {[...films, ...films].map((f, i) => (
         <Poster
           key={`${f.tmdbId}-${i}`}
           path={f.posterPath}
           title={f.title}
-          size="w185"
-          sizes="150px"
-          className="w-24 shrink-0 opacity-85 sm:w-32 lg:w-36"
+          size="w342"
+          sizes="(max-width: 640px) 160px, 320px"
+          className="h-full w-auto shrink-0 opacity-85"
         />
       ))}
     </div>
