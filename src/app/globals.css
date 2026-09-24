@@ -73,6 +73,17 @@
   color-scheme: dark;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Pas de mot seul en fin de paragraphe */
+p {
+  text-wrap: pretty;
+}
+
 body {
   background: var(--color-velvet-950);
   color: var(--color-screen);
@@ -119,7 +130,7 @@ body::before {
   @apply font-mono text-[11px] uppercase tracking-[0.2em] text-dust-400;
 }
 @utility meta {
-  @apply font-mono text-xs text-dust-300;
+  @apply font-mono text-xs text-dust-300 tabular-nums;
 }
 
 @utility btn {
@@ -156,6 +167,19 @@ body::before {
   @apply chip border-tungsten/60 bg-tungsten-soft text-tungsten hover:border-tungsten hover:text-tungsten;
 }
 
+/* Squelette de chargement : un faisceau de projecteur balaie la forme à venir */
+@utility skeleton {
+  @apply relative overflow-hidden rounded-md bg-velvet-850;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    translate: -100% 0;
+    background: linear-gradient(90deg, transparent, rgb(242 184 75 / 0.07), transparent);
+    animation: beam 1.6s ease-in-out infinite;
+  }
+}
+
 /* Lumière du projecteur qui déborde de l'écran sur le velours */
 @utility screen-glow {
   box-shadow:
@@ -167,5 +191,11 @@ body::before {
 @keyframes reel {
   to {
     transform: translateX(-50%);
+  }
+}
+
+@keyframes beam {
+  to {
+    translate: 100% 0;
   }
 }

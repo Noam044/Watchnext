@@ -19,7 +19,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,var(--color-velvet-950))]" />
         </div>
       )}
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
+      <main id="contenu" tabIndex={-1} className="flex flex-1 outline-none flex-col items-center justify-center px-4 py-12">
         <div className="mb-8">
           <Logo />
         </div>

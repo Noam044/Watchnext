@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { loginAction, registerAction, type AuthFormState } from "@/actions/auth";
+import { PasswordInput } from "@/components/password-input";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
@@ -39,12 +40,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       </label>
       <label className="block space-y-1.5">
         <span className="field-label">Mot de passe</span>
-        <input
+        <PasswordInput
           name="password"
-          type="password"
           required
           minLength={isRegister ? 8 : undefined}
-          className="input"
           autoComplete={isRegister ? "new-password" : "current-password"}
         />
         {isRegister && <span className="block text-xs text-dust-400">8 caractères minimum.</span>}
