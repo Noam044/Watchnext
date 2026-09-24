@@ -134,7 +134,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
             <p className="eyebrow" id="affinite">
               Affinité avec toi
             </p>
-            <p className="marquee mt-2 text-7xl text-tungsten">
+            <p className="marquee mt-2 text-7xl text-tungsten tabular-nums">
               {match.pct != null ? <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> : "—"}
             </p>
             <p className="mt-3 text-sm text-dust-300">
@@ -172,7 +172,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           <h2 id="gouts" className="marquee text-4xl">
             {isSelf ? "Tes goûts" : "Ses goûts"}
           </h2>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="card grid divide-y divide-velvet-800 md:grid-cols-[1.2fr_1fr_1fr] md:divide-x md:divide-y-0">
             <RankList title="Genres" items={summary.topGenres.map((g) => ({ name: g.name, score: g.score }))} />
             <RankList
               title="Réalisateurs"
@@ -221,7 +221,7 @@ function Stat({
   return (
     <div className="flex flex-col-reverse px-2 py-4 text-center sm:px-4">
       <dt className="eyebrow mt-1 text-[10px] tracking-[0.14em]">{label}</dt>
-      <dd className="marquee text-3xl sm:text-4xl">
+      <dd className="marquee text-3xl tabular-nums sm:text-4xl">
         {value == null ? (
           "—"
         ) : (
@@ -247,7 +247,7 @@ function RankList({
   empty?: string;
 }) {
   return (
-    <div className="card p-5">
+    <div className="p-5 sm:p-6">
       <h3 className="eyebrow">{title}</h3>
       {items.length ? (
         <ol className="mt-4 space-y-3">

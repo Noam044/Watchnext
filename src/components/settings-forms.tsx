@@ -10,6 +10,7 @@ import {
   type FormState,
 } from "@/actions/profile";
 import { CheckIcon } from "@/components/icons";
+import { PasswordInput } from "@/components/password-input";
 import { toast } from "@/components/toaster";
 import { backdropUrl } from "@/lib/tmdb-images";
 
@@ -203,7 +204,7 @@ export function EmailForm({ email }: { email: string }) {
         </label>
         <label className="block space-y-1.5">
           <span className="field-label">Mot de passe actuel</span>
-          <input name="password" type="password" required className="input" autoComplete="current-password" />
+          <PasswordInput name="password" required autoComplete="current-password" />
         </label>
       </div>
       <ErrorLine state={state} />
@@ -221,17 +222,17 @@ export function PasswordForm() {
     <form action={action} className="space-y-4">
       <label className="block space-y-1.5 sm:max-w-[calc(50%-0.5rem)]">
         <span className="field-label">Mot de passe actuel</span>
-        <input name="current" type="password" required className="input" autoComplete="current-password" />
+        <PasswordInput name="current" required autoComplete="current-password" />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block space-y-1.5">
           <span className="field-label">Nouveau mot de passe</span>
-          <input name="next" type="password" required minLength={8} className="input" autoComplete="new-password" />
+          <PasswordInput name="next" required minLength={8} autoComplete="new-password" />
           <span className="block text-xs text-dust-400">8 caractères minimum.</span>
         </label>
         <label className="block space-y-1.5">
           <span className="field-label">Confirmation</span>
-          <input name="confirm" type="password" required minLength={8} className="input" autoComplete="new-password" />
+          <PasswordInput name="confirm" required minLength={8} autoComplete="new-password" />
         </label>
       </div>
       <ErrorLine state={state} />

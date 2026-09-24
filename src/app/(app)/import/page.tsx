@@ -41,18 +41,18 @@ export default async function ImportPage() {
       <ImportPanel defaultUsername={profile?.username} />
 
       {(profile?.lastRssSync || profile?.lastImportAt) && (
-        <dl className="grid gap-3 text-sm sm:grid-cols-3">
-          <div className="card p-4">
-            <dt className="eyebrow">Films en bibliothèque</dt>
-            <dd className="mt-1 text-lg">{filmCount}</dd>
+        <dl className="flex flex-wrap gap-x-10 gap-y-4 border-y border-velvet-800 py-5 text-sm">
+          <div className="flex flex-col-reverse">
+            <dt className="eyebrow mt-1">Films en bibliothèque</dt>
+            <dd className="marquee text-3xl tabular-nums">{filmCount.toLocaleString("fr-FR")}</dd>
           </div>
-          <div className="card p-4">
-            <dt className="eyebrow">Dernière synchro RSS</dt>
-            <dd className="mt-1">{profile.lastRssSync ? dateFmt.format(profile.lastRssSync) : "—"}</dd>
+          <div className="flex flex-col-reverse">
+            <dt className="eyebrow mt-1">Dernière synchro RSS</dt>
+            <dd className="pt-2 text-screen">{profile.lastRssSync ? dateFmt.format(profile.lastRssSync) : "Jamais"}</dd>
           </div>
-          <div className="card p-4">
-            <dt className="eyebrow">Dernier import complet</dt>
-            <dd className="mt-1">{profile.lastImportAt ? dateFmt.format(profile.lastImportAt) : "—"}</dd>
+          <div className="flex flex-col-reverse">
+            <dt className="eyebrow mt-1">Dernier import complet</dt>
+            <dd className="pt-2 text-screen">{profile.lastImportAt ? dateFmt.format(profile.lastImportAt) : "Jamais"}</dd>
           </div>
         </dl>
       )}
