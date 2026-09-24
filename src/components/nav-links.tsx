@@ -2,30 +2,109 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Avatar } from "@/components/avatar";
+import { ScreenIcon, UploadIcon, UserIcon, UsersIcon } from "@/components/icons";
 
 const LINKS = [
-  { href: "/dashboard", label: "Recommandations" },
-  { href: "/import", label: "Importer" },
+  { href: "/dashboard", label: "À voir", Icon: ScreenIcon },
+  { href: "/friends", label: "Amis", Icon: UsersIcon },
+  { href: "/import", label: "Importer", Icon: UploadIcon },
 ] as const;
 
-export function NavLinks({ mobile = false }: { mobile?: boolean }) {
+type Me = { name: string; handle: string; pendingRequests: number };
+
+function isActive(pathname: string, href: string, handle: string) {
+  if (href === "/profile") return pathname.startsWith("/profile") || pathname === `/u/${handle}`;
+  if (href === "/friends") return pathname.startsWith("/friends") || (pathname.startsWith("/u/") && pathname !== `/u/${handle}`);
+  return pathname.startsWith(href);
+}
+
+function Badge({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <span className="grid min-w-4.5 place-items-center rounded-full bg-curtain px-1 font-mono text-[10px] leading-4.5 font-bold text-screen">
+      {count}
+    </span>
+  );
+}
+
+/** Navigation principale (écran large). */
+export function DesktopNav({ me }: { me: Me }) {
   const pathname = usePathname();
   return (
-    <nav className={mobile ? "flex w-full gap-1" : "ml-4 hidden gap-1 sm:flex"}>
-      {LINKS.map((l) => {
-        const active = pathname.startsWith(l.href);
+    <nav aria-label="Navigation principale" className="ml-8 hidden items-center gap-1 md:flex">
+      {LINKS.map(({ href, label }) => {
+        const active = isActive(pathname, href, me.handle);
         return (
           <Link
-            key={l.href}
-            href={l.href}
-            className={`rounded-full px-3.5 py-1.5 text-sm transition ${mobile ? "flex-1 text-center" : ""} ${
-              active ? "bg-ink-800 text-ink-100" : "text-ink-400 hover:text-ink-100"
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+              active ? "bg-velvet-800 text-screen" : "text-dust-300 hover:text-screen"
             }`}
           >
-            {l.label}
+            {label}
+            {href === "/friends" && <Badge count={me.pendingRequests} />}
           </Link>
         );
       })}
+    </nav>
+  );
+}
+
+export function ProfileLink({ me }: { me: Me }) {
+  const pathname = usePathname();
+  const active = isActive(pathname, "/profile", me.handle);
+  return (
+    <Link
+      href="/profile"
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-2.5 rounded-full py-1 pr-1 pl-3 text-sm transition md:pr-3 md:pl-1 ${
+        active ? "bg-velvet-800" : "hover:bg-velvet-850"
+      }`}
+    >
+      <Avatar name={me.name} handle={me.handle} size="sm" className="order-last md:order-first" />
+      <span className="hidden max-w-36 truncate font-medium md:block">{me.name}</span>
+    </Link>
+  );
+}
+
+/** Barre d'onglets fixée en bas (mobile) : les pages sont à portée de pouce. */
+export function MobileTabBar({ me }: { me: Me }) {
+  const pathname = usePathname();
+  const tabs = [...LINKS, { href: "/profile", label: "Profil", Icon: UserIcon }] as const;
+  return (
+    <nav
+      aria-label="Navigation principale"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-velvet-800 bg-velvet-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
+    >
+      <ul className="grid grid-cols-4">
+        {tabs.map(({ href, label, Icon }) => {
+          const active = isActive(pathname, href, me.handle);
+          return (
+            <li key={href}>
+              <Link
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
+                  active ? "text-tungsten" : "text-dust-400"
+                }`}
+              >
+                <span className="relative">
+                  <Icon className="size-5.5" />
+                  {href === "/friends" && me.pendingRequests > 0 && (
+                    <span className="absolute -top-1 -right-2">
+                      <Badge count={me.pendingRequests} />
+                    </span>
+                  )}
+                </span>
+                {label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }

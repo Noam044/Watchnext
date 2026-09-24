@@ -1,14 +1,16 @@
 import Link from "next/link";
 
+/** Marque : un écran Cinémascope allumé, et le nom en lettres de marquise. */
 export function Logo({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="group inline-flex items-center gap-2" aria-label="Watchnext, accueil">
-      <span className="relative grid size-8 place-items-center rounded-lg bg-accent text-ink-950">
-        <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
-          <path d="M8 5.5v13l10.5-6.5L8 5.5Z" />
-        </svg>
+    <Link href={href} className="group inline-flex items-center gap-2.5" aria-label="Watchnext, accueil">
+      <svg viewBox="0 0 30 18" className="h-[18px] w-[30px]" aria-hidden>
+        <rect x="1" y="1" width="28" height="11.7" rx="1.5" className="fill-tungsten transition group-hover:fill-tungsten-strong" />
+        <path d="M6 17 15 12.7 24 17" className="fill-none stroke-tungsten/40" strokeWidth="1.2" />
+      </svg>
+      <span className="marquee text-[1.45rem] tracking-[0.04em]">
+        Watch<span className="text-tungsten">next</span>
       </span>
-      <span className="font-display text-2xl leading-none tracking-tight">Watchnext</span>
     </Link>
   );
 }

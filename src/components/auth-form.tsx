@@ -14,20 +14,20 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   return (
     <form action={action} className="space-y-4">
       <div className="mb-6 space-y-1">
-        <h1 className="font-display text-3xl">{isRegister ? "Créer un compte" : "Bon retour"}</h1>
-        <p className="text-sm text-ink-400">
-          {isRegister ? "Quelques secondes, puis on importe ton Letterboxd." : "Connecte-toi pour voir tes recommandations."}
+        <h1 className="marquee text-4xl">{isRegister ? "Créer un compte" : "Bon retour en salle"}</h1>
+        <p className="text-sm text-dust-300">
+          {isRegister ? "Ensuite, tu importes ton Letterboxd." : "Connecte-toi pour voir tes recommandations."}
         </p>
       </div>
 
       {isRegister && (
         <label className="block space-y-1.5">
-          <span className="label">Prénom (optionnel)</span>
+          <span className="field-label">Prénom (optionnel)</span>
           <input name="name" className="input" autoComplete="given-name" defaultValue={state?.fields?.name} />
         </label>
       )}
       <label className="block space-y-1.5">
-        <span className="label">Email</span>
+        <span className="field-label">Email</span>
         <input
           name="email"
           type="email"
@@ -38,7 +38,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         />
       </label>
       <label className="block space-y-1.5">
-        <span className="label">Mot de passe</span>
+        <span className="field-label">Mot de passe</span>
         <input
           name="password"
           type="password"
@@ -47,7 +47,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           className="input"
           autoComplete={isRegister ? "new-password" : "current-password"}
         />
-        {isRegister && <span className="text-xs text-ink-400">8 caractères minimum.</span>}
+        {isRegister && <span className="block text-xs text-dust-400">8 caractères minimum.</span>}
       </label>
 
       {state?.error && (
@@ -60,9 +60,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         {pending ? "Un instant…" : isRegister ? "Créer mon compte" : "Se connecter"}
       </button>
 
-      <p className="pt-2 text-center text-sm text-ink-400">
+      <p className="pt-2 text-center text-sm text-dust-300">
         {isRegister ? "Déjà inscrit ? " : "Pas encore de compte ? "}
-        <Link href={isRegister ? "/login" : "/register"} className="text-accent hover:underline">
+        <Link href={isRegister ? "/login" : "/register"} className="font-medium text-tungsten underline-offset-4 hover:underline">
           {isRegister ? "Se connecter" : "Créer un compte"}
         </Link>
       </p>

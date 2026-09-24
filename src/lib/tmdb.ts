@@ -177,6 +177,12 @@ export async function getGenreMap(): Promise<Map<number, string>> {
   return new Map((res?.genres ?? []).map((g) => [g.id, g.name]));
 }
 
+/** Films populaires de la semaine (page d'accueil). */
+export async function trending() {
+  const page = await cached<TmdbPage>("/trending/movie/week", { language: language() }, DAY);
+  return page?.results ?? [];
+}
+
 /** Détails complets (non mis en cache ici : stockés dans la table Film). */
 export function getMovieDetails(tmdbId: number) {
   return request<TmdbMovieDetails>(`/movie/${tmdbId}`, {

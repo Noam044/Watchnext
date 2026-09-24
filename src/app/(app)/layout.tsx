@@ -1,30 +1,32 @@
 import { logoutAction } from "@/actions/auth";
+import { LogoutIcon } from "@/components/icons";
 import { Logo } from "@/components/logo";
-import { NavLinks } from "@/components/nav-links";
+import { DesktopNav, MobileTabBar, ProfileLink } from "@/components/nav-links";
+import { pendingRequestCount } from "@/lib/friends";
 import { requireUser } from "@/lib/session";
+import { displayName } from "@/lib/users";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
+  const me = { name: displayName(user), handle: user.handle, pendingRequests: await pendingRequestCount(user.id) };
   return (
     <div className="relative z-10 flex flex-1 flex-col">
-      <header className="sticky top-0 z-30 border-b border-ink-800/80 bg-ink-950/80 backdrop-blur-lg">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
+      <header className="sticky top-0 z-30 border-b border-velvet-800/80 bg-velvet-950/85 backdrop-blur-lg">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
           <Logo href="/dashboard" />
-          <NavLinks />
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden max-w-40 truncate text-sm text-ink-400 md:block">{user.name ?? user.email}</span>
+          <DesktopNav me={me} />
+          <div className="ml-auto flex items-center gap-1">
+            <ProfileLink me={me} />
             <form action={logoutAction}>
-              <button className="rounded-full px-3 py-1.5 text-sm text-ink-300 transition hover:bg-ink-800 hover:text-ink-100">
-                Déconnexion
+              <button className="btn-quiet size-10 p-0" aria-label="Se déconnecter" title="Se déconnecter">
+                <LogoutIcon className="size-4.5" />
               </button>
             </form>
           </div>
         </div>
-        <div className="mx-auto flex max-w-6xl px-4 pb-2 sm:hidden">
-          <NavLinks mobile />
-        </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-28 sm:px-6 sm:pt-10 md:pb-16">{children}</main>
+      <MobileTabBar me={me} />
     </div>
   );
 }

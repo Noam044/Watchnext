@@ -94,7 +94,7 @@ export function ImportPanel({ defaultUsername }: { defaultUsername?: string | nu
 
   return (
     <div className="card overflow-hidden">
-      <div role="tablist" className="grid grid-cols-2 border-b border-ink-800">
+      <div role="tablist" className="grid grid-cols-2 border-b border-velvet-800">
         {(
           [
             ["quick", "Import rapide", "Pseudo Letterboxd · RSS"],
@@ -110,11 +110,11 @@ export function ImportPanel({ defaultUsername }: { defaultUsername?: string | nu
               setTab(id);
               setStatus({ kind: "idle" });
             }}
-            className={`relative px-4 py-4 text-left transition sm:px-6 ${tab === id ? "bg-ink-850" : "hover:bg-ink-850/50"}`}
+            className={`relative px-4 py-4 text-left transition sm:px-6 ${tab === id ? "bg-velvet-850" : "hover:bg-velvet-850/50"}`}
           >
-            <span className={`block text-sm font-medium ${tab === id ? "text-ink-100" : "text-ink-300"}`}>{title}</span>
-            <span className="block text-xs text-ink-400">{sub}</span>
-            {tab === id && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />}
+            <span className={`block text-sm font-medium ${tab === id ? "text-screen" : "text-dust-300"}`}>{title}</span>
+            <span className="block text-xs text-dust-400">{sub}</span>
+            {tab === id && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-tungsten" />}
           </button>
         ))}
       </div>
@@ -123,10 +123,10 @@ export function ImportPanel({ defaultUsername }: { defaultUsername?: string | nu
         {tab === "quick" ? (
           <form onSubmit={runQuick} className="space-y-4">
             <label className="block space-y-1.5">
-              <span className="label">Ton pseudo Letterboxd</span>
+              <span className="field-label">Ton pseudo Letterboxd</span>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <div className="relative flex-1">
-                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm text-ink-400">
+                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm text-dust-400">
                     letterboxd.com/
                   </span>
                   <input
@@ -146,10 +146,10 @@ export function ImportPanel({ defaultUsername }: { defaultUsername?: string | nu
                 </button>
               </div>
             </label>
-            <p className="flex gap-2 text-sm text-ink-400">
+            <p className="flex gap-2 text-sm text-dust-400">
               <InfoIcon />
               <span>
-                On lit ton flux RSS public : seules tes <strong className="text-ink-300">~50 dernières entrées</strong> de
+                On lit ton flux RSS public : seules tes <strong className="text-dust-300">~50 dernières entrées</strong> de
                 journal sont récupérées. Pour tout ton historique, utilise l&apos;import complet.
               </span>
             </p>
@@ -169,14 +169,14 @@ export function ImportPanel({ defaultUsername }: { defaultUsername?: string | nu
               }}
               onClick={() => !busy && inputRef.current?.click()}
               className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-4 py-10 text-center transition ${
-                dragging ? "border-accent bg-accent-soft" : "border-ink-600 hover:border-ink-400"
+                dragging ? "border-tungsten bg-tungsten-soft" : "border-velvet-600 hover:border-dust-400"
               }`}
             >
               <UploadIcon />
-              <p className="mt-3 text-sm text-ink-100">
+              <p className="mt-3 text-sm text-screen">
                 Dépose ton export <strong>.zip</strong> ou tes fichiers <strong>.csv</strong>
               </p>
-              <p className="mt-1 text-xs text-ink-400">ou clique pour parcourir · 25 Mo max</p>
+              <p className="mt-1 text-xs text-dust-400">ou clique pour parcourir · 25 Mo max</p>
               <input
                 ref={inputRef}
                 type="file"
@@ -190,13 +190,13 @@ export function ImportPanel({ defaultUsername }: { defaultUsername?: string | nu
             {files.length > 0 && (
               <ul className="flex flex-wrap gap-2">
                 {files.map((f) => (
-                  <li key={f.name} className="flex items-center gap-2 rounded-full bg-ink-800 py-1 pr-1 pl-3 text-xs">
+                  <li key={f.name} className="flex items-center gap-2 rounded-full bg-velvet-800 py-1 pr-1 pl-3 text-xs">
                     {f.name}
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => setFiles((prev) => prev.filter((p) => p !== f))}
-                      className="grid size-5 place-items-center rounded-full text-ink-400 hover:bg-ink-700 hover:text-ink-100"
+                      className="grid size-5 place-items-center rounded-full text-dust-400 hover:bg-velvet-700 hover:text-screen"
                       aria-label={`Retirer ${f.name}`}
                     >
                       ×
@@ -210,26 +210,26 @@ export function ImportPanel({ defaultUsername }: { defaultUsername?: string | nu
               {busy ? "Import en cours…" : "Lancer l'import"}
             </button>
 
-            <details className="group rounded-xl border border-ink-800 bg-ink-950/40 px-4 py-3 text-sm">
-              <summary className="cursor-pointer list-none font-medium text-ink-300 marker:hidden">
+            <details className="group rounded-xl border border-velvet-800 bg-velvet-950/40 px-4 py-3 text-sm">
+              <summary className="cursor-pointer list-none font-medium text-dust-300 marker:hidden">
                 <span className="mr-2 inline-block transition group-open:rotate-90">›</span>
                 Comment obtenir mon export Letterboxd ?
               </summary>
-              <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-ink-400">
+              <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-dust-400">
                 <li>
-                  Sur letterboxd.com, ouvre <strong className="text-ink-300">Settings</strong> puis l&apos;onglet{" "}
-                  <strong className="text-ink-300">Data</strong>.
+                  Sur letterboxd.com, ouvre <strong className="text-dust-300">Settings</strong> puis l&apos;onglet{" "}
+                  <strong className="text-dust-300">Data</strong>.
                 </li>
                 <li>
-                  Clique sur <strong className="text-ink-300">Export your data</strong> : un fichier .zip est téléchargé.
+                  Clique sur <strong className="text-dust-300">Export your data</strong> : un fichier .zip est téléchargé.
                 </li>
                 <li>
                   Dépose ce .zip ici tel quel (inutile de le décompresser). Tu peux aussi envoyer seulement{" "}
-                  <code className="text-ink-300">watched.csv</code>, <code className="text-ink-300">ratings.csv</code>,{" "}
-                  <code className="text-ink-300">diary.csv</code> et <code className="text-ink-300">watchlist.csv</code>.
+                  <code className="text-dust-300">watched.csv</code>, <code className="text-dust-300">ratings.csv</code>,{" "}
+                  <code className="text-dust-300">diary.csv</code> et <code className="text-dust-300">watchlist.csv</code>.
                 </li>
               </ol>
-              <p className="mt-3 text-ink-400">
+              <p className="mt-3 text-dust-400">
                 Les CSV ne contiennent pas d&apos;identifiant TMDB : chaque film est retrouvé par son titre et son année.
                 Les rares films introuvables te seront listés.
               </p>
@@ -256,14 +256,14 @@ function StatusBox({
   if (status.kind === "working") {
     return (
       <div className="mt-6 space-y-3" aria-live="polite">
-        <p className="flex items-center gap-2 text-sm text-ink-300">
-          <span className="size-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+        <p className="flex items-center gap-2 text-sm text-dust-300">
+          <span className="size-3 animate-spin rounded-full border-2 border-tungsten border-t-transparent" />
           {status.message}
         </p>
         {status.progress !== undefined && (
-          <div className="h-1.5 overflow-hidden rounded-full bg-ink-800">
+          <div className="h-1.5 overflow-hidden rounded-full bg-velvet-800">
             <div
-              className="h-full rounded-full bg-accent transition-all duration-500"
+              className="h-full rounded-full bg-tungsten transition-all duration-500"
               style={{ width: `${Math.round(status.progress * 100)}%` }}
             />
           </div>
@@ -276,7 +276,7 @@ function StatusBox({
       <div role="alert" className="mt-6 rounded-xl border border-bad/30 bg-bad/10 p-4 text-sm text-bad">
         <p>{status.message}</p>
         {status.resumeJobId && (
-          <button onClick={() => onResume(status.resumeJobId!)} className="btn-ghost mt-3 text-ink-100">
+          <button onClick={() => onResume(status.resumeJobId!)} className="btn-ghost mt-3 text-screen">
             Reprendre l&apos;import
           </button>
         )}
@@ -284,8 +284,8 @@ function StatusBox({
     );
   }
   return (
-    <div className="mt-6 flex flex-col gap-3 rounded-xl border border-good/25 bg-good/10 p-4 text-sm sm:flex-row sm:items-center">
-      <p className="flex-1 text-ink-100">{status.message}</p>
+    <div className="mt-6 flex flex-col gap-3 rounded-xl border border-exit/25 bg-exit/10 p-4 text-sm sm:flex-row sm:items-center">
+      <p className="flex-1 text-screen">{status.message}</p>
       <div className="flex gap-2">
         {!!status.notFound && (
           <a href="#introuvables" className="btn-ghost">
@@ -310,7 +310,7 @@ function InfoIcon() {
 
 function UploadIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-8 text-ink-400" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-8 text-dust-400" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
       <path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
