@@ -34,21 +34,29 @@ Production : `npm run build && npm start`.
 2. **Import** (`/import`) :
    - **Import rapide** : pseudo Letterboxd → lecture de `https://letterboxd.com/{pseudo}/rss/`. Seules les ~50 dernières entrées du journal sont disponibles. L'ID TMDB vient directement du flux (`tmdb:movieId`).
    - **Import complet** : export `.zip` (Settings → Data → Export your data) ou CSV séparés. Les fichiers lus sont `watched.csv`, `ratings.csv`, `diary.csv`, `watchlist.csv` et `likes/films.csv`. Les dossiers `deleted/` et `orphaned/` sont ignorés. Chaque film est retrouvé sur TMDB par titre et année. Les films introuvables sont listés sur la page.
-3. **Tableau de bord** (`/dashboard`) : nombre de films, note moyenne, likes, watchlist, genres et réalisateurs préférés, répartition des notes, puis les recommandations avec leur explication.
+3. **À voir** (`/dashboard`) : la recommandation n°1 en grand, puis le reste de la sélection, filtrable par genre. Chaque film affiche son explication.
 4. **Mettre à jour** : resynchroniser le RSS, recalculer, réimporter un export ou réafficher les films masqués. Les imports se fusionnent sans doublon.
+5. **Profil** (`/profile` → `/u/{pseudo}`) : bannière du film fétiche, statistiques, goûts (genres, réalisateurs, acteurs), puis toute la bibliothèque. Elle est découpée en onglets (notes, vus, coups de cœur, watchlist), filtrable par note depuis l'histogramme, triable et paginée.
+6. **Modifier le profil** (`/profile/edit`) : nom, pseudo, bio, pseudo Letterboxd, visibilité de la bibliothèque, film fétiche, email (mot de passe demandé) et mot de passe.
+7. **Amis** (`/friends`) : recherche par nom ou @pseudo, demandes reçues et envoyées, liste d'amis triée par affinité. Sur le profil d'un ami : affinité de notes, films en commun et ses coups de cœur que tu n'as pas vus.
+   - La bibliothèque d'un membre n'est visible que par ses amis, sauf s'il la rend publique. Le nom, le pseudo, la bio et le film fétiche restent visibles pour qu'on puisse le trouver.
+   - Affinité : `1 − écart moyen des notes / 3` sur les films notés par les deux, calculée à partir de 5 films en commun.
 
 ## Architecture
 
 ```
 src/
 ├── auth.ts                         Auth.js (Credentials + JWT)
-├── actions/                        Server Actions (auth, synchro RSS, recalcul, masquer / déjà vu)
+├── actions/                        Server Actions (auth, synchro RSS, recalcul, masquer / déjà vu, profil, amis)
 ├── app/
 │   ├── page.tsx                    Page d'accueil
 │   ├── (auth)/login, register      Formulaires
 │   ├── (app)/layout.tsx            Coque protégée (requireUser)
-│   ├── (app)/dashboard             Profil + recommandations
+│   ├── (app)/dashboard             Recommandations
 │   ├── (app)/import                Onboarding / réimport + films introuvables
+│   ├── (app)/u/[handle]            Profil public d'un membre (bibliothèque, goûts, affinité)
+│   ├── (app)/profile, profile/edit Raccourci vers son profil, réglages du compte
+│   ├── (app)/friends               Recherche de membres, demandes, liste d'amis
 │   └── api/
 │       ├── auth/[...nextauth]
 │       ├── import                  POST : upload .zip / .csv → ImportJob
@@ -58,6 +66,10 @@ src/
     ├── tmdb.ts                     Client TMDB : cache en base, limite de concurrence, retry 429
     ├── films.ts                    Cache des films, détails (crédits + mots-clés), correspondance titre+année
     ├── library.ts                  Fusion UserFilm sans doublon
+    ├── profile.ts                  Bibliothèque paginée, film fétiche
+    ├── friends.ts                  Liens d'amitié, visibilité, affinité
+    ├── users.ts                    Pseudos (@handle)
+    ├── showcase.ts                 Films à l'affiche (page d'accueil, connexion)
     ├── import.ts                   Synchro RSS, import complet par lots (reprise possible)
     ├── letterboxd/rss.ts           Lecture et analyse du flux RSS
     ├── letterboxd/export.ts        Lecture du zip et des CSV, dédoublonnage
@@ -77,7 +89,8 @@ Choix principaux :
 
 | Modèle | Rôle |
 |---|---|
-| `User` | email unique, `passwordHash` bcrypt |
+| `User` | email unique, `passwordHash` bcrypt, `handle` unique (@pseudo), `bio`, `publicProfile`, `emblemFilmId` (film fétiche) |
+| `Friendship` | `requesterId` → `addresseeId`, `status` (`PENDING` / `ACCEPTED`). Une seule ligne par paire : une demande croisée vaut acceptation. |
 | `LetterboxdProfile` | pseudo, `lastRssSync`, `lastImportAt` (1–1 avec User) |
 | `Film` | `tmdbId` unique, titre, année, affiche, votes, `genres` / `directors` / `cast` / `keywords` en JSON, `detailsFetchedAt` |
 | `UserFilm` | (userId, filmId) unique : `watched`, `inWatchlist`, `rating` (0,5–5), `liked`, `watchedAt` |
@@ -120,3 +133,11 @@ Règles de fusion : `watched` et `liked` se cumulent. La note la plus récente l
 | Moins de 3 films vus | invitation à importer davantage |
 
 Données de films : [TMDB](https://www.themoviedb.org). Ce produit utilise l'API TMDB sans être approuvé ni certifié par TMDB. Non affilié à Letterboxd.
+
+## Identité visuelle
+
+Thème « la salle » : velours bordeaux presque noir (`velvet-*`), texte ivoire (`screen`), accent tungstène (`tungsten`), rouge rideau (`curtain`) pour les pastilles et le vert « sortie de secours » (`exit`) réservé aux confirmations. Les jetons sont dans `src/app/globals.css`.
+
+- Typographies : Big Shoulders pour les titres (utilitaire `marquee`), Hanken Grotesk pour le texte, Courier Prime pour les fiches techniques (`eyebrow`, `meta`).
+- Élément signature : l'écran au format Cinémascope 2.39:1 (`ScopeScreen`). Il sert pour la recommandation n°1, la bannière du profil et les cartes d'amis. Il « s'allume » au chargement, sauf si l'utilisateur a demandé à réduire les animations.
+- Mobile : barre d'onglets fixée en bas de l'écran.

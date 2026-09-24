@@ -5,6 +5,7 @@ import { AuthError } from "next-auth";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/db";
+import { availableHandle } from "@/lib/users";
 
 export type AuthFormState = { error?: string; fields?: { email?: string; name?: string } } | undefined;
 
@@ -29,7 +30,12 @@ export async function registerAction(_: AuthFormState, form: FormData): Promise<
     return { error: "Un compte existe déjà avec cette adresse email.", fields };
   }
   await prisma.user.create({
-    data: { email, name: name || null, passwordHash: await bcrypt.hash(password, 12) },
+    data: {
+      email,
+      name: name || null,
+      handle: await availableHandle(name || email.split("@")[0]),
+      passwordHash: await bcrypt.hash(password, 12),
+    },
   });
   await signIn("credentials", { email, password, redirectTo: "/import?welcome=1" });
 }

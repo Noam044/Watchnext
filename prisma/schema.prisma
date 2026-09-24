@@ -11,16 +11,47 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  /// Identifiant public (@pseudo), utilisé dans l'URL du profil : /u/{handle}
+  handle        String   @unique
+  bio           String?
+  /// Bibliothèque visible par tout utilisateur connecté (sinon : amis seulement)
+  publicProfile Boolean  @default(false)
+  /// Film fétiche : son image de fond sert de bannière au profil
+  emblemFilmId  String?
 
-  letterboxd      LetterboxdProfile?
-  films           UserFilm[]
-  recommendations Recommendation[]
-  importJobs      ImportJob[]
+  emblemFilm       Film?              @relation("UserEmblem", fields: [emblemFilmId], references: [id], onDelete: SetNull)
+  letterboxd       LetterboxdProfile?
+  films            UserFilm[]
+  recommendations  Recommendation[]
+  importJobs       ImportJob[]
+  sentRequests     Friendship[]       @relation("FriendshipRequester")
+  receivedRequests Friendship[]       @relation("FriendshipAddressee")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+/// Lien d'amitié entre deux utilisateurs. Une seule ligne par paire, quel que soit le sens.
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
 }
 
 model LetterboxdProfile {
@@ -35,33 +66,34 @@ model LetterboxdProfile {
 
 /// Métadonnées TMDB mises en cache, partagées entre tous les utilisateurs.
 model Film {
-  id            String    @id @default(cuid())
-  tmdbId        Int       @unique
-  title         String
-  originalTitle String?
-  year          Int?
-  releaseDate   String?
-  overview      String?
-  posterPath    String?
-  backdropPath  String?
-  runtime       Int?
-  voteAverage   Float     @default(0)
-  voteCount     Int       @default(0)
-  popularity    Float     @default(0)
+  id               String    @id @default(cuid())
+  tmdbId           Int       @unique
+  title            String
+  originalTitle    String?
+  year             Int?
+  releaseDate      String?
+  overview         String?
+  posterPath       String?
+  backdropPath     String?
+  runtime          Int?
+  voteAverage      Float     @default(0)
+  voteCount        Int       @default(0)
+  popularity       Float     @default(0)
   /// [{ id, name }]
-  genres        Json      @default("[]")
+  genres           Json      @default("[]")
   /// [{ id, name }]
-  directors     Json      @default("[]")
+  directors        Json      @default("[]")
   /// [{ id, name }] — acteurs principaux, dans l'ordre du générique
-  cast          Json      @default("[]")
+  cast             Json      @default("[]")
   /// [{ id, name }]
-  keywords      Json      @default("[]")
+  keywords         Json      @default("[]")
   /// null tant que seules les données "liste" (search/discover) sont connues.
   detailsFetchedAt DateTime?
-  updatedAt     DateTime  @updatedAt
+  updatedAt        DateTime  @updatedAt
 
   userFilms       UserFilm[]
   recommendations Recommendation[]
+  emblemOf        User[]           @relation("UserEmblem")
 }
 
 model UserFilm {
