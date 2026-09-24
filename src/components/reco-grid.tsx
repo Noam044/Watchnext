@@ -2,6 +2,8 @@
 
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { hideRecommendationAction, markSeenAction } from "@/actions/library";
+import { AnimatedNumber } from "@/components/animated-number";
+import { CutReveal } from "@/components/cut-reveal";
 import { EyeIcon, EyeOffIcon, ExternalIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { ScopeScreen } from "@/components/scope-screen";
@@ -126,19 +128,19 @@ function Feature({ r, onAct }: { r: RecoItem; onAct: Act }) {
 
 function FeatureText({ r, onAct }: { r: RecoItem; onAct: Act }) {
   return (
-    <div className="max-w-3xl animate-rise [animation-delay:400ms]">
+    <div className="max-w-3xl">
       <p className="eyebrow text-tungsten">
-        Ta séance · <span className="font-bold">{r.pct} %</span> pour toi
+        Ta séance · <AnimatedNumber value={r.pct} suffix=" %" delay={500} className="font-bold" /> pour toi
       </p>
       <h1 className="marquee mt-2 text-5xl text-balance sm:text-6xl lg:text-7xl">
-        {r.title}
+        <CutReveal text={r.title} delay={450} />
       </h1>
-      <p className="meta mt-3">
+      <p className="meta mt-3 animate-rise [animation-delay:800ms]">
         {metaLine(r)}
         {r.genres.length > 0 && <span className="hidden sm:inline"> · {r.genres.slice(0, 3).join(", ")}</span>}
       </p>
-      <p className="mt-3 max-w-xl text-base leading-snug text-screen/90">{r.reason}</p>
-      <div className="mt-5 flex flex-wrap gap-2">
+      <p className="mt-3 max-w-xl animate-rise text-base leading-snug text-screen/90 [animation-delay:900ms]">{r.reason}</p>
+      <div className="mt-5 flex animate-rise flex-wrap gap-2 [animation-delay:1000ms]">
         <a href={letterboxdUrl(r.tmdbId)} target="_blank" rel="noreferrer" className="btn-primary">
           Voir sur Letterboxd <ExternalIcon className="size-3.5" />
         </a>

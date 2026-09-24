@@ -28,6 +28,7 @@
 
   --animate-projector: projector 1.6s ease-out both;
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-cut-in: cut-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
   @keyframes projector {
     0% {
@@ -47,6 +48,17 @@
     100% {
       opacity: 1;
       filter: none;
+    }
+  }
+  /* La lettre monte depuis sous sa ligne, découpée par un masque (marges négatives : accents et jambages restent visibles) */
+  @keyframes cut-in {
+    from {
+      clip-path: inset(0 -0.1em 100% -0.1em);
+      transform: translateY(0.45em);
+    }
+    to {
+      clip-path: inset(-0.3em -0.1em -0.3em -0.1em);
+      transform: none;
     }
   }
   @keyframes rise {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AnimatedNumber } from "@/components/animated-number";
 import { HeartIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { Stars, formatRating } from "@/components/stars";
@@ -158,7 +159,7 @@ export function Library({
 
       {filtered && (
         <p className="meta">
-          {page.total.toLocaleString("fr-FR")} film{page.total > 1 ? "s" : ""}
+          <AnimatedNumber value={page.total} /> film{page.total > 1 ? "s" : ""}
           {query.rating != null && ` notés ${formatRating(query.rating)}★`}
           {query.q && ` pour « ${query.q} »`} ·{" "}
           <Link href={href({ rating: null, q: "" })} scroll={false} className="underline-offset-4 hover:text-screen hover:underline">

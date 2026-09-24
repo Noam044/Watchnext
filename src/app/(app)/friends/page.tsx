@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AnimatedNumber } from "@/components/animated-number";
 import { Avatar } from "@/components/avatar";
 import { CopyHandle } from "@/components/copy-handle";
 import { FriendButton } from "@/components/friend-button";
@@ -152,7 +153,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                   >
                     {match.pct != null && (
                       <span className="absolute top-2 right-2 rounded-full bg-velvet-950/85 px-2 py-0.5 font-mono text-[11px] font-bold text-tungsten backdrop-blur">
-                        {match.pct} % d&apos;affinité
+                        <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> d&apos;affinité
                       </span>
                     )}
                   </ScopeScreen>

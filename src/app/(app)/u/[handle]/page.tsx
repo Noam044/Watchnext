@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AnimatedNumber } from "@/components/animated-number";
 import { Avatar } from "@/components/avatar";
+import { CutReveal } from "@/components/cut-reveal";
+import { Filmstrip } from "@/components/filmstrip";
 import { FriendButton } from "@/components/friend-button";
 import { ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
 import { Library } from "@/components/library";
-import { Poster } from "@/components/poster";
 import { ScopeScreen } from "@/components/scope-screen";
-import { formatRating } from "@/components/stars";
 import { prisma } from "@/lib/db";
 import { canViewLibrary, favoritesNotSeenBy, getRelation, tasteMatch } from "@/lib/friends";
 import { getLibraryCounts, getLibraryPage, parseLibraryQuery, publicUserSelect, resolveEmblem } from "@/lib/profile";
@@ -70,7 +71,9 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <Avatar name={name} handle={owner.handle} size="xl" className="-mt-12 ring-4 sm:-mt-14" />
             <div className="min-w-0 pb-1">
-              <h1 className="marquee text-5xl break-words sm:text-6xl">{name}</h1>
+              <h1 className="marquee text-5xl break-words sm:text-6xl">
+                <CutReveal text={name} delay={350} />
+              </h1>
               <p className="meta mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span>@{owner.handle}</span>
                 {owner.letterboxd?.username && (
@@ -102,11 +105,11 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
 
         {summary && (
           <dl className="mt-8 grid grid-cols-3 divide-velvet-800 border-y border-velvet-800 sm:grid-cols-5 sm:divide-x">
-            <Stat label="Films vus" value={summary.watchedCount.toLocaleString("fr-FR")} />
-            <Stat label="Notés" value={summary.ratedCount.toLocaleString("fr-FR")} />
-            <Stat label="Moyenne" value={summary.averageRating ? `${formatRating(Math.round(summary.averageRating * 100) / 100)}★` : "—"} />
-            <Stat label="Coups de cœur" value={summary.likedCount.toLocaleString("fr-FR")} />
-            <Stat label="Watchlist" value={summary.watchlistCount.toLocaleString("fr-FR")} />
+            <Stat label="Films vus" value={summary.watchedCount} />
+            <Stat label="Notés" value={summary.ratedCount} />
+            <Stat label="Moyenne" value={summary.averageRating} decimals suffix="★" />
+            <Stat label="Coups de cœur" value={summary.likedCount} />
+            <Stat label="Watchlist" value={summary.watchlistCount} />
           </dl>
         )}
       </header>
@@ -131,7 +134,9 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
             <p className="eyebrow" id="affinite">
               Affinité avec toi
             </p>
-            <p className="marquee mt-2 text-7xl text-tungsten">{match.pct != null ? `${match.pct} %` : "—"}</p>
+            <p className="marquee mt-2 text-7xl text-tungsten">
+              {match.pct != null ? <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> : "—"}
+            </p>
             <p className="mt-3 text-sm text-dust-300">
               {match.pct != null
                 ? `Calculée sur ${match.ratedTogether} films que vous avez notés tous les deux.`
@@ -143,20 +148,20 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           </div>
           {favorites && favorites.length > 0 && (
             <div className="min-w-0">
-              <h2 className="marquee text-3xl">Ses coups de cœur que tu n&apos;as pas vus</h2>
-              <ul className="-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-color:var(--color-velvet-700)_transparent] [scrollbar-width:thin] sm:mx-0 sm:px-0">
-                {favorites.map((f) => (
-                  <li key={f.id} className="w-28 shrink-0 sm:w-32">
-                    <a href={`https://letterboxd.com/tmdb/${f.film.tmdbId}/`} target="_blank" rel="noreferrer" className="group block">
-                      <Poster path={f.film.posterPath} title={f.film.title} size="w185" sizes="128px" className="transition group-hover:-translate-y-1" />
-                      <p className="mt-2 truncate text-xs font-medium">{f.film.title}</p>
-                      <p className="meta text-[11px]">
-                        {f.rating != null ? `${formatRating(f.rating)}★` : ""} {f.liked ? "♥" : ""}
-                      </p>
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <h2 className="marquee mb-4 text-3xl">Ses coups de cœur que tu n&apos;as pas vus</h2>
+              <Filmstrip
+                label={`Coups de cœur de ${name} que tu n'as pas vus`}
+                frames={favorites.map((f) => ({
+                  id: f.id,
+                  tmdbId: f.film.tmdbId,
+                  title: f.film.title,
+                  year: f.film.year,
+                  backdropPath: f.film.backdropPath,
+                  posterPath: f.film.posterPath,
+                  rating: f.rating,
+                  liked: f.liked,
+                }))}
+              />
             </div>
           )}
         </section>
@@ -202,11 +207,32 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  decimals = false,
+  suffix,
+}: {
+  label: string;
+  value: number | null;
+  decimals?: boolean;
+  suffix?: string;
+}) {
   return (
     <div className="flex flex-col-reverse px-2 py-4 text-center sm:px-4">
       <dt className="eyebrow mt-1 text-[10px] tracking-[0.14em]">{label}</dt>
-      <dd className="marquee text-3xl sm:text-4xl">{value}</dd>
+      <dd className="marquee text-3xl sm:text-4xl">
+        {value == null ? (
+          "—"
+        ) : (
+          <AnimatedNumber
+            value={decimals ? Math.round(value * 10) / 10 : value}
+            format={decimals ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : undefined}
+            suffix={suffix}
+            delay={450}
+          />
+        )}
+      </dd>
     </div>
   );
 }
