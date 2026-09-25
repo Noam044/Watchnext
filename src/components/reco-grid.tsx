@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
+import { ViewTransition, useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { hideRecommendationAction, markSeenAction } from "@/actions/library";
 import { trailerKeyAction } from "@/actions/trailer";
 import { AnimatedNumber } from "@/components/animated-number";
@@ -148,20 +148,25 @@ function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | n
   }
   return (
     <section aria-label={`Ta séance : ${r.title}`} className="relative">
-      <ScopeScreen
-        backdropPath={r.backdropPath}
-        posterPath={r.posterPath}
-        alt=""
-        preload
-        animate
-        className="group/screen"
-        imageClassName="transition-transform duration-[8s] ease-out group-hover/screen:scale-105"
-      >
-        <div className="absolute inset-0 hidden bg-linear-to-t from-velvet-950/95 via-velvet-950/40 to-transparent md:block" />
-        <div className="absolute inset-x-0 bottom-0 hidden p-8 md:block lg:p-10">
-          <FeatureText r={r} onAct={onAct} onPlay={onPlay} />
-        </div>
-      </ScopeScreen>
+      {/* L'image se transforme en celle de la fiche du film (même nom de transition). */}
+      <ViewTransition name={`screen-${r.tmdbId}`} share="morph" default="none">
+        <ScopeScreen
+          backdropPath={r.backdropPath}
+          posterPath={r.posterPath}
+          alt=""
+          preload
+          animate
+          className="group/screen cursor-pointer"
+          imageClassName="transition-[transform,filter] duration-[8s] ease-out group-hover/screen:scale-105 group-hover/screen:brightness-110"
+        >
+          {/* Tout l'écran ouvre la fiche du film ; les boutons posés dessus gardent leur action. */}
+          <Link href={`/film/${r.tmdbId}`} tabIndex={-1} aria-hidden className="absolute inset-0" />
+          <div className="pointer-events-none absolute inset-0 hidden bg-linear-to-t from-velvet-950/95 via-velvet-950/40 to-transparent md:block" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden p-8 md:block lg:p-10 [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
+            <FeatureText r={r} onAct={onAct} onPlay={onPlay} />
+          </div>
+        </ScopeScreen>
+      </ViewTransition>
       <div className="mt-5 md:hidden">
         <FeatureText r={r} onAct={onAct} onPlay={onPlay} />
       </div>

@@ -56,6 +56,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
         <FilmScreen
           backdropPath={film.backdropPath}
           posterPath={film.posterPath}
+          tmdbId={film.tmdbId}
           title={film.title}
           trailerKey={trailerKey}
         />
