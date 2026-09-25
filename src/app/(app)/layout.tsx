@@ -1,17 +1,23 @@
 import { logoutAction } from "@/actions/auth";
 import { LogoutIcon } from "@/components/icons";
+import { LocaleSwitch } from "@/components/locale-switch";
 import { Logo } from "@/components/logo";
 import { DesktopNav, MobileTabBar, ProfileLink } from "@/components/nav-links";
 import { NotificationPoller } from "@/components/notification-poller";
 import { PageTransition } from "@/components/page-transition";
 import { pendingRequestCount } from "@/lib/friends";
 import { unreadMessageCount } from "@/lib/messages";
+import { getI18n } from "@/i18n/server";
 import { requireUser } from "@/lib/session";
 import { displayName } from "@/lib/users";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
-  const [pendingRequests, unreadMessages] = await Promise.all([pendingRequestCount(user.id), unreadMessageCount(user.id)]);
+  const [pendingRequests, unreadMessages, { t }] = await Promise.all([
+    pendingRequestCount(user.id),
+    unreadMessageCount(user.id),
+    getI18n(),
+  ]);
   const me = { name: displayName(user), handle: user.handle, pendingRequests, unreadMessages };
   return (
     <div className="relative z-10 flex flex-1 flex-col">
@@ -20,9 +26,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Logo href="/dashboard" />
           <DesktopNav me={me} />
           <div className="ml-auto flex items-center gap-1">
+            <LocaleSwitch className="mr-1" />
             <ProfileLink me={me} />
             <form action={logoutAction}>
-              <button className="btn-quiet size-10 p-0" aria-label="Se déconnecter" title="Se déconnecter">
+              <button className="btn-quiet size-10 p-0" aria-label={t.common.logout} title={t.common.logout}>
                 <LogoutIcon className="size-4.5" />
               </button>
             </form>

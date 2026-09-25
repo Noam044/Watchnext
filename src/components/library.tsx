@@ -3,29 +3,18 @@ import { ViewTransition } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { HeartIcon, PencilIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
-import { Stars, formatRating } from "@/components/stars";
+import { Stars } from "@/components/stars";
 import { Tilt } from "@/components/tilt";
 import type { Film, UserFilm } from "@/generated/prisma/client";
+import { dateFormat, formatNumber, formatRating } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
 import type { LibraryQuery, LibrarySort, LibraryTab } from "@/lib/profile";
 
-const TABS: { id: LibraryTab; label: string }[] = [
-  { id: "rated", label: "Notes" },
-  { id: "watched", label: "Vus" },
-  { id: "liked", label: "Coups de cœur" },
-  { id: "watchlist", label: "Watchlist" },
-];
-
-const SORTS: { id: LibrarySort; label: string }[] = [
-  { id: "recent", label: "Récents" },
-  { id: "rating", label: "Note" },
-  { id: "title", label: "Titre" },
-  { id: "year", label: "Année" },
-];
-
-const dateFmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+const TABS: LibraryTab[] = ["rated", "watched", "liked", "watchlist"];
+const SORTS: LibrarySort[] = ["recent", "rating", "title", "year"];
 
 /** Bibliothèque Letterboxd d'un utilisateur : onglets, filtre par note, tri, recherche et pagination. */
-export function Library({
+export async function Library({
   basePath,
   query,
   counts,
@@ -51,6 +40,9 @@ export function Library({
     const s = sp.toString();
     return `${basePath}${s ? `?${s}` : ""}#films`;
   };
+  const { t, locale } = await getI18n();
+  const p = t.profile;
+  const dateFmt = dateFormat(locale, { day: "numeric", month: "short", year: "numeric" });
   const showRatings = query.tab !== "watchlist";
   const maxDist = Math.max(1, ...distribution.map((d) => d.count));
   const filtered = query.rating != null || !!query.q;
@@ -58,23 +50,23 @@ export function Library({
   return (
     <section id="films" aria-labelledby="films-title" className="scroll-mt-20 space-y-6">
       <h2 id="films-title" className="marquee text-4xl">
-        {isSelf ? "Tes films" : "Ses films"}
+        {isSelf ? p.filmsSelf : p.filmsOther}
       </h2>
 
-      <nav aria-label="Catégories" className="-mx-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-velvet-800 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
-        {TABS.map((t) => {
-          const active = query.tab === t.id;
+      <nav aria-label={p.categories} className="-mx-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-velvet-800 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
+        {TABS.map((tab) => {
+          const active = query.tab === tab;
           return (
             <Link
-              key={t.id}
-              href={href({ tab: t.id, rating: null })}
+              key={tab}
+              href={href({ tab, rating: null })}
               scroll={false}
               aria-current={active ? "page" : undefined}
               className={`relative shrink-0 px-3 pt-1 pb-3 text-sm font-medium transition ${
                 active ? "text-screen" : "text-dust-400 hover:text-screen"
               }`}
             >
-              {t.label} <span className="font-mono text-[11px] text-dust-400">{counts[t.id].toLocaleString("fr-FR")}</span>
+              {p.tabs[tab]} <span className="font-mono text-[11px] text-dust-400">{formatNumber(counts[tab], locale)}</span>
               {active && <span className="absolute inset-x-2 bottom-0 h-0.5 bg-tungsten" />}
             </Link>
           );
@@ -85,10 +77,10 @@ export function Library({
       {showRatings && distribution.some((d) => d.count > 0) && (
         <div>
           <div className="flex items-baseline justify-between">
-            <p className="eyebrow">Filtrer par note</p>
+            <p className="eyebrow">{p.filterByRating}</p>
             {query.rating != null && (
               <Link href={href({ rating: null })} scroll={false} className="meta inline-flex items-center gap-1 hover:text-screen">
-                <XIcon className="size-3" /> Toutes les notes
+                <XIcon className="size-3" /> {p.allRatings}
               </Link>
             )}
           </div>
@@ -101,9 +93,9 @@ export function Library({
                   key={d.rating}
                   href={href({ rating: active ? null : d.rating })}
                   scroll={false}
-                  aria-label={`${formatRating(d.rating)} étoiles : ${d.count} films`}
+                  aria-label={p.ratingBar(formatRating(d.rating, locale), d.count)}
                   aria-current={active ? "true" : undefined}
-                  title={`${formatRating(d.rating)}★ · ${d.count} films`}
+                  title={`${formatRating(d.rating, locale)}★ · ${p.filmsCount(d.count)}`}
                   className="group flex h-full flex-col justify-end"
                 >
                   <span
@@ -134,25 +126,25 @@ export function Library({
             name="q"
             type="search"
             defaultValue={query.q}
-            placeholder="Chercher un titre"
-            aria-label="Chercher un titre"
+            placeholder={p.searchTitle}
+            aria-label={p.searchTitle}
             className="input rounded-full py-2 pl-10"
           />
         </form>
         <div className="flex items-center gap-2">
-          <span className="eyebrow">Trier</span>
+          <span className="eyebrow">{p.sort}</span>
           <div className="flex rounded-full border border-velvet-700 p-0.5">
-            {SORTS.filter((s) => showRatings || s.id !== "rating").map((s) => (
+            {SORTS.filter((s) => showRatings || s !== "rating").map((s) => (
               <Link
-                key={s.id}
-                href={href({ sort: s.id })}
+                key={s}
+                href={href({ sort: s })}
                 scroll={false}
-                aria-current={query.sort === s.id ? "true" : undefined}
+                aria-current={query.sort === s ? "true" : undefined}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  query.sort === s.id ? "bg-velvet-700 text-screen" : "text-dust-300 hover:text-screen"
+                  query.sort === s ? "bg-velvet-700 text-screen" : "text-dust-300 hover:text-screen"
                 }`}
               >
-                {s.label}
+                {p.sorts[s]}
               </Link>
             ))}
           </div>
@@ -161,11 +153,11 @@ export function Library({
 
       {filtered && (
         <p className="meta">
-          <AnimatedNumber value={page.total} /> film{page.total > 1 ? "s" : ""}
-          {query.rating != null && ` notés ${formatRating(query.rating)}★`}
-          {query.q && ` pour « ${query.q} »`} ·{" "}
+          <AnimatedNumber value={page.total} /> {t.common.films(page.total)}
+          {query.rating != null && p.ratedWith(formatRating(query.rating, locale))}
+          {query.q && p.forQuery(query.q)} ·{" "}
           <Link href={href({ rating: null, q: "" })} scroll={false} className="underline-offset-4 hover:text-screen hover:underline">
-            effacer les filtres
+            {p.clearFilters}
           </Link>
         </p>
       )}
@@ -192,7 +184,7 @@ export function Library({
                 {showRatings && uf.rating != null && <Stars value={uf.rating} />}
                 {uf.liked && <HeartIcon className="size-3 text-curtain brightness-150" />}
                 {uf.review && (
-                  <span title="Critique écrite" aria-label="Critique écrite">
+                  <span title={t.film.criticWritten} aria-label={t.film.criticWritten}>
                     <PencilIcon className="size-3 text-dust-300" />
                   </span>
                 )}
@@ -205,28 +197,28 @@ export function Library({
         </ul>
       ) : (
         <p className="card px-6 py-10 text-center text-sm text-dust-300">
-          {filtered ? "Aucun film ne correspond à ces filtres." : "Aucun film dans cette catégorie pour l'instant."}
+          {filtered ? p.noMatch : p.emptyCategory}
         </p>
       )}
 
       {page.pageCount > 1 && (
-        <nav aria-label="Pages" className="flex items-center justify-center gap-3 pt-2">
+        <nav aria-label={p.pages} className="flex items-center justify-center gap-3 pt-2">
           {query.page > 1 ? (
             <Link href={href({ page: query.page - 1 })} scroll={false} className="btn-ghost px-4 py-2">
-              Précédent
+              {p.previous}
             </Link>
           ) : (
-            <span className="btn border border-velvet-800 px-4 py-2 text-dust-400 opacity-50">Précédent</span>
+            <span className="btn border border-velvet-800 px-4 py-2 text-dust-400 opacity-50">{p.previous}</span>
           )}
           <span className="meta">
             {query.page} / {page.pageCount}
           </span>
           {query.page < page.pageCount ? (
             <Link href={href({ page: query.page + 1 })} scroll={false} className="btn-ghost px-4 py-2">
-              Suivant
+              {p.next}
             </Link>
           ) : (
-            <span className="btn border border-velvet-800 px-4 py-2 text-dust-400 opacity-50">Suivant</span>
+            <span className="btn border border-velvet-800 px-4 py-2 text-dust-400 opacity-50">{p.next}</span>
           )}
         </nav>
       )}

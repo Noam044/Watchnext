@@ -38,7 +38,7 @@ export function filesFromZip(buffer: Uint8Array): ExportFile[] {
       filter: (f) => f.name.toLowerCase().endsWith(".csv"),
     });
   } catch {
-    throw new AppError("CSV_INVALID", "L'archive .zip est illisible ou corrompue.");
+    throw new AppError("CSV_INVALID", "zipUnreadable");
   }
   return Object.entries(entries).map(([name, data]) => ({ name, content: strFromU8(data) }));
 }
@@ -65,7 +65,7 @@ function parseCsv(file: ExportFile): { headers: string[]; rows: Row[] } {
   });
   const fatal = res.errors.find((e) => e.type !== "FieldMismatch");
   if (fatal) {
-    throw new AppError("CSV_INVALID", `Le fichier « ${file.name} » n'est pas un CSV valide (ligne ${(fatal.row ?? 0) + 2}).`);
+    throw new AppError("CSV_INVALID", "csvInvalid", { file: file.name, row: (fatal.row ?? 0) + 2 });
   }
   return { headers: res.meta.fields ?? [], rows: res.data };
 }
@@ -129,10 +129,7 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
 
   for (const { file, headers, rows, kind } of parsed) {
     if (!headers.includes("Name") || !headers.includes("Year")) {
-      throw new AppError(
-        "CSV_INVALID",
-        `« ${file.name} » ne ressemble pas à un export Letterboxd (colonnes Name et Year manquantes).`,
-      );
+      throw new AppError("CSV_INVALID", "notLetterboxdFile", { file: file.name });
     }
     used.push(file.name);
 
@@ -188,18 +185,14 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
   }
 
   if (used.length === 0) {
-    const hint = unknown.length ? ` Fichiers non reconnus : ${unknown.slice(0, 5).join(", ")}.` : "";
-    throw new AppError(
-      "CSV_INVALID",
-      `Aucun fichier exploitable trouvé. Envoie l'archive .zip de l'export ou au moins watched.csv, ratings.csv, diary.csv ou watchlist.csv.${hint}`,
-    );
+    throw new AppError("CSV_INVALID", "noUsableFile", { unknown: unknown.slice(0, 5).join(", ") });
   }
 
   const entries = [...map.values()]
     .map((e) => ({ ...e, inWatchlist: e.inWatchlist && !e.watched }))
     .filter((e) => e.watched || e.inWatchlist);
   if (entries.length === 0) {
-    throw new AppError("CSV_INVALID", "L'export ne contient aucun film.");
+    throw new AppError("CSV_INVALID", "noFilms");
   }
   return { entries, used };
 }

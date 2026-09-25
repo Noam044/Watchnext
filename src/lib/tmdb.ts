@@ -47,7 +47,7 @@ export type TmdbMovieDetails = Omit<TmdbMovieListItem, "genre_ids"> & {
 function apiKey() {
   const key = process.env.TMDB_API_KEY?.trim();
   if (!key) {
-    throw new AppError("TMDB_AUTH", "La clé TMDB (TMDB_API_KEY) n'est pas configurée sur le serveur.", 500);
+    throw new AppError("TMDB_AUTH", "tmdbKeyMissing", {}, 500);
   }
   return key;
 }
@@ -82,13 +82,13 @@ async function request<T>(path: string, params: Record<string, string | number |
         await sleep(500 * (attempt + 1));
         continue;
       }
-      throw new AppError("TMDB_UNAVAILABLE", "TMDB ne répond pas pour le moment. Réessaie dans quelques minutes.", 503);
+      throw new AppError("TMDB_UNAVAILABLE", "tmdbUnavailable", {}, 503);
     }
 
     if (res.ok) return (await res.json()) as T;
     if (res.status === 404) return null;
     if (res.status === 401) {
-      throw new AppError("TMDB_AUTH", "La clé TMDB est invalide ou révoquée. Vérifie TMDB_API_KEY.", 500);
+      throw new AppError("TMDB_AUTH", "tmdbKeyInvalid", {}, 500);
     }
     if (res.status === 429) {
       const retryAfter = Number(res.headers.get("retry-after")) || 2 ** attempt;
@@ -96,19 +96,15 @@ async function request<T>(path: string, params: Record<string, string | number |
         await sleep(retryAfter * 1000);
         continue;
       }
-      throw new AppError(
-        "TMDB_QUOTA",
-        "Le quota de requêtes TMDB est atteint. Patiente une minute puis relance : la progression est conservée.",
-        429,
-      );
+      throw new AppError("TMDB_QUOTA", "tmdbQuota", {}, 429);
     }
     if (res.status >= 500 && attempt < 2) {
       await sleep(800 * (attempt + 1));
       continue;
     }
-    throw new AppError("TMDB_UNAVAILABLE", `TMDB a renvoyé une erreur (${res.status}).`, 502);
+    throw new AppError("TMDB_UNAVAILABLE", "tmdbStatus", { status: res.status }, 502);
   }
-  throw new AppError("TMDB_UNAVAILABLE", "TMDB ne répond pas pour le moment.", 503);
+  throw new AppError("TMDB_UNAVAILABLE", "tmdbUnavailable", {}, 503);
 }
 
 /** Appel TMDB mis en cache dans la table TmdbCache. */
@@ -168,10 +164,10 @@ export async function discover(params: Record<string, string | number | undefine
   return page?.results ?? [];
 }
 
-export async function getGenreMap(): Promise<Map<number, string>> {
+export async function getGenreMap(lang = language()): Promise<Map<number, string>> {
   const res = await cached<{ genres: { id: number; name: string }[] }>(
     "/genre/movie/list",
-    { language: language() },
+    { language: lang },
     30 * DAY,
   );
   return new Map((res?.genres ?? []).map((g) => [g.id, g.name]));

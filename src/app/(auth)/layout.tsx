@@ -1,17 +1,21 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
+import { LocaleSwitch } from "@/components/locale-switch";
+import { getI18n } from "@/i18n/server";
 import { getCurrentUser } from "@/lib/session";
 import { filmOfTheDay, getShowcaseFilms } from "@/lib/showcase";
 import { backdropUrl } from "@/lib/tmdb-images";
 
 export default async function AuthLayout({ children }: LayoutProps<"/">) {
   if (await getCurrentUser()) redirect("/dashboard");
-  const film = filmOfTheDay(await getShowcaseFilms());
+  const [films, { t }] = await Promise.all([getShowcaseFilms(), getI18n()]);
+  const film = filmOfTheDay(films);
   const src = backdropUrl(film?.backdropPath, "w1280");
 
   return (
     <div className="relative z-10 flex flex-1 flex-col">
+      <LocaleSwitch className="absolute top-4 right-4 z-20 bg-velvet-950/60 backdrop-blur" />
       {src && (
         <div className="fixed inset-0 -z-10" aria-hidden>
           <Image src={src} alt="" fill sizes="100vw" className="animate-projector object-cover opacity-55" preload />
@@ -29,7 +33,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
       </main>
       {film && (
         <p className="meta px-4 pb-5 text-center text-[11px] text-dust-400">
-          À l&apos;écran : {film.title}
+          {t.auth.onScreen} {film.title}
           {film.year ? ` (${film.year})` : ""}
         </p>
       )}

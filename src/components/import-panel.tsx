@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { regenerateAction, syncRssAction } from "@/actions/library";
 import { CheckIcon, ExternalIcon } from "@/components/icons";
+import { useI18n } from "@/i18n/client";
 
 type Tab = "quick" | "full";
 
@@ -30,29 +31,30 @@ export function ImportPanel({
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [openedLetterboxd, setOpenedLetterboxd] = useState(false);
+  const i = useI18n().t.importPage;
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const inputRef = useRef<HTMLInputElement>(null);
   const busy = status.kind === "working";
 
   async function finish(summary: string, notFound?: number) {
-    setStatus({ kind: "working", message: "Calcul de tes recommandations…" });
+    setStatus({ kind: "working", message: i.computing });
     const res = await regenerateAction();
     if (!res.ok) {
-      setStatus({ kind: "error", message: `${summary} Mais le calcul des recommandations a échoué : ${res.error}` });
+      setStatus({ kind: "error", message: i.computeFailed(summary, res.error) });
       router.refresh();
       return;
     }
-    setStatus({ kind: "done", message: `${summary} ${res.data.count} recommandations prêtes.`, notFound });
+    setStatus({ kind: "done", message: i.ready(summary, res.data.count), notFound });
     router.refresh();
   }
 
   async function runQuick(e: React.FormEvent) {
     e.preventDefault();
     if (!username.trim()) return;
-    setStatus({ kind: "working", message: "Lecture de ton flux RSS Letterboxd…" });
+    setStatus({ kind: "working", message: i.readingRss });
     const res = await syncRssAction(username);
     if (!res.ok) return setStatus({ kind: "error", message: res.error });
-    await finish(`${res.data.imported} films récupérés depuis le flux de ${res.data.username}.`);
+    await finish(i.rssDone(res.data.imported, res.data.username));
   }
 
   async function processJob(jobId: string) {
@@ -62,7 +64,7 @@ export function ImportPanel({
       if (!res.ok) {
         return setStatus({
           kind: "error",
-          message: body.error ?? "Le traitement de l'import a échoué.",
+          message: body.error ?? i.processFailed,
           resumeJobId: jobId,
         });
       }
@@ -70,12 +72,11 @@ export function ImportPanel({
       const pct = p.total ? p.processed / p.total : 1;
       setStatus({
         kind: "working",
-        message: `Correspondance avec TMDB : ${p.processed} / ${p.total} films`,
+        message: i.matching(p.processed, p.total),
         progress: pct,
       });
       if (p.status === "DONE") {
-        const nf = p.notFound ? ` ${p.notFound} introuvable${p.notFound > 1 ? "s" : ""} sur TMDB.` : "";
-        return finish(`${p.matched} films importés.${nf}`, p.notFound);
+        return finish(i.imported(p.matched, p.notFound ? i.notFoundCount(p.notFound) : ""), p.notFound);
       }
     }
   }
@@ -83,12 +84,12 @@ export function ImportPanel({
   async function runFull(e: React.FormEvent) {
     e.preventDefault();
     if (files.length === 0) return;
-    setStatus({ kind: "working", message: "Lecture de l'export…", progress: 0 });
+    setStatus({ kind: "working", message: i.readingExport, progress: 0 });
     const form = new FormData();
     for (const f of files) form.append("files", f);
     const res = await fetch("/api/import", { method: "POST", body: form });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) return setStatus({ kind: "error", message: body.error ?? "Envoi impossible." });
+    if (!res.ok) return setStatus({ kind: "error", message: body.error ?? i.uploadFailed });
     await processJob(body.jobId);
   }
 
@@ -107,8 +108,8 @@ export function ImportPanel({
       <div role="tablist" className="grid grid-cols-2 border-b border-velvet-800">
         {(
           [
-            ["quick", "Import rapide", "Pseudo Letterboxd · RSS"],
-            ["full", "Import complet", "Export .zip ou CSV"],
+            ["quick", i.tabQuick, i.tabQuickSub],
+            ["full", i.tabFull, i.tabFullSub],
           ] as const
         ).map(([id, title, sub]) => (
           <button
@@ -126,7 +127,7 @@ export function ImportPanel({
               {title}
               {id === "full" && (
                 <span className="rounded-sm border border-tungsten/50 px-1.5 py-px font-mono text-[10px] font-bold tracking-wide text-tungsten uppercase">
-                  Recommandé
+                  {i.recommended}
                 </span>
               )}
             </span>
@@ -140,7 +141,7 @@ export function ImportPanel({
         {tab === "quick" ? (
           <form onSubmit={runQuick} className="space-y-4">
             <label className="block space-y-1.5">
-              <span className="field-label">Ton pseudo Letterboxd</span>
+              <span className="field-label">{i.usernameLabel}</span>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <div className="relative flex-1">
                   <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm text-dust-400">
@@ -150,7 +151,7 @@ export function ImportPanel({
                     className="input pl-[7.4rem]"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="pseudo"
+                    placeholder={i.usernamePlaceholder}
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
@@ -159,28 +160,30 @@ export function ImportPanel({
                   />
                 </div>
                 <button className="btn-primary sm:w-auto" disabled={busy || !username.trim()}>
-                  {busy ? "Import en cours…" : "Importer"}
+                  {busy ? i.importing : i.importButton}
                 </button>
               </div>
             </label>
             <p className="flex gap-2 text-sm text-dust-400">
               <InfoIcon />
               <span>
-                On lit ton flux RSS public : seules tes <strong className="text-dust-300">~50 dernières entrées</strong> de
-                journal sont récupérées. Pour tout ton historique, utilise l&apos;import complet.
+                {i.quickInfoBefore}
+                <strong className="text-dust-300">{i.quickInfoStrong}</strong>
+                {i.quickInfoAfter}
               </span>
             </p>
           </form>
         ) : (
           <form onSubmit={runFull}>
             <p className="text-sm text-dust-300">
-              Ton export contient tout ton historique : films vus, notes, likes, journal et watchlist. Trois étapes :
+              {i.fullIntro}
             </p>
             <ol className="relative mt-6 space-y-7 border-l border-velvet-700 pl-8">
-              <Step n={1} done={openedLetterboxd} title="Ouvre tes réglages Letterboxd">
+              <Step n={1} done={openedLetterboxd} title={i.step1Title} label={i.stepLabel}>
                 <p className="text-sm text-dust-300">
-                  La page <strong className="text-screen">Settings › Data</strong> s&apos;ouvre dans un nouvel onglet.
-                  Connecte-toi à Letterboxd si besoin.
+                  {i.step1Before}
+                  <strong className="text-screen">Settings › Data</strong>
+                  {i.step1After}
                 </p>
                 <a
                   href={LETTERBOXD_DATA_URL}
@@ -189,20 +192,21 @@ export function ImportPanel({
                   onClick={() => setOpenedLetterboxd(true)}
                   className="btn mt-3 border border-tungsten/60 text-tungsten hover:border-tungsten hover:bg-tungsten-soft"
                 >
-                  <span className="sm:hidden">Ouvrir mes réglages Letterboxd</span>
-                  <span className="hidden sm:inline">Ouvrir letterboxd.com/settings/data</span>
+                  <span className="sm:hidden">{i.step1ButtonShort}</span>
+                  <span className="hidden sm:inline">{i.step1ButtonLong}</span>
                   <ExternalIcon className="size-3.5" />
                 </a>
               </Step>
 
-              <Step n={2} done={files.length > 0} title="Clique sur « Export your data »">
+              <Step n={2} done={files.length > 0} title={i.step2Title} label={i.stepLabel}>
                 <p className="text-sm text-dust-300">
-                  Letterboxd prépare un fichier <strong className="text-screen">.zip</strong> et le télécharge, en
-                  quelques secondes.
+                  {i.step2Before}
+                  <strong className="text-screen">.zip</strong>
+                  {i.step2After}
                 </p>
               </Step>
 
-              <Step n={3} done={files.length > 0} title="Dépose le .zip ici">
+              <Step n={3} done={files.length > 0} title={i.step3Title} label={i.stepLabel}>
                 <div
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -221,9 +225,11 @@ export function ImportPanel({
                 >
                   <UploadIcon />
                   <p className="mt-3 text-sm text-screen">
-                    Dépose ton export <strong>.zip</strong> tel quel, sans le décompresser
+                    {i.dropBefore}
+                    <strong>.zip</strong>
+                    {i.dropAfter}
                   </p>
-                  <p className="mt-1 text-xs text-dust-400">ou clique pour parcourir · .zip ou .csv · 25 Mo max</p>
+                  <p className="mt-1 text-xs text-dust-400">{i.dropHint}</p>
                   <input
                     ref={inputRef}
                     type="file"
@@ -244,7 +250,7 @@ export function ImportPanel({
                           disabled={busy}
                           onClick={() => setFiles((prev) => prev.filter((p) => p !== f))}
                           className="grid size-5 place-items-center rounded-full text-dust-400 hover:bg-velvet-700 hover:text-screen"
-                          aria-label={`Retirer ${f.name}`}
+                          aria-label={i.removeFile(f.name)}
                         >
                           ×
                         </button>
@@ -254,17 +260,18 @@ export function ImportPanel({
                 )}
 
                 <button className="btn-primary mt-4 w-full sm:w-auto" disabled={busy || files.length === 0}>
-                  {busy ? "Import en cours…" : "Lancer l'import"}
+                  {busy ? i.importing : i.launch}
                 </button>
               </Step>
             </ol>
 
             <p className="mt-7 border-t border-velvet-800 pt-4 text-xs leading-relaxed text-dust-400">
-              Tu peux aussi envoyer seulement <code className="text-dust-300">watched.csv</code>,{" "}
-              <code className="text-dust-300">ratings.csv</code>, <code className="text-dust-300">diary.csv</code> et{" "}
-              <code className="text-dust-300">watchlist.csv</code>. Ces fichiers ne contiennent pas d&apos;identifiant
-              TMDB : chaque film est retrouvé par son titre et son année, et les rares films introuvables te seront
-              listés.
+              {i.csvNoteBefore}
+              <code className="text-dust-300">watched.csv</code>, <code className="text-dust-300">ratings.csv</code>,{" "}
+              <code className="text-dust-300">diary.csv</code>
+              {i.csvNoteAnd}
+              <code className="text-dust-300">watchlist.csv</code>
+              {i.csvNoteAfter}
             </p>
           </form>
         )}
@@ -284,6 +291,7 @@ function StatusBox({
   onResume: (jobId: string) => void;
   onOpen: () => void;
 }) {
+  const i = useI18n().t.importPage;
   if (status.kind === "idle") return null;
   if (status.kind === "working") {
     return (
@@ -309,7 +317,7 @@ function StatusBox({
         <p>{status.message}</p>
         {status.resumeJobId && (
           <button onClick={() => onResume(status.resumeJobId!)} className="btn-ghost mt-3 text-screen">
-            Reprendre l&apos;import
+            {i.resume}
           </button>
         )}
       </div>
@@ -321,11 +329,11 @@ function StatusBox({
       <div className="flex gap-2">
         {!!status.notFound && (
           <a href="#introuvables" className="btn-ghost">
-            Voir les introuvables
+            {i.seeUnmatched}
           </a>
         )}
         <button onClick={onOpen} className="btn-primary">
-          Voir mes recommandations
+          {i.seeRecos}
         </button>
       </div>
     </div>
@@ -333,7 +341,19 @@ function StatusBox({
 }
 
 /** Étape du guide d'export : pastille numérotée sur la frise, cochée une fois faite. */
-function Step({ n, done, title, children }: { n: number; done: boolean; title: string; children: React.ReactNode }) {
+function Step({
+  n,
+  done,
+  title,
+  label,
+  children,
+}: {
+  n: number;
+  done: boolean;
+  title: string;
+  label: (n: number, done: boolean) => string;
+  children: React.ReactNode;
+}) {
   return (
     <li className="relative">
       <span
@@ -345,7 +365,7 @@ function Step({ n, done, title, children }: { n: number; done: boolean; title: s
         {done ? <CheckIcon className="size-3.5" /> : n}
       </span>
       <h3 className="font-semibold">
-        <span className="sr-only">Étape {n}{done ? " (faite)" : ""} : </span>
+        <span className="sr-only">{label(n, done)}</span>
         {title}
       </h3>
       <div className="mt-1.5">{children}</div>

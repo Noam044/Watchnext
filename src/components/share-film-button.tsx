@@ -6,6 +6,7 @@ import { sendMessageAction, shareTargetsAction } from "@/actions/messages";
 import { Avatar } from "@/components/avatar";
 import { SendIcon, XIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
+import { useI18n } from "@/i18n/client";
 
 type Target = { id: string; name: string; handle: string };
 
@@ -16,6 +17,8 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
   const [to, setTo] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [pending, startTransition] = useTransition();
+  const { t } = useI18n();
+  const m = t.messages;
 
   const open = () => {
     ref.current?.showModal();
@@ -28,7 +31,7 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
       if (!to) return;
       const res = await sendMessageAction({ toUserId: to, tmdbId, body: note });
       if (!res.ok) return toast(res.error, "error");
-      toast(`« ${title} » envoyé à ${targets?.find((t) => t.id === to)?.name ?? "ton ami"}.`);
+      toast(m.sentTo(title, targets?.find((x) => x.id === to)?.name ?? m.yourFriend));
       setNote("");
       setTo(null);
       close();
@@ -37,11 +40,11 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
   return (
     <>
       <button type="button" onClick={open} className={className}>
-        <SendIcon /> Envoyer à un ami
+        <SendIcon /> {m.shareButton}
       </button>
       <dialog
         ref={ref}
-        aria-label={`Envoyer « ${title} » à un ami`}
+        aria-label={m.shareLabel(title)}
         onClick={(e) => e.target === e.currentTarget && close()}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
@@ -52,8 +55,8 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
         className="m-0 mt-auto w-full max-w-none rounded-t-2xl border border-velvet-700 bg-velvet-900 p-0 text-screen shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm open:animate-rise sm:m-auto sm:max-w-md sm:rounded-2xl"
       >
         <div className="flex items-center justify-between border-b border-velvet-800 px-5 py-4">
-          <h2 className="marquee text-2xl">Envoyer à un ami</h2>
-          <button onClick={close} className="grid size-9 place-items-center rounded-full hover:bg-velvet-800" aria-label="Fermer">
+          <h2 className="marquee text-2xl">{m.shareButton}</h2>
+          <button onClick={close} className="grid size-9 place-items-center rounded-full hover:bg-velvet-800" aria-label={t.common.close}>
             <XIcon />
           </button>
         </div>
@@ -65,13 +68,13 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
             </div>
           ) : targets.length === 0 ? (
             <p className="text-sm text-dust-300">
-              Tu n&apos;as pas encore d&apos;amis sur Watchnext.{" "}
+              {m.noFriendsYet}{" "}
               <Link href="/friends" className="text-tungsten underline-offset-4 hover:underline">
-                Trouver des amis
+                {m.findFriends}
               </Link>
             </p>
           ) : (
-            <ul role="radiogroup" aria-label="Destinataire" className="max-h-64 space-y-1 overflow-y-auto">
+            <ul role="radiogroup" aria-label={m.recipient} className="max-h-64 space-y-1 overflow-y-auto">
               {targets.map((t) => (
                 <li key={t.id}>
                   <button
@@ -94,23 +97,23 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
             </ul>
           )}
           <label className="block space-y-1.5">
-            <span className="field-label">Un mot (optionnel)</span>
+            <span className="field-label">{m.note}</span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               maxLength={2000}
               className="input resize-none"
-              placeholder="Il faut absolument que tu voies ça…"
+              placeholder={m.notePlaceholder}
             />
           </label>
         </div>
         <div className="flex justify-end gap-2 border-t border-velvet-800 px-5 py-4">
           <button onClick={close} className="btn-quiet">
-            Annuler
+            {t.common.cancel}
           </button>
           <button onClick={send} disabled={!to || pending} className="btn-primary">
-            {pending ? "Envoi…" : "Envoyer"}
+            {pending ? m.sending : m.send}
           </button>
         </div>
       </dialog>

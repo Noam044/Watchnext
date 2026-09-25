@@ -11,7 +11,10 @@ import { ReviewText } from "@/components/review-text";
 import { FilmScreen } from "@/components/film-screen";
 import { ShareFilmButton } from "@/components/share-film-button";
 import { Stars } from "@/components/stars";
+import { dateFormat, formatNumber } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
+import { getLocalizer } from "@/lib/localize";
 import { getFilmPage } from "@/lib/film-page";
 import { refs } from "@/lib/films";
 import { requireUser } from "@/lib/session";
@@ -20,7 +23,6 @@ import { displayName } from "@/lib/users";
 
 export const maxDuration = 30;
 
-const dateFmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
 function parseId(raw: string) {
   const id = Number(raw);
@@ -30,7 +32,7 @@ function parseId(raw: string) {
 export async function generateMetadata({ params }: PageProps<"/film/[tmdbId]">): Promise<Metadata> {
   const id = parseId((await params).tmdbId);
   const film = id ? await prisma.film.findUnique({ where: { tmdbId: id }, select: { title: true, year: true } }) : null;
-  return { title: film ? `${film.title}${film.year ? ` (${film.year})` : ""}` : "Film" };
+  return { title: film ? `${film.title}${film.year ? ` (${film.year})` : ""}` : (await getI18n()).t.filmPage.metaFallback };
 }
 
 export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) {
@@ -40,8 +42,13 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
   const [data, trailerKey] = await Promise.all([getFilmPage(id, me.id), getTrailerKey(id).catch(() => null)]);
   if (!data) notFound();
   const { film, mine, reco, friends } = data;
+  const { t, locale } = await getI18n();
+  const fp = t.filmPage;
+  const loc = await getLocalizer(locale);
+  const dateFmt = dateFormat(locale, { day: "numeric", month: "long", year: "numeric" });
+  const score = (v: number) => formatNumber(v, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-  const genres = refs(film.genres).map((g) => g.name);
+  const genres = refs(film.genres).map(loc.genre);
   const directors = refs(film.directors).map((d) => d.name);
   const cast = refs(film.cast).map((c) => c.name);
   const recoPct = (reco?.details as { pct?: number } | null)?.pct;
@@ -75,7 +82,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
           <div className="min-w-0 pt-3 sm:pt-5">
             {recoPct != null && (
               <p className="eyebrow text-tungsten">
-                <span className="font-bold">{recoPct} %</span> pour toi
+                <span className="font-bold">{recoPct} %</span> {t.film.pctForYou}
               </p>
             )}
             <h1 className="marquee mt-1 text-4xl text-balance sm:text-6xl">
@@ -87,15 +94,15 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
             <p className="meta mt-2">
               {[
                 film.year,
-                directors[0] && `Réal. ${directors.join(", ")}`,
-                film.runtime ? `${film.runtime} min` : null,
-                film.voteAverage > 0 ? `TMDB ${film.voteAverage.toFixed(1).replace(".", ",")}` : null,
+                directors[0] && t.film.directedBy(directors.join(", ")),
+                film.runtime ? t.film.minutes(film.runtime) : null,
+                film.voteAverage > 0 ? `TMDB ${score(film.voteAverage)}` : null,
               ]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
             {genres.length > 0 && (
-              <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Genres">
+              <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={fp.genres}>
                 {genres.map((g) => (
                   <li key={g} className="chip cursor-default">
                     {g}
@@ -109,7 +116,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
         <div className="mt-6 flex flex-wrap gap-2 px-1 sm:px-6">
           <ShareFilmButton tmdbId={film.tmdbId} title={film.title} />
           <a href={`https://letterboxd.com/tmdb/${film.tmdbId}/`} target="_blank" rel="noreferrer" className="btn-ghost">
-            Voir sur Letterboxd <ExternalIcon className="size-3.5" />
+            {t.common.seeOnLetterboxd} <ExternalIcon className="size-3.5" />
           </a>
         </div>
       </header>
@@ -117,36 +124,38 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-10">
           {reco && (
-            <section aria-label="Pourquoi ce film" className="rounded-2xl border border-tungsten/30 bg-tungsten-soft p-5">
-              <p className="eyebrow text-tungsten">Recommandé pour toi</p>
-              <p className="mt-2 text-base text-screen">{reco.reason}</p>
+            <section aria-label={fp.whyLabel} className="rounded-2xl border border-tungsten/30 bg-tungsten-soft p-5">
+              <p className="eyebrow text-tungsten">{fp.recommended}</p>
+              <p className="mt-2 text-base text-screen">
+                {loc.reco(reco.reason, [], (reco.details as { because?: string[] } | null)?.because ?? []).reason}
+              </p>
             </section>
           )}
 
           <section aria-labelledby="ton-avis" className="reveal space-y-3">
             <h2 id="ton-avis" className="marquee text-3xl">
-              Ton avis
+              {fp.yourTake}
             </h2>
             {mine?.watched ? (
               <div className="card space-y-3 p-5">
                 <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {mine.rating != null ? <Stars value={mine.rating} className="text-lg" /> : <span className="text-sm text-dust-300">Vu, sans note</span>}
+                  {mine.rating != null ? <Stars value={mine.rating} className="text-lg" /> : <span className="text-sm text-dust-300">{fp.watchedNoRating}</span>}
                   {mine.liked && (
                     <span className="inline-flex items-center gap-1 text-sm text-dust-300">
-                      <HeartIcon className="size-4 text-curtain brightness-150" /> Coup de cœur
+                      <HeartIcon className="size-4 text-curtain brightness-150" /> {fp.liked}
                     </span>
                   )}
-                  {mine.watchedAt && <span className="meta">Vu le {dateFmt.format(mine.watchedAt)}</span>}
+                  {mine.watchedAt && <span className="meta">{fp.watchedOn(dateFmt.format(mine.watchedAt))}</span>}
                 </p>
                 {mine.review ? (
                   <ReviewText text={mine.review} spoilers={mine.reviewSpoilers} />
                 ) : (
-                  <p className="text-sm text-dust-400">Pas de critique écrite sur Letterboxd pour ce film.</p>
+                  <p className="text-sm text-dust-400">{fp.noReview}</p>
                 )}
               </div>
             ) : (
               <p className="card p-5 text-sm text-dust-300">
-                {mine?.inWatchlist ? "Dans ta watchlist : tu ne l'as pas encore vu." : "Tu n'as pas encore vu ce film."}
+                {mine?.inWatchlist ? fp.inWatchlist : fp.notSeen}
               </p>
             )}
           </section>
@@ -154,7 +163,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
           {film.overview && (
             <section aria-labelledby="synopsis" className="reveal space-y-3">
               <h2 id="synopsis" className="marquee text-3xl">
-                Synopsis
+                {fp.synopsis}
               </h2>
               <p className="max-w-prose text-base leading-relaxed text-screen/90">{film.overview}</p>
             </section>
@@ -162,13 +171,14 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
 
           <section aria-labelledby="amis" className="reveal space-y-3">
             <h2 id="amis" className="marquee text-3xl">
-              Tes amis{friendsWatched.length > 0 && <span className="text-dust-400"> · {friendsWatched.length}</span>}
+              {fp.yourFriends}
+              {friendsWatched.length > 0 && <span className="text-dust-400"> · {friendsWatched.length}</span>}
             </h2>
             {friendsWatched.length === 0 ? (
               <p className="text-sm text-dust-300">
-                Aucun de tes amis ne l&apos;a encore vu.
+                {fp.noFriendSaw}
                 {friendsWatchlist.length > 0 &&
-                  ` Il est dans la watchlist de ${friendsWatchlist.map((f) => displayName(f.user)).join(", ")}.`}
+                  fp.inFriendsWatchlist(friendsWatchlist.map((f) => displayName(f.user)).join(", "))}
               </p>
             ) : (
               <ul className="divide-y divide-velvet-800 rounded-2xl border border-velvet-800 bg-velvet-900/60">
@@ -192,32 +202,32 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
           </section>
         </div>
 
-        <aside aria-label="Fiche technique" className="space-y-5 lg:pt-12">
+        <aside aria-label={fp.credits} className="space-y-5 lg:pt-12">
           <dl className="card divide-y divide-velvet-800 text-sm">
             {directors.length > 0 && (
               <div className="p-4">
-                <dt className="eyebrow">Réalisation</dt>
+                <dt className="eyebrow">{fp.direction}</dt>
                 <dd className="mt-1">{directors.join(", ")}</dd>
               </div>
             )}
             {cast.length > 0 && (
               <div className="p-4">
-                <dt className="eyebrow">Avec</dt>
+                <dt className="eyebrow">{fp.cast}</dt>
                 <dd className="mt-1 leading-relaxed">{cast.join(", ")}</dd>
               </div>
             )}
             {film.releaseDate && (
               <div className="p-4">
-                <dt className="eyebrow">Sortie</dt>
+                <dt className="eyebrow">{fp.release}</dt>
                 <dd className="mt-1">{dateFmt.format(new Date(`${film.releaseDate}T12:00:00Z`))}</dd>
               </div>
             )}
             {film.voteCount > 0 && (
               <div className="p-4">
-                <dt className="eyebrow">Note TMDB</dt>
+                <dt className="eyebrow">{fp.tmdbRating}</dt>
                 <dd className="mt-1">
-                  {film.voteAverage.toFixed(1).replace(".", ",")} / 10{" "}
-                  <span className="meta">({film.voteCount.toLocaleString("fr-FR")} votes)</span>
+                  {score(film.voteAverage)} / 10{" "}
+                  <span className="meta">{fp.votes(formatNumber(film.voteCount, locale))}</span>
                 </dd>
               </div>
             )}

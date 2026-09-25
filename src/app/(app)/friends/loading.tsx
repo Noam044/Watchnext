@@ -1,7 +1,10 @@
+import { getI18n } from "@/i18n/server";
+
 /** Squelette de la page Amis. */
-export default function Loading() {
+export default async function Loading() {
+  const { t } = await getI18n();
   return (
-    <div className="space-y-12" aria-busy="true" aria-label="Chargement de tes amis">
+    <div className="space-y-12" aria-busy="true" aria-label={t.friends.loading}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
           <div className="skeleton h-3 w-24" />

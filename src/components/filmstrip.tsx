@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon } from "@/components/icons";
-import { formatRating } from "@/components/stars";
+import { useI18n } from "@/i18n/client";
+import { formatRating } from "@/i18n/format";
 import { backdropUrl, posterUrl } from "@/lib/tmdb-images";
 
 export type FilmstripFrame = {
@@ -27,6 +28,7 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const frameRefs = useRef<(HTMLLIElement | null)[]>([]);
   const [active, setActive] = useState(0);
+  const { t, locale } = useI18n();
 
   // La vue « dans la fenêtre » est celle qui croise la ligne verticale au centre du défilement.
   useEffect(() => {
@@ -57,8 +59,8 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
         <div
           ref={scrollerRef}
           role="region"
-          aria-roledescription="pellicule"
-          aria-label={`${label}. Flèches gauche et droite pour faire défiler.`}
+          aria-roledescription={t.profile.stripRole}
+          aria-label={t.profile.stripLabel(label)}
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -99,7 +101,7 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
                         goTo(i);
                       }
                     }}
-                    aria-label={`Fiche de ${f.title}`}
+                    aria-label={t.film.detailsOf(f.title)}
                     className="group relative block aspect-[3/2] overflow-hidden rounded-[3px] bg-black"
                   >
                     {src && (
@@ -142,14 +144,14 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
         <p className="mt-3 flex flex-wrap items-baseline justify-center gap-x-2 text-center" aria-live="polite">
           <span className="font-semibold">{current.title}</span>
           <span className="meta">
-            {[current.year, current.rating != null ? `${formatRating(current.rating)}★` : null, current.liked ? "♥" : null]
+            {[current.year, current.rating != null ? `${formatRating(current.rating, locale)}★` : null, current.liked ? "♥" : null]
               .filter(Boolean)
               .join(" · ")}
           </span>
         </p>
       )}
       <div className="mt-2 flex justify-center gap-2">
-        <button onClick={() => goTo(active - 1)} disabled={active === 0} className="btn-quiet px-3 py-1.5 text-xs" aria-label="Image précédente">
+        <button onClick={() => goTo(active - 1)} disabled={active === 0} className="btn-quiet px-3 py-1.5 text-xs" aria-label={t.profile.prevImage}>
           ←
         </button>
         <span className="meta self-center text-[11px]">
@@ -159,7 +161,7 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
           onClick={() => goTo(active + 1)}
           disabled={active === frames.length - 1}
           className="btn-quiet px-3 py-1.5 text-xs"
-          aria-label="Image suivante"
+          aria-label={t.profile.nextImage}
         >
           →
         </button>

@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useI18n } from "@/i18n/client";
 import { posterUrl } from "@/lib/tmdb-images";
 
 export function Poster({
@@ -17,10 +20,11 @@ export function Poster({
   sizes?: string;
 }) {
   const url = posterUrl(path, size);
+  const { t } = useI18n();
   return (
     <div className={`relative aspect-[2/3] overflow-hidden rounded-[5px] bg-velvet-800 ${className}`}>
       {url ? (
-        <Image src={url} alt={`Affiche de ${title}`} fill sizes={sizes} className="object-cover" preload={preload} />
+        <Image src={url} alt={t.film.posterOf(title)} fill sizes={sizes} className="object-cover" preload={preload} />
       ) : (
         <div className="absolute inset-0 grid place-items-center p-3 text-center">
           <span className="marquee text-lg text-dust-300">{title}</span>

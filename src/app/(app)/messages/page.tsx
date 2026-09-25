@@ -4,13 +4,18 @@ import { Avatar } from "@/components/avatar";
 import { ChatIcon } from "@/components/icons";
 import { getConversations } from "@/lib/messages";
 import { requireUser } from "@/lib/session";
-import { formatAgo } from "@/lib/text";
+import { formatAgo } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
 import { displayName } from "@/lib/users";
 
-export const metadata: Metadata = { title: "Messages" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t.messages.meta };
+}
 
 export default async function MessagesPage() {
   const me = await requireUser();
+  const { t, locale } = await getI18n();
+  const m = t.messages;
   const conversations = await getConversations(me.id);
   const started = conversations.filter((c) => c.last);
   const others = conversations.filter((c) => !c.last);
@@ -18,19 +23,19 @@ export default async function MessagesPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-10">
       <header>
-        <p className="eyebrow">Entre amis seulement</p>
-        <h1 className="marquee mt-1 text-6xl sm:text-7xl">Messages</h1>
+        <p className="eyebrow">{m.eyebrow}</p>
+        <h1 className="marquee mt-1 text-6xl sm:text-7xl">{m.title}</h1>
       </header>
 
       {conversations.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">
           <ChatIcon className="size-8 text-dust-400" />
-          <p className="marquee text-3xl">Personne à qui écrire</p>
+          <p className="marquee text-3xl">{m.emptyTitle}</p>
           <p className="max-w-md text-sm text-dust-300">
-            La messagerie est réservée à tes amis. Ajoute des amis pour discuter et vous envoyer des films.
+            {m.emptyText}
           </p>
           <Link href="/friends" className="btn-primary mt-2">
-            Trouver des amis
+            {m.findFriends}
           </Link>
         </div>
       ) : (
@@ -46,13 +51,13 @@ export default async function MessagesPage() {
                         <span className={`truncate ${unread ? "font-bold text-screen" : "font-semibold"}`}>{displayName(friend)}</span>
                         {last && (
                           <span className="meta shrink-0 text-[11px]" suppressHydrationWarning>
-                            {formatAgo(last.createdAt.toISOString())}
+                            {formatAgo(last.createdAt.toISOString(), locale)}
                           </span>
                         )}
                       </span>
                       <span className={`mt-0.5 flex items-center gap-2 text-sm ${unread ? "text-screen" : "text-dust-300"}`}>
                         <span className="truncate">
-                          {last?.senderId === me.id && "Toi : "}
+                          {last?.senderId === me.id && m.you}
                           {last?.film ? `🎬 ${last.film.title}${last.body ? ` · ${last.body}` : ""}` : last?.body}
                         </span>
                         {unread > 0 && (
@@ -70,7 +75,7 @@ export default async function MessagesPage() {
           {others.length > 0 && (
             <section aria-labelledby="demarrer" className="space-y-3">
               <h2 id="demarrer" className="eyebrow">
-                Démarrer une conversation
+                {m.startConversation}
               </h2>
               <ul className="flex flex-wrap gap-2">
                 {others.map(({ friend }) => (

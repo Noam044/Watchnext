@@ -60,11 +60,11 @@ export async function runClaimedSync(userId: string, username: string): Promise<
     await prisma.letterboxdProfile.update({ where: { userId }, data: { syncStartedAt: null, lastSyncError: null } });
     return { ok: true, changed };
   } catch (e) {
-    const error =
-      e instanceof AppError ? e.message : "Erreur inattendue pendant la synchronisation avec Letterboxd.";
+    // Enregistrée sous forme de clé de traduction : elle s'affichera dans la langue de l'utilisateur.
+    const stored = e instanceof AppError ? e.serialize() : JSON.stringify({ key: "lbUnreachable", params: {} });
     if (!(e instanceof AppError)) console.error(e);
-    await prisma.letterboxdProfile.update({ where: { userId }, data: { syncStartedAt: null, lastSyncError: error } });
-    return { ok: false, error };
+    await prisma.letterboxdProfile.update({ where: { userId }, data: { syncStartedAt: null, lastSyncError: stored } });
+    return { ok: false, error: stored };
   }
 }
 

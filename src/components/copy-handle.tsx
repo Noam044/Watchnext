@@ -1,21 +1,23 @@
 "use client";
 
 import { toast } from "@/components/toaster";
+import { useI18n } from "@/i18n/client";
 
 export function CopyHandle({ handle }: { handle: string }) {
+  const f = useI18n().t.friends;
   return (
     <button
       type="button"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(`${location.origin}/u/${handle}`);
-          toast("Lien de ton profil copié.");
+          toast(f.linkCopied);
         } catch {
-          toast("Copie impossible : sélectionne le pseudo à la main.", "error");
+          toast(f.copyFailed, "error");
         }
       }}
       className="chip font-mono"
-      title="Copier le lien de mon profil"
+      title={f.copyTitle}
     >
       @{handle}
     </button>

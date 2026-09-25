@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { notificationSummaryAction, type NotificationSummary } from "@/actions/messages";
 import { toast } from "@/components/toaster";
+import { useI18n } from "@/i18n/client";
 
 const POLL_MS = 20_000;
 
@@ -15,6 +16,7 @@ export function NotificationPoller({ initial }: { initial: Omit<NotificationSumm
   const router = useRouter();
   const pathname = usePathname();
   const last = useRef(initial);
+  const { t } = useI18n();
 
   // Les compteurs rendus par le serveur font foi (ex. après lecture d'une conversation).
   useEffect(() => {
@@ -29,9 +31,9 @@ export function NotificationPoller({ initial }: { initial: Omit<NotificationSumm
       const prev = last.current;
       const inThread = pathname.startsWith("/messages/");
       if (next.unreadMessages > prev.unreadMessages && !inThread && next.latestFrom) {
-        toast(`Nouveau message de ${next.latestFrom}`);
+        toast(t.messages.newMessageFrom(next.latestFrom));
       }
-      if (next.pendingRequests > prev.pendingRequests) toast("Nouvelle demande d'ami");
+      if (next.pendingRequests > prev.pendingRequests) toast(t.messages.newFriendRequest);
       if (next.unreadMessages !== prev.unreadMessages || next.pendingRequests !== prev.pendingRequests) {
         last.current = next;
         router.refresh();
@@ -43,7 +45,7 @@ export function NotificationPoller({ initial }: { initial: Omit<NotificationSumm
       clearInterval(timer);
       document.removeEventListener("visibilitychange", check);
     };
-  }, [pathname, router]);
+  }, [pathname, router, t]);
 
   return null;
 }

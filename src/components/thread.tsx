@@ -8,16 +8,20 @@ import { FilmIcon, SendIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { Stars } from "@/components/stars";
 import { toast } from "@/components/toaster";
+import { useI18n } from "@/i18n/client";
+import { dateFormat } from "@/i18n/format";
 
 const POLL_MS = 4000;
-const dayFmt = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-const timeFmt = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
 type FilmChoice = { tmdbId: number; title: string; year: number | null; posterPath: string | null; rating: number | null };
 
 /** Fil de discussion avec un ami : messages, films partagés, envoi et mise à jour automatique. */
 export function Thread({ friend, initial }: { friend: { id: string; name: string }; initial: MessageDTO[] }) {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const m = t.messages;
+  const dayFmt = dateFormat(locale, { weekday: "long", day: "numeric", month: "long" });
+  const timeFmt = dateFormat(locale, { hour: "2-digit", minute: "2-digit" });
   const [messages, setMessages] = useState(initial);
   const [body, setBody] = useState("");
   const [film, setFilm] = useState<FilmChoice | null>(null);
@@ -71,36 +75,36 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
 
   return (
     <>
-      <ol aria-label={`Conversation avec ${friend.name}`} className="flex min-h-[40vh] flex-col gap-2 py-6">
+      <ol aria-label={m.conversationWith(friend.name)} className="flex min-h-[40vh] flex-col gap-2 py-6">
         {messages.length === 0 && (
           <li className="m-auto max-w-xs text-center text-sm text-dust-300">
-            Aucun message pour l&apos;instant. Écris à {friend.name}, ou envoie-lui un film que tu as aimé.
+            {m.emptyThread(friend.name)}
           </li>
         )}
-        {messages.map((m, i) => {
-          const day = dayFmt.format(new Date(m.createdAt));
+        {messages.map((msg, i) => {
+          const day = dayFmt.format(new Date(msg.createdAt));
           const newDay = i === 0 || dayFmt.format(new Date(messages[i - 1].createdAt)) !== day;
           return (
-            <li key={m.id} className="contents">
+            <li key={msg.id} className="contents">
               {newDay && (
                 <p className="eyebrow my-3 text-center text-[10px]" suppressHydrationWarning>
                   {day}
                 </p>
               )}
-              <div className={`flex max-w-[85%] flex-col gap-1 ${m.mine ? "items-end self-end" : "items-start self-start"}`}>
-                {m.film && <SharedFilm film={m.film} mine={m.mine} />}
-                {m.body && (
+              <div className={`flex max-w-[85%] flex-col gap-1 ${msg.mine ? "items-end self-end" : "items-start self-start"}`}>
+                {msg.film && <SharedFilm film={msg.film} mine={msg.mine} />}
+                {msg.body && (
                   <p
                     className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
-                      m.mine ? "rounded-br-md bg-tungsten text-velvet-950" : "rounded-bl-md bg-velvet-800 text-screen"
+                      msg.mine ? "rounded-br-md bg-tungsten text-velvet-950" : "rounded-bl-md bg-velvet-800 text-screen"
                     }`}
                   >
-                    {m.body}
+                    {msg.body}
                   </p>
                 )}
                 <span className="meta px-1 text-[10px] text-dust-400" suppressHydrationWarning>
-                  {timeFmt.format(new Date(m.createdAt))}
-                  {m.id === lastMineId && m.read && " · Vu"}
+                  {timeFmt.format(new Date(msg.createdAt))}
+                  {msg.id === lastMineId && msg.read && m.read}
                 </span>
               </div>
             </li>
@@ -123,7 +127,7 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
             <span className="min-w-0 flex-1 truncate text-sm">
               <span className="font-semibold">{film.title}</span> <span className="meta">{film.year ?? ""}</span>
             </span>
-            <button type="button" onClick={() => setFilm(null)} className="grid size-8 place-items-center rounded-full hover:bg-velvet-700" aria-label="Retirer le film">
+            <button type="button" onClick={() => setFilm(null)} className="grid size-8 place-items-center rounded-full hover:bg-velvet-700" aria-label={m.removeFilm}>
               <XIcon />
             </button>
           </div>
@@ -143,8 +147,8 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
             onClick={() => setPicking((v) => !v)}
             aria-expanded={picking}
             className="grid size-10 shrink-0 place-items-center rounded-full text-dust-300 transition hover:bg-velvet-800 hover:text-screen"
-            aria-label="Joindre un film"
-            title="Joindre un film de ta bibliothèque"
+            aria-label={m.attachFilm}
+            title={m.attachFilmTitle}
           >
             <FilmIcon className="size-5" />
           </button>
@@ -159,15 +163,15 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
             }}
             rows={1}
             maxLength={2000}
-            placeholder={`Écrire à ${friend.name}…`}
-            aria-label="Message"
+            placeholder={m.writeTo(friend.name)}
+            aria-label={m.message}
             className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm text-screen [field-sizing:content] placeholder:text-dust-400 focus:outline-none"
           />
           <button
             type="submit"
             disabled={pending || (!body.trim() && !film)}
             className="grid size-10 shrink-0 place-items-center rounded-full bg-tungsten text-velvet-950 transition hover:bg-tungsten-strong disabled:opacity-40"
-            aria-label="Envoyer"
+            aria-label={m.send}
           >
             <SendIcon className="size-4.5" />
           </button>
@@ -178,6 +182,7 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
 }
 
 function SharedFilm({ film, mine }: { film: NonNullable<MessageDTO["film"]>; mine: boolean }) {
+  const m = useI18n().t.messages;
   return (
     <Link
       href={`/film/${film.tmdbId}`}
@@ -187,9 +192,9 @@ function SharedFilm({ film, mine }: { film: NonNullable<MessageDTO["film"]>; min
     >
       <Poster path={film.posterPath} title={film.title} size="w185" sizes="56px" className="w-14 shrink-0" />
       <span className="min-w-0">
-        <span className="eyebrow block text-[9px]">Film partagé</span>
+        <span className="eyebrow block text-[9px]">{m.sharedFilm}</span>
         <span className="block truncate font-semibold group-hover:text-tungsten">{film.title}</span>
-        <span className="meta block text-[11px]">{film.year ?? ""} · Voir la fiche →</span>
+        <span className="meta block text-[11px]">{film.year ?? ""} · {m.seeFilm}</span>
       </span>
     </Link>
   );
@@ -199,6 +204,8 @@ function SharedFilm({ film, mine }: { film: NonNullable<MessageDTO["film"]>; min
 function FilmPicker({ onPick, onClose }: { onPick: (f: FilmChoice) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<FilmChoice[] | null>(null);
+  const { t } = useI18n();
+  const m = t.messages;
 
   useEffect(() => {
     let cancelled = false;
@@ -219,19 +226,19 @@ function FilmPicker({ onPick, onClose }: { onPick: (f: FilmChoice) => void; onCl
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && onClose()}
-          placeholder="Chercher dans tes films"
-          aria-label="Chercher un film de ta bibliothèque"
+          placeholder={m.searchMyFilms}
+          aria-label={m.searchMyFilmsLabel}
           className="input rounded-full py-2"
         />
-        <button type="button" onClick={onClose} className="grid size-9 shrink-0 place-items-center rounded-full hover:bg-velvet-800" aria-label="Fermer">
+        <button type="button" onClick={onClose} className="grid size-9 shrink-0 place-items-center rounded-full hover:bg-velvet-800" aria-label={t.common.close}>
           <XIcon />
         </button>
       </div>
       <ul className="mt-2 max-h-56 overflow-y-auto">
         {results === null ? (
-          <li className="meta px-2 py-3">Chargement…</li>
+          <li className="meta px-2 py-3">{t.common.loading}</li>
         ) : results.length === 0 ? (
-          <li className="meta px-2 py-3">{q ? "Aucun film de ta bibliothèque ne correspond." : "Aucun coup de cœur pour l'instant : cherche un titre."}</li>
+          <li className="meta px-2 py-3">{q ? m.noLibraryMatch : m.noFavorites}</li>
         ) : (
           results.map((f) => (
             <li key={f.tmdbId}>

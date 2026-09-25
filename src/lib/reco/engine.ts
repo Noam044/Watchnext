@@ -57,10 +57,7 @@ export async function generateRecommendations(userId: string) {
   const library = await prisma.userFilm.findMany({ where: { userId }, include: { film: true } });
   const watched = library.filter((uf) => uf.watched);
   if (watched.length < MIN_WATCHED) {
-    throw new AppError(
-      "NOT_ENOUGH_DATA",
-      `Il faut au moins ${MIN_WATCHED} films vus pour calculer des recommandations. Importe ton historique Letterboxd.`,
-    );
+    throw new AppError("NOT_ENOUGH_DATA", "notEnoughData", { min: MIN_WATCHED });
   }
 
   // Les films les plus influents doivent avoir leurs détails (réalisateurs, mots-clés…).

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "@/lib/errors";
 import { findFriendship, relationFrom, type Relation } from "@/lib/friends";
@@ -11,9 +12,10 @@ export type FriendOp = "add" | "accept" | "decline" | "cancel" | "remove";
 /** Ajoute, accepte, refuse, annule ou retire un ami. Renvoie le nouveau lien. */
 export async function friendAction(targetId: string, op: FriendOp): Promise<ActionResult<{ relation: Relation }>> {
   const me = await requireUser();
-  if (targetId === me.id) return { ok: false, error: "Tu ne peux pas t'ajouter toi-même." };
+  const txt = (await getI18n()).t.friends;
+  if (targetId === me.id) return { ok: false, error: txt.errSelf };
   const target = await prisma.user.findUnique({ where: { id: targetId }, select: { id: true } });
-  if (!target) return { ok: false, error: "Cet utilisateur n'existe plus." };
+  if (!target) return { ok: false, error: txt.errGone };
 
   const f = await findFriendship(me.id, targetId);
   const current = relationFrom(me.id, targetId, f);
@@ -28,7 +30,7 @@ export async function friendAction(targetId: string, op: FriendOp): Promise<Acti
       }
       break;
     case "accept":
-      if (current !== "incoming") return { ok: false, error: "Cette demande n'existe plus." };
+      if (current !== "incoming") return { ok: false, error: txt.errRequestGone };
       await prisma.friendship.update({ where: { id: f!.id }, data: { status: "ACCEPTED", acceptedAt: new Date() } });
       break;
     case "decline":

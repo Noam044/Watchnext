@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { toErrorResult, type ActionResult } from "@/lib/errors";
 import { syncRss } from "@/lib/import";
@@ -16,7 +17,7 @@ export async function syncRssAction(
     revalidatePath("/dashboard");
     return { ok: true, data };
   } catch (e) {
-    return toErrorResult(e);
+    return toErrorResult(e, (await getI18n()).t);
   }
 }
 
@@ -27,7 +28,7 @@ export async function regenerateAction(): Promise<ActionResult<{ count: number }
     revalidatePath("/dashboard");
     return { ok: true, data: { count } };
   } catch (e) {
-    return toErrorResult(e);
+    return toErrorResult(e, (await getI18n()).t);
   }
 }
 
@@ -38,7 +39,7 @@ async function ownReco(userId: string, recoId: string) {
 export async function hideRecommendationAction(recoId: string): Promise<ActionResult> {
   const user = await requireUser();
   const reco = await ownReco(user.id, recoId);
-  if (!reco) return { ok: false, error: "Recommandation introuvable." };
+  if (!reco) return { ok: false, error: (await getI18n()).t.dashboard.recoNotFound };
   await prisma.recommendation.update({ where: { id: reco.id }, data: { hidden: true } });
   revalidatePath("/dashboard");
   return { ok: true };
@@ -54,7 +55,7 @@ export async function unhideAllAction(): Promise<ActionResult> {
 export async function markSeenAction(recoId: string, liked = false): Promise<ActionResult> {
   const user = await requireUser();
   const reco = await ownReco(user.id, recoId);
-  if (!reco) return { ok: false, error: "Recommandation introuvable." };
+  if (!reco) return { ok: false, error: (await getI18n()).t.dashboard.recoNotFound };
   await prisma.$transaction([
     prisma.userFilm.upsert({
       where: { userId_filmId: { userId: user.id, filmId: reco.filmId } },

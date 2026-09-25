@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { syncStateAction, type SyncStateDTO } from "@/actions/sync";
 import { toast } from "@/components/toaster";
-import { formatAgo } from "@/lib/text";
+import { useI18n } from "@/i18n/client";
+import { formatAgo } from "@/i18n/format";
 
 const POLL_MS = 4000;
 const MAX_POLLS = 45; // 3 minutes
@@ -15,6 +16,7 @@ const MAX_POLLS = 45; // 3 minutes
  */
 export function SyncStatus({ initial }: { initial: SyncStateDTO }) {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const [state, setState] = useState(initial);
 
   // Nouvel état venu du serveur (ex. après « Synchroniser » ou un rafraîchissement).
@@ -37,7 +39,7 @@ export function SyncStatus({ initial }: { initial: SyncStateDTO }) {
       clearInterval(timer);
       setState(next);
       if (next.error) toast(next.error, "error");
-      else if (next.lastRssSync !== state.lastRssSync) toast("Journal Letterboxd synchronisé.");
+      else if (next.lastRssSync !== state.lastRssSync) toast(t.dashboard.syncDone);
       router.refresh();
     };
     const timer = setInterval(check, POLL_MS);
@@ -49,27 +51,27 @@ export function SyncStatus({ initial }: { initial: SyncStateDTO }) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [state.running, state.lastRssSync, router]);
+  }, [state.running, state.lastRssSync, router, t]);
 
   if (state.running) {
     return (
       <p aria-live="polite" className="meta flex items-center gap-2">
         <span className="size-2.5 animate-spin rounded-full border-2 border-tungsten border-t-transparent" />
-        Synchronisation avec ton journal Letterboxd…
+        {t.dashboard.syncRunning}
       </p>
     );
   }
   if (state.error) {
     return (
       <p className="meta text-bad" role="status">
-        Dernière synchronisation échouée : {state.error}
+        {t.dashboard.syncFailed(state.error)}
       </p>
     );
   }
   if (!state.lastRssSync) return null;
   return (
     <p className="meta" suppressHydrationWarning>
-      Synchronisé avec Letterboxd {formatAgo(state.lastRssSync)}
+      {t.dashboard.syncedAgo(formatAgo(state.lastRssSync, locale))}
     </p>
   );
 }

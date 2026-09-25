@@ -5,6 +5,7 @@ import { Avatar } from "@/components/avatar";
 import { BackButton } from "@/components/back-button";
 import { LockIcon } from "@/components/icons";
 import { Thread } from "@/components/thread";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { canMessage, getThread, markThreadRead } from "@/lib/messages";
 import { requireUser } from "@/lib/session";
@@ -18,7 +19,8 @@ const getUser = (handle: string) =>
 
 export async function generateMetadata({ params }: PageProps<"/messages/[handle]">): Promise<Metadata> {
   const user = await getUser((await params).handle);
-  return { title: user ? `Messages · ${displayName(user)}` : "Messages" };
+  const m = (await getI18n()).t.messages;
+  return { title: user ? m.metaThread(displayName(user)) : m.meta };
 }
 
 export default async function ThreadPage({ params }: PageProps<"/messages/[handle]">) {
@@ -26,6 +28,7 @@ export default async function ThreadPage({ params }: PageProps<"/messages/[handl
   const friend = await getUser((await params).handle);
   if (!friend || friend.id === me.id) notFound();
   const name = displayName(friend);
+  const m = (await getI18n()).t.messages;
 
   if (!(await canMessage(me.id, friend.id))) {
     return (
@@ -33,10 +36,10 @@ export default async function ThreadPage({ params }: PageProps<"/messages/[handl
         <BackButton />
         <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">
           <LockIcon className="size-7 text-dust-400" />
-          <p className="marquee text-3xl">Réservé aux amis</p>
-          <p className="max-w-md text-sm text-dust-300">Ajoute {name} en ami pour pouvoir lui écrire.</p>
+          <p className="marquee text-3xl">{m.friendsOnlyTitle}</p>
+          <p className="max-w-md text-sm text-dust-300">{m.friendsOnlyText(name)}</p>
           <Link href={`/u/${friend.handle}`} className="btn-primary mt-2">
-            Voir son profil
+            {m.seeProfile}
           </Link>
         </div>
       </div>

@@ -10,7 +10,10 @@ import { FullImportReminder } from "@/components/full-import-reminder";
 import { ChatIcon, ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
 import { Library } from "@/components/library";
 import { ScopeScreen } from "@/components/scope-screen";
+import { dateFormat } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
+import { getLocalizer } from "@/lib/localize";
 import { canViewLibrary, favoritesNotSeenBy, getRelation, tasteMatch } from "@/lib/friends";
 import {
   getLibraryCounts,
@@ -29,10 +32,9 @@ const getUser = (handle: string) =>
 
 export async function generateMetadata({ params }: PageProps<"/u/[handle]">): Promise<Metadata> {
   const user = await getUser((await params).handle);
-  return { title: user ? `${displayName(user)} (@${user.handle})` : "Profil introuvable" };
+  return { title: user ? `${displayName(user)} (@${user.handle})` : (await getI18n()).t.profile.notFound };
 }
 
-const monthFmt = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" });
 
 export default async function ProfilePage({ params, searchParams }: PageProps<"/u/[handle]">) {
   const me = await requireUser();
@@ -45,7 +47,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
   const visible = canViewLibrary(relation, owner.publicProfile);
   const query = parseLibraryQuery(await searchParams);
 
-  const [emblem, summary, counts, page, match, favorites, rssOnly] = await Promise.all([
+  const [emblem, summary, counts, page, match, favorites, rssOnly, { t, locale }] = await Promise.all([
     resolveEmblem(owner),
     visible ? getProfileSummary(owner.id) : null,
     visible ? getLibraryCounts(owner.id) : null,
@@ -53,7 +55,11 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
     !isSelf && visible ? tasteMatch(me.id, owner.id) : null,
     !isSelf && visible ? favoritesNotSeenBy(owner.id, me.id) : null,
     isSelf ? needsFullImport(owner.id) : false,
+    getI18n(),
   ]);
+  const p = t.profile;
+  const loc = await getLocalizer(locale);
+  const monthFmt = dateFormat(locale, { month: "long", year: "numeric" });
 
   return (
     <div className="space-y-12">
@@ -70,7 +76,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           <div className="absolute inset-0 bg-linear-to-t from-velvet-950/80 via-transparent to-transparent" />
           {emblem && (
             <p className="meta absolute right-4 bottom-3 hidden text-screen/75 sm:block">
-              Film fétiche · {emblem.title}
+              {p.emblem} · {emblem.title}
               {emblem.year ? ` (${emblem.year})` : ""}
             </p>
           )}
@@ -95,20 +101,20 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
                     Letterboxd <ExternalIcon className="size-3" />
                   </a>
                 )}
-                <span>Membre depuis {monthFmt.format(owner.createdAt)}</span>
+                <span>{p.memberSince(monthFmt.format(owner.createdAt))}</span>
               </p>
             </div>
           </div>
           <div className="shrink-0 pb-1">
             {isSelf ? (
               <Link href="/profile/edit" className="btn-ghost">
-                <PencilIcon /> Modifier le profil
+                <PencilIcon /> {p.editProfile}
               </Link>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 {relation === "friends" && (
                   <Link href={`/messages/${owner.handle}`} className="btn-primary">
-                    <ChatIcon /> Écrire
+                    <ChatIcon /> {p.write}
                   </Link>
                 )}
                 <FriendButton userId={owner.id} name={name} relation={relation} />
@@ -121,11 +127,11 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
 
         {summary && (
           <dl className="mt-8 grid grid-cols-3 divide-velvet-800 border-y border-velvet-800 sm:grid-cols-5 sm:divide-x">
-            <Stat label="Films vus" value={summary.watchedCount} />
-            <Stat label="Notés" value={summary.ratedCount} />
-            <Stat label="Moyenne" value={summary.averageRating} decimals suffix="★" />
-            <Stat label="Coups de cœur" value={summary.likedCount} />
-            <Stat label="Watchlist" value={summary.watchlistCount} />
+            <Stat label={p.statWatched} value={summary.watchedCount} />
+            <Stat label={p.statRated} value={summary.ratedCount} />
+            <Stat label={p.statAverage} value={summary.averageRating} decimals suffix="★" />
+            <Stat label={p.statLiked} value={summary.likedCount} />
+            <Stat label={p.statWatchlist} value={summary.watchlistCount} />
           </dl>
         )}
       </header>
@@ -135,13 +141,13 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
       {!visible && (
         <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">
           <LockIcon className="size-7 text-dust-400" />
-          <p className="marquee text-3xl">Bibliothèque réservée aux amis</p>
+          <p className="marquee text-3xl">{p.lockedTitle}</p>
           <p className="max-w-md text-sm text-dust-300">
             {relation === "outgoing"
-              ? `Ta demande est envoyée. Tu verras les films de ${name} dès qu'elle sera acceptée.`
+              ? p.lockedOutgoing(name)
               : relation === "incoming"
-                ? `${name} veut t'ajouter en ami. Accepte pour voir vos films en commun.`
-                : `Ajoute ${name} en ami pour voir ses notes et vos films en commun.`}
+                ? p.lockedIncoming(name)
+                : p.lockedNone(name)}
           </p>
         </div>
       )}
@@ -150,25 +156,25 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
         <section aria-labelledby="affinite" className="reveal grid gap-6 lg:grid-cols-[18rem_1fr] lg:items-start">
           <div className="card p-6">
             <p className="eyebrow" id="affinite">
-              Affinité avec toi
+              {p.affinity}
             </p>
             <p className="marquee mt-2 text-7xl text-tungsten tabular-nums">
               {match.pct != null ? <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> : "—"}
             </p>
             <p className="mt-3 text-sm text-dust-300">
               {match.pct != null
-                ? `Calculée sur ${match.ratedTogether} films que vous avez notés tous les deux.`
-                : "Pas assez de films notés en commun pour la calculer (5 minimum)."}
+                ? p.affinityBasis(match.ratedTogether)
+                : p.affinityTooFew}
             </p>
             <p className="meta mt-4 border-t border-velvet-800 pt-4">
-              {match.common} films vus en commun · {match.bothLiked} coups de cœur partagés
+              {p.affinityCommon(match.common, match.bothLiked)}
             </p>
           </div>
           {favorites && favorites.length > 0 && (
             <div className="min-w-0">
-              <h2 className="marquee mb-4 text-3xl">Ses coups de cœur que tu n&apos;as pas vus</h2>
+              <h2 className="marquee mb-4 text-3xl">{p.theirFavorites}</h2>
               <Filmstrip
-                label={`Coups de cœur de ${name} que tu n'as pas vus`}
+                label={p.theirFavoritesLabel(name)}
                 frames={favorites.map((f) => ({
                   id: f.id,
                   tmdbId: f.film.tmdbId,
@@ -188,24 +194,24 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
       {summary && summary.watchedCount > 0 && (
         <section aria-labelledby="gouts" className="reveal space-y-4">
           <h2 id="gouts" className="marquee text-4xl">
-            {isSelf ? "Tes goûts" : "Ses goûts"}
+            {isSelf ? p.tasteSelf : p.tasteOther}
           </h2>
           <div className="card grid divide-y divide-velvet-800 md:grid-cols-[1.2fr_1fr_1fr] md:divide-x md:divide-y-0">
-            <RankList title="Genres" items={summary.topGenres.map((g) => ({ name: g.name, score: g.score }))} />
+            <RankList title={p.genres} items={summary.topGenres.map((g) => ({ name: loc.genre(g), score: g.score }))} />
             <RankList
-              title="Réalisateurs"
-              items={summary.topDirectors.map((d) => ({ name: d.name, score: d.score, sub: `${d.count} films` }))}
-              empty="Pas encore assez de films notés."
+              title={p.directors}
+              items={summary.topDirectors.map((d) => ({ name: d.name, score: d.score, sub: p.filmsCount(d.count) }))}
+              empty={p.notEnoughRated}
             />
             <RankList
-              title="Acteurs"
-              items={summary.topActors.map((d) => ({ name: d.name, score: d.score, sub: `${d.count} films` }))}
-              empty="Pas encore assez de films notés."
+              title={p.actors}
+              items={summary.topActors.map((d) => ({ name: d.name, score: d.score, sub: p.filmsCount(d.count) }))}
+              empty={p.notEnoughRated}
             />
           </div>
           {summary.topDecades[0] && (
             <p className="meta">
-              Décennie favorite : <span className="text-screen">{summary.topDecades[0].name}</span>
+              {p.favoriteDecade} <span className="text-screen">{loc.decade(summary.topDecades[0].id)}</span>
             </p>
           )}
         </section>

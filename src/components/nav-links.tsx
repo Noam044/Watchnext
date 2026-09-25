@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/avatar";
+import { useI18n } from "@/i18n/client";
 import { ChatIcon, ScreenIcon, UploadIcon, UserIcon, UsersIcon } from "@/components/icons";
 
 const LINKS = [
-  { href: "/dashboard", label: "À voir", Icon: ScreenIcon },
-  { href: "/friends", label: "Amis", Icon: UsersIcon },
-  { href: "/messages", label: "Messages", Icon: ChatIcon },
-  { href: "/import", label: "Importer", Icon: UploadIcon },
+  { href: "/dashboard", key: "toWatch", Icon: ScreenIcon },
+  { href: "/friends", key: "friends", Icon: UsersIcon },
+  { href: "/messages", key: "messages", Icon: ChatIcon },
+  { href: "/import", key: "import", Icon: UploadIcon },
 ] as const;
 
 type Me = { name: string; handle: string; pendingRequests: number; unreadMessages: number };
@@ -39,9 +40,10 @@ function Badge({ count }: { count: number }) {
 /** Navigation principale (écran large). */
 export function DesktopNav({ me }: { me: Me }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   return (
-    <nav aria-label="Navigation principale" className="ml-8 hidden items-center gap-1 md:flex">
-      {LINKS.map(({ href, label }) => {
+    <nav aria-label={t.nav.main} className="ml-8 hidden items-center gap-1 md:flex">
+      {LINKS.map(({ href, key }) => {
         const active = isActive(pathname, href, me.handle);
         return (
           <Link
@@ -52,7 +54,7 @@ export function DesktopNav({ me }: { me: Me }) {
               active ? "bg-velvet-800 text-screen" : "text-dust-300 hover:text-screen"
             }`}
           >
-            {label}
+            {t.nav[key]}
             <Badge count={badgeFor(href, me)} />
           </Link>
         );
@@ -81,14 +83,15 @@ export function ProfileLink({ me }: { me: Me }) {
 /** Barre d'onglets fixée en bas (mobile) : les pages sont à portée de pouce. */
 export function MobileTabBar({ me }: { me: Me }) {
   const pathname = usePathname();
-  const tabs = [...LINKS, { href: "/profile", label: "Profil", Icon: UserIcon }] as const;
+  const { t } = useI18n();
+  const tabs = [...LINKS, { href: "/profile", key: "profile", Icon: UserIcon }] as const;
   return (
     <nav
-      aria-label="Navigation principale"
+      aria-label={t.nav.main}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-velvet-800 bg-velvet-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
     >
       <ul className="grid grid-cols-5">
-        {tabs.map(({ href, label, Icon }) => {
+        {tabs.map(({ href, key, Icon }) => {
           const active = isActive(pathname, href, me.handle);
           return (
             <li key={href}>
@@ -107,7 +110,7 @@ export function MobileTabBar({ me }: { me: Me }) {
                     </span>
                   )}
                 </span>
-                {label}
+                {t.nav[key]}
               </Link>
             </li>
           );

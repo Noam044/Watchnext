@@ -87,7 +87,7 @@ async function progress(jobId: string): Promise<JobProgress> {
  */
 export async function processImportBatch(userId: string, jobId: string, batchSize = 30): Promise<JobProgress> {
   const job = await prisma.importJob.findFirst({ where: { id: jobId, userId } });
-  if (!job) throw new AppError("NOT_FOUND", "Import introuvable.", 404);
+  if (!job) throw new AppError("NOT_FOUND", "importNotFound", {}, 404);
   if (job.status === "DONE" || job.status === "FAILED") return progress(jobId);
 
   await prisma.importJob.update({ where: { id: jobId }, data: { status: "PROCESSING" } });

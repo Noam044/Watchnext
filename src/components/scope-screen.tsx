@@ -47,7 +47,8 @@ export function ScopeScreen({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--color-velvet-700),var(--color-velvet-950))]" />
         )}
         {/* Vignettage de projection */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgb(0_0_0/0.55))]" />
+        {/* Vignettage de projection : il s'ouvre au survol des écrans cliquables (group/screen). */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgb(0_0_0/0.55))] transition-opacity duration-700 group-hover/screen:opacity-30" />
       </div>
       {children}
     </div>

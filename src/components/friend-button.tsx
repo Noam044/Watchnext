@@ -6,14 +6,8 @@ import { friendAction, type FriendOp } from "@/actions/friends";
 import { CheckIcon, PlusIcon, XIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
 import type { Relation } from "@/lib/friends";
+import { useI18n } from "@/i18n/client";
 
-const DONE: Record<FriendOp, string> = {
-  add: "Demande d'ami envoyée.",
-  accept: "Vous êtes maintenant amis.",
-  decline: "Demande refusée.",
-  cancel: "Demande annulée.",
-  remove: "Retiré de tes amis.",
-};
 
 export function FriendButton({
   userId,
@@ -29,6 +23,7 @@ export function FriendButton({
   const router = useRouter();
   const [relation, setRelation] = useState(initial);
   const [pending, startTransition] = useTransition();
+  const p = useI18n().t.profile;
   // Le lien a pu changer ailleurs sur la page (ex. demande acceptée dans une autre liste).
   const [lastInitial, setLastInitial] = useState(initial);
   if (initial !== lastInitial) {
@@ -38,11 +33,11 @@ export function FriendButton({
 
   const run = (op: FriendOp) =>
     startTransition(async () => {
-      if (op === "remove" && !confirm(`Retirer ${name} de tes amis ?`)) return;
+      if (op === "remove" && !confirm(p.confirmRemove(name))) return;
       const res = await friendAction(userId, op);
       if (!res.ok) return toast(res.error, "error");
       setRelation(res.data.relation);
-      toast(res.data.relation === "friends" && op === "add" ? DONE.accept : DONE[op]);
+      toast(res.data.relation === "friends" && op === "add" ? p.done.accept : p.done[op]);
       router.refresh();
     });
 
@@ -54,7 +49,7 @@ export function FriendButton({
     case "none":
       return (
         <button onClick={() => run("add")} disabled={pending} className={`btn-primary ${size}`}>
-          <PlusIcon /> Ajouter en ami
+          <PlusIcon /> {p.addFriend}
         </button>
       );
     case "outgoing":
@@ -63,20 +58,20 @@ export function FriendButton({
           onClick={() => run("cancel")}
           disabled={pending}
           className={`btn-ghost group/btn ${size}`}
-          title="Cliquer pour annuler la demande"
+          title={p.cancelRequestTitle}
         >
-          <span className="group-hover/btn:hidden">Demande envoyée</span>
-          <span className="hidden group-hover/btn:inline">Annuler la demande</span>
+          <span className="group-hover/btn:hidden">{p.requestSent}</span>
+          <span className="hidden group-hover/btn:inline">{p.cancelRequest}</span>
         </button>
       );
     case "incoming":
       return (
         <div className="flex gap-2">
           <button onClick={() => run("accept")} disabled={pending} className={`btn-primary ${size}`}>
-            <CheckIcon /> Accepter
+            <CheckIcon /> {p.accept}
           </button>
           <button onClick={() => run("decline")} disabled={pending} className={`btn-quiet ${size}`}>
-            <XIcon /> Refuser
+            <XIcon /> {p.decline}
           </button>
         </div>
       );
@@ -84,11 +79,11 @@ export function FriendButton({
       return (
         <div className="flex items-center gap-1">
           <span className={`btn cursor-default border border-exit/30 text-exit ${size}`}>
-            <CheckIcon /> Amis
+            <CheckIcon /> {p.friends}
           </span>
           {!compact && (
             <button onClick={() => run("remove")} disabled={pending} className="btn-quiet text-xs">
-              Retirer
+              {p.remove}
             </button>
           )}
         </div>

@@ -2,21 +2,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRightIcon } from "@/components/icons";
 import { EmailForm, EmblemPicker, PasswordForm, ProfileForm } from "@/components/settings-forms";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { emblemCandidates } from "@/lib/profile";
 import { requireUser } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Modifier le profil" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t.settings.meta };
+}
 
 const SECTIONS = [
-  { id: "profil", label: "Profil public" },
-  { id: "film-fetiche", label: "Film fétiche" },
-  { id: "email", label: "Adresse email" },
-  { id: "mot-de-passe", label: "Mot de passe" },
-];
+  { id: "profil", key: "sectionProfile" },
+  { id: "film-fetiche", key: "sectionEmblem" },
+  { id: "email", key: "sectionEmail" },
+  { id: "mot-de-passe", key: "sectionPassword" },
+] as const;
 
 export default async function EditProfilePage() {
   const me = await requireUser();
+  const s = (await getI18n()).t.settings;
   const [user, candidates] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: me.id },
@@ -41,22 +45,22 @@ export default async function EditProfilePage() {
   return (
     <div className="grid gap-10 lg:grid-cols-[13rem_1fr]">
       <aside className="lg:sticky lg:top-24 lg:self-start">
-        <p className="eyebrow">Réglages</p>
-        <h1 className="marquee mt-1 text-5xl">Ton profil</h1>
+        <p className="eyebrow">{s.eyebrow}</p>
+        <h1 className="marquee mt-1 text-5xl">{s.title}</h1>
         <Link href={`/u/${user.handle}`} className="meta mt-3 inline-flex items-center gap-1 hover:text-screen">
-          Voir mon profil <ArrowRightIcon className="size-3.5" />
+          {s.viewProfile} <ArrowRightIcon className="size-3.5" />
         </Link>
-        <nav aria-label="Sections" className="mt-8 hidden flex-col gap-1 border-l border-velvet-800 lg:flex">
-          {SECTIONS.map((s) => (
-            <a key={s.id} href={`#${s.id}`} className="-ml-px border-l border-transparent py-1 pl-4 text-sm text-dust-300 hover:border-tungsten hover:text-screen">
-              {s.label}
+        <nav aria-label={s.sections} className="mt-8 hidden flex-col gap-1 border-l border-velvet-800 lg:flex">
+          {SECTIONS.map((sec) => (
+            <a key={sec.id} href={`#${sec.id}`} className="-ml-px border-l border-transparent py-1 pl-4 text-sm text-dust-300 hover:border-tungsten hover:text-screen">
+              {s[sec.key]}
             </a>
           ))}
         </nav>
       </aside>
 
       <div className="min-w-0 space-y-6">
-        <Section id="profil" title="Profil public" hint="Ce que voient les autres membres de Watchnext.">
+        <Section id="profil" title={s.sectionProfile} hint={s.sectionProfileHint}>
           <ProfileForm
             defaults={{
               name: user.name ?? "",
@@ -67,13 +71,13 @@ export default async function EditProfilePage() {
             }}
           />
         </Section>
-        <Section id="film-fetiche" title="Film fétiche" hint="Son image devient la bannière de ton profil. Choisis parmi tes films les mieux notés.">
+        <Section id="film-fetiche" title={s.sectionEmblem} hint={s.sectionEmblemHint}>
           <EmblemPicker options={options} selected={user.emblemFilmId} />
         </Section>
-        <Section id="email" title="Adresse email" hint="Elle sert à te connecter et n'est jamais affichée.">
+        <Section id="email" title={s.sectionEmail} hint={s.sectionEmailHint}>
           <EmailForm email={user.email} />
         </Section>
-        <Section id="mot-de-passe" title="Mot de passe">
+        <Section id="mot-de-passe" title={s.sectionPassword}>
           <PasswordForm />
         </Section>
       </div>

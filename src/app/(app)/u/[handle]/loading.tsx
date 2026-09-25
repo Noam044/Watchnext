@@ -1,7 +1,10 @@
+import { getI18n } from "@/i18n/server";
+
 /** Squelette du profil : bannière, identité, statistiques puis affiches. */
-export default function Loading() {
+export default async function Loading() {
+  const { t } = await getI18n();
   return (
-    <div className="space-y-12" aria-busy="true" aria-label="Chargement du profil">
+    <div className="space-y-12" aria-busy="true" aria-label={t.profile.loading}>
       <div>
         <div className="skeleton -mx-4 aspect-[2.39/1] rounded-none sm:mx-0 sm:rounded-md" />
         <div className="flex items-end gap-4 px-1 sm:px-6">

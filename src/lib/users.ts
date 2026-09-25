@@ -2,7 +2,6 @@ import "server-only";
 import { prisma } from "@/lib/db";
 
 export const HANDLE_RE = /^[a-z0-9_]{3,24}$/;
-export const HANDLE_RULES = "3 à 24 caractères : lettres minuscules, chiffres ou _.";
 
 export function slugifyHandle(raw: string) {
   const base = raw

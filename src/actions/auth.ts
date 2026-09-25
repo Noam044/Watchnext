@@ -4,16 +4,20 @@ import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { availableHandle } from "@/lib/users";
 
 export type AuthFormState = { error?: string; fields?: { email?: string; name?: string } } | undefined;
 
-const registerSchema = z.object({
-  name: z.string().trim().max(60).optional(),
-  email: z.email("Adresse email invalide.").transform((e) => e.toLowerCase().trim()),
-  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères.").max(128),
-});
+type AuthTexts = Awaited<ReturnType<typeof getI18n>>["t"]["auth"];
+
+const registerSchema = (a: AuthTexts) =>
+  z.object({
+    name: z.string().trim().max(60).optional(),
+    email: z.email(a.errInvalidEmail).transform((e) => e.toLowerCase().trim()),
+    password: z.string().min(8, a.errPasswordLength).max(128),
+  });
 
 export async function registerAction(_: AuthFormState, form: FormData): Promise<AuthFormState> {
   const raw = {
@@ -21,13 +25,14 @@ export async function registerAction(_: AuthFormState, form: FormData): Promise<
     email: String(form.get("email") ?? ""),
     password: String(form.get("password") ?? ""),
   };
-  const parsed = registerSchema.safeParse(raw);
+  const a = (await getI18n()).t.auth;
+  const parsed = registerSchema(a).safeParse(raw);
   const fields = { email: raw.email, name: raw.name };
   if (!parsed.success) return { error: parsed.error.issues[0].message, fields };
 
   const { email, password, name } = parsed.data;
   if (await prisma.user.findUnique({ where: { email } })) {
-    return { error: "Un compte existe déjà avec cette adresse email.", fields };
+    return { error: a.errEmailTaken, fields };
   }
   await prisma.user.create({
     data: {
@@ -49,7 +54,7 @@ export async function loginAction(_: AuthFormState, form: FormData): Promise<Aut
       redirectTo: "/dashboard",
     });
   } catch (e) {
-    if (e instanceof AuthError) return { error: "Email ou mot de passe incorrect.", fields: { email } };
+    if (e instanceof AuthError) return { error: (await getI18n()).t.auth.errBadCredentials, fields: { email } };
     throw e; // redirection NEXT_REDIRECT
   }
 }

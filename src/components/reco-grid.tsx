@@ -12,6 +12,9 @@ import { ScopeScreen } from "@/components/scope-screen";
 import { Tilt } from "@/components/tilt";
 import { toast } from "@/components/toaster";
 import { TrailerFrame } from "@/components/trailer";
+import { useI18n } from "@/i18n/client";
+import type { Dictionary } from "@/i18n/dictionaries";
+import { formatNumber } from "@/i18n/format";
 
 export type RecoItem = {
   id: string;
@@ -30,8 +33,8 @@ export type RecoItem = {
   pct: number;
 };
 
-function metaLine(r: RecoItem) {
-  return [r.year, r.directors[0] && `Réal. ${r.directors[0]}`, r.runtime ? `${r.runtime} min` : null]
+function metaLine(r: RecoItem, t: Dictionary) {
+  return [r.year, r.directors[0] && t.film.directedBy(r.directors[0]), r.runtime ? t.film.minutes(r.runtime) : null]
     .filter(Boolean)
     .join(" · ");
 }
@@ -41,15 +44,15 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
   const [, startTransition] = useTransition();
   const [genre, setGenre] = useState<string | null>(null);
   const [sheet, setSheet] = useState<RecoItem | null>(null);
+  const { t } = useI18n();
 
   const act = (r: RecoItem, kind: "seen" | "hide") =>
     startTransition(async () => {
       setSheet(null);
       removeItem(r.id);
       const res = kind === "seen" ? await markSeenAction(r.id) : await hideRecommendationAction(r.id);
-      if (!res.ok) toast(res.error ?? "Action impossible.", "error");
-      else
-        toast(kind === "seen" ? `« ${r.title} » ajouté à tes films vus.` : `« ${r.title} » ne te sera plus proposé.`);
+      if (!res.ok) toast(res.error ?? t.film.actionFailed, "error");
+      else toast(kind === "seen" ? t.film.addedToWatched(r.title) : t.film.wontSuggest(r.title));
     });
 
   const genres = useMemo(() => {
@@ -61,7 +64,7 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
   if (optimistic.length === 0) {
     return (
       <div className="card p-10 text-center text-dust-300">
-        Tu as fait le tour de cette sélection. Clique sur « Recalculer » pour en générer une nouvelle.
+        {t.dashboard.doneAll}
       </div>
     );
   }
@@ -83,16 +86,16 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
         <section aria-labelledby="programme" className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow">{rest.length} autres films</p>
+              <p className="eyebrow">{t.dashboard.othersCount(rest.length)}</p>
               <h2 id="programme" className="marquee mt-1 text-4xl sm:text-5xl">
-                Le programme
+                {t.dashboard.programme}
               </h2>
             </div>
           </div>
           {genres.length > 1 && (
             <div
               role="group"
-              aria-label="Filtrer par genre"
+              aria-label={t.dashboard.filterByGenre}
               className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
             >
               <button
@@ -100,7 +103,7 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
                 className={`shrink-0 ${activeGenre ? "chip" : "chip-active"}`}
                 aria-pressed={!activeGenre}
               >
-                Tous
+                {t.dashboard.all}
               </button>
               {genres.map(([g, n]) => (
                 <button
@@ -132,13 +135,14 @@ type Open = (r: RecoItem) => void;
 
 /** Le film n°1, projeté sur l'écran Cinémascope. */
 function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | null; onAct: Act }) {
+  const { t } = useI18n();
   const [playing, setPlaying] = useState(false);
   const close = useCallback(() => setPlaying(false), []);
   const onPlay = trailerKey ? () => setPlaying(true) : undefined;
 
   if (playing && trailerKey) {
     return (
-      <section aria-label={`Ta séance : ${r.title}`} className="relative">
+      <section aria-label={t.film.sessionLabel(r.title)} className="relative">
         <TrailerFrame videoKey={trailerKey} title={r.title} onClose={close} />
         <div className="mt-6">
           <FeatureText r={r} onAct={onAct} />
@@ -147,7 +151,7 @@ function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | n
     );
   }
   return (
-    <section aria-label={`Ta séance : ${r.title}`} className="relative">
+    <section aria-label={t.film.sessionLabel(r.title)} className="relative">
       {/* L'image se transforme en celle de la fiche du film (même nom de transition). */}
       <ViewTransition name={`screen-${r.tmdbId}`} share="morph" default="none">
         <ScopeScreen
@@ -156,11 +160,22 @@ function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | n
           alt=""
           preload
           animate
-          className="group/screen cursor-pointer"
+          className="group/screen cursor-pointer transition-shadow duration-500 hover:shadow-[0_0_0_1px_rgb(246_236_220/0.14),0_50px_160px_-30px_rgb(242_184_75/0.45),0_10px_40px_-10px_rgb(0_0_0/0.8)]"
           imageClassName="transition-[transform,filter] duration-[8s] ease-out group-hover/screen:scale-105 group-hover/screen:brightness-110"
         >
           {/* Tout l'écran ouvre la fiche du film ; les boutons posés dessus gardent leur action. */}
           <Link href={`/film/${r.tmdbId}`} tabIndex={-1} aria-hidden className="absolute inset-0" />
+          {/* Faisceau du projecteur qui balaie l'écran une fois au survol */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(100deg,transparent_35%,rgb(255_236_200/0.16)_50%,transparent_65%)] transition-transform duration-[1.4s] ease-out group-hover/screen:translate-x-full motion-reduce:hidden"
+          />
+          <span
+            aria-hidden
+            className="meta pointer-events-none absolute top-4 right-4 hidden -translate-y-2 items-center gap-1.5 rounded-full bg-velvet-950/75 px-3 py-1.5 text-screen opacity-0 backdrop-blur transition duration-300 group-hover/screen:translate-y-0 group-hover/screen:opacity-100 md:inline-flex"
+          >
+            {t.film.seeFilm} <ArrowRightIcon className="size-3.5" />
+          </span>
           <div className="pointer-events-none absolute inset-0 hidden bg-linear-to-t from-velvet-950/95 via-velvet-950/40 to-transparent md:block" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden p-8 md:block lg:p-10 [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
             <FeatureText r={r} onAct={onAct} onPlay={onPlay} />
@@ -175,16 +190,18 @@ function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | n
 }
 
 function FeatureText({ r, onAct, onPlay }: { r: RecoItem; onAct: Act; onPlay?: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="max-w-3xl">
       <p className="eyebrow text-tungsten">
-        Ta séance · <AnimatedNumber value={r.pct} suffix=" %" delay={500} className="font-bold" /> pour toi
+        {t.film.session} · <AnimatedNumber value={r.pct} suffix=" %" delay={500} className="font-bold" />{" "}
+        {t.film.pctForYou}
       </p>
-      <h1 className="marquee mt-2 text-5xl text-balance sm:text-6xl lg:text-7xl">
+      <h1 className="marquee mt-2 text-5xl text-balance transition-transform duration-500 ease-out group-hover/screen:-translate-y-1 sm:text-6xl lg:text-7xl">
         <CutReveal text={r.title} delay={450} />
       </h1>
       <p className="meta mt-3 animate-rise [animation-delay:800ms]">
-        {metaLine(r)}
+        {metaLine(r, t)}
         {r.genres.length > 0 && <span className="hidden sm:inline"> · {r.genres.slice(0, 3).join(", ")}</span>}
       </p>
       <p className="mt-3 max-w-xl animate-rise text-base leading-snug text-screen/90 [animation-delay:900ms]">
@@ -193,20 +210,20 @@ function FeatureText({ r, onAct, onPlay }: { r: RecoItem; onAct: Act; onPlay?: (
       <div className="mt-5 flex animate-rise flex-wrap gap-2 [animation-delay:1000ms]">
         {onPlay && (
           <button onClick={onPlay} className="btn-primary">
-            <PlayIcon className="size-3.5" /> Bande-annonce
+            <PlayIcon className="size-3.5" /> {t.film.trailer}
           </button>
         )}
         <Link
           href={`/film/${r.tmdbId}`}
           className={onPlay ? "btn-ghost bg-velvet-950/40 backdrop-blur" : "btn-primary"}
         >
-          <InfoIcon /> Fiche du film
+          <InfoIcon /> {t.film.filmPage}
         </Link>
         <button onClick={() => onAct(r, "seen")} className="btn-quiet">
-          <EyeIcon /> Déjà vu
+          <EyeIcon /> {t.film.seen}
         </button>
         <button onClick={() => onAct(r, "hide")} className="btn-quiet">
-          <EyeOffIcon /> Pas pour moi
+          <EyeOffIcon /> {t.film.notForMe}
         </button>
       </div>
     </div>
@@ -214,13 +231,14 @@ function FeatureText({ r, onAct, onPlay }: { r: RecoItem; onAct: Act; onPlay?: (
 }
 
 function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; onAct: Act; onOpen: Open }) {
+  const { t } = useI18n();
   return (
     <li className="group reveal flex flex-col">
       <button
         type="button"
         onClick={() => onOpen(r)}
         className="relative block cursor-pointer rounded-[5px] text-left transition duration-300 group-hover:-translate-y-1"
-        aria-label={`Fiche de ${r.title}`}
+        aria-label={t.film.detailsOf(r.title)}
       >
         <Tilt className="rounded-[5px]">
           <Poster
@@ -246,22 +264,22 @@ function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; on
             {r.title}
           </button>
         </h3>
-        <p className="meta mt-1">{metaLine(r)}</p>
+        <p className="meta mt-1">{metaLine(r, t)}</p>
         <p className="mt-2 line-clamp-3 text-sm leading-snug text-dust-300">{r.reason}</p>
         <div className="mt-auto -ml-2 flex gap-0.5 pt-2">
           <button
             onClick={() => onAct(r, "seen")}
             className="btn-quiet gap-1.5 px-2 py-1.5 text-xs"
-            title="Je l'ai déjà vu : l'ajouter à mes films vus"
+            title={t.film.seenTitle}
           >
-            <EyeIcon className="size-3.5" /> Déjà vu
+            <EyeIcon className="size-3.5" /> {t.film.seen}
           </button>
           <button
             onClick={() => onAct(r, "hide")}
             className="btn-quiet gap-1.5 px-2 py-1.5 text-xs"
-            title="Ne plus me proposer ce film"
+            title={t.film.hideTitle}
           >
-            <EyeOffIcon className="size-3.5" /> Masquer
+            <EyeOffIcon className="size-3.5" /> {t.film.hide}
           </button>
         </div>
       </div>
@@ -275,6 +293,7 @@ function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; on
  */
 function FilmSheet({ r, onClose, onAct }: { r: RecoItem | null; onClose: () => void; onAct: Act }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -297,7 +316,7 @@ function FilmSheet({ r, onClose, onAct }: { r: RecoItem | null; onClose: () => v
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose(); // clic sur le fond
       }}
-      aria-label={r ? `Fiche de ${r.title}` : undefined}
+      aria-label={r ? t.film.detailsOf(r.title) : undefined}
       className="m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-velvet-700 bg-velvet-900 p-0 text-screen shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm open:animate-rise sm:m-auto sm:max-w-2xl sm:rounded-2xl"
     >
       {r && <SheetBody key={r.id} r={r} onAct={onAct} />}
@@ -311,13 +330,14 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
   const [playing, setPlaying] = useState(false);
   const [loading, startLoading] = useTransition();
   const close = useCallback(() => setPlaying(false), []);
+  const { t, locale } = useI18n();
 
   const play = () =>
     startLoading(async () => {
       const key = trailer === undefined ? await trailerKeyAction(r.tmdbId) : trailer;
       setTrailer(key);
       if (key) setPlaying(true);
-      else toast("Pas de bande-annonce disponible pour ce film.", "error");
+      else toast(t.film.noTrailer, "error");
     });
 
   return (
@@ -339,7 +359,7 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
           <form method="dialog" className="absolute top-3 right-3">
             <button
               className="grid size-9 place-items-center rounded-full bg-velvet-950/80 text-screen backdrop-blur hover:bg-velvet-800"
-              aria-label="Fermer la fiche"
+              aria-label={t.film.closeSheet}
             >
               <XIcon className="size-4" />
             </button>
@@ -356,22 +376,25 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
         />
         <div className="min-w-0 pt-10 sm:pt-14">
           <p className="eyebrow text-tungsten">
-            <span className="font-bold">{r.pct} %</span> pour toi
+            <span className="font-bold">{r.pct} %</span> {t.film.pctForYou}
             {r.voteAverage > 0 && (
-              <span className="text-dust-400"> · TMDB {r.voteAverage.toFixed(1).replace(".", ",")}</span>
+              <span className="text-dust-400">
+                {" "}
+                · TMDB {formatNumber(r.voteAverage, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+              </span>
             )}
           </p>
           <h2 className="marquee mt-1 text-4xl text-balance sm:text-5xl">{r.title}</h2>
-          <p className="meta mt-2">{metaLine(r)}</p>
+          <p className="meta mt-2">{metaLine(r, t)}</p>
         </div>
       </div>
       <div className="space-y-5 border-t border-velvet-800 px-5 py-6 sm:px-7">
         <p className="text-base leading-snug text-screen">{r.reason}</p>
         {(r.genres.length > 0 || r.tags.length > 0) && (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Genres et points communs">
-            {r.tags.map((t) => (
-              <li key={t} className="chip-active cursor-default">
-                {t}
+          <ul className="flex flex-wrap gap-1.5" aria-label={t.film.genresAndTags}>
+            {r.tags.map((tag) => (
+              <li key={tag} className="chip-active cursor-default">
+                {tag}
               </li>
             ))}
             {r.genres.map((g) => (
@@ -384,21 +407,21 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
         {r.overview ? (
           <p className="max-w-prose text-sm leading-relaxed text-dust-300">{r.overview}</p>
         ) : (
-          <p className="text-sm text-dust-400">Pas de synopsis disponible pour ce film.</p>
+          <p className="text-sm text-dust-400">{t.film.noSynopsis}</p>
         )}
       </div>
       <div className="sticky bottom-0 flex flex-wrap gap-2 border-t border-velvet-800 bg-velvet-900/95 px-5 py-4 backdrop-blur sm:px-7">
         <button onClick={play} disabled={loading || trailer === null} className="btn-primary">
-          <PlayIcon className="size-3.5" /> {loading ? "Chargement…" : "Bande-annonce"}
+          <PlayIcon className="size-3.5" /> {loading ? t.common.loading : t.film.trailer}
         </button>
         <Link href={`/film/${r.tmdbId}`} className="btn-ghost">
-          Fiche complète <ArrowRightIcon className="size-3.5" />
+          {t.film.fullPage} <ArrowRightIcon className="size-3.5" />
         </Link>
         <button onClick={() => onAct(r, "seen")} className="btn-ghost">
-          <EyeIcon /> Déjà vu
+          <EyeIcon /> {t.film.seen}
         </button>
         <button onClick={() => onAct(r, "hide")} className="btn-quiet">
-          <EyeOffIcon /> Pas pour moi
+          <EyeOffIcon /> {t.film.notForMe}
         </button>
       </div>
     </article>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ExternalIcon, PlayIcon, XIcon } from "@/components/icons";
+import { useI18n } from "@/i18n/client";
 
 /**
  * Lecteur de bande-annonce : l'écran passe du Cinémascope au 16:9, comme les caches
@@ -10,6 +11,7 @@ import { ExternalIcon, PlayIcon, XIcon } from "@/components/icons";
  */
 export function TrailerFrame({ videoKey, title, onClose }: { videoKey: string; title: string; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
@@ -24,7 +26,7 @@ export function TrailerFrame({ videoKey, title, onClose }: { videoKey: string; t
       <div className="screen-glow relative aspect-video animate-masking-open overflow-hidden rounded-md bg-black">
         <iframe
           src={src}
-          title={`Bande-annonce de ${title}`}
+          title={t.film.trailerOf(title)}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
@@ -35,7 +37,7 @@ export function TrailerFrame({ videoKey, title, onClose }: { videoKey: string; t
           type="button"
           onClick={onClose}
           className="absolute top-3 right-3 grid size-10 place-items-center rounded-full bg-velvet-950/85 text-screen backdrop-blur transition hover:bg-velvet-800"
-          aria-label="Fermer la bande-annonce"
+          aria-label={t.film.closeTrailer}
         >
           <XIcon />
         </button>
@@ -47,14 +49,16 @@ export function TrailerFrame({ videoKey, title, onClose }: { videoKey: string; t
         rel="noreferrer"
         className="meta mt-2 inline-flex items-center gap-1 text-[11px] text-dust-400 hover:text-screen"
       >
-        La vidéo ne se lance pas ? Ouvrir sur YouTube <ExternalIcon className="size-3" />
+        {t.film.trailerFallback} <ExternalIcon className="size-3" />
       </a>
     </div>
   );
 }
 
 /** Gros bouton ▶ posé au centre d'un écran, qui s'allume au survol. */
-export function PlayOverlay({ onPlay, label = "Bande-annonce" }: { onPlay: () => void; label?: string }) {
+export function PlayOverlay({ onPlay, label }: { onPlay: () => void; label?: string }) {
+  const { t } = useI18n();
+  label ??= t.film.trailer;
   return (
     <button
       type="button"

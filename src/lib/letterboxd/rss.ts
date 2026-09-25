@@ -21,7 +21,7 @@ export function normalizeUsername(input: string) {
   const m = input.trim().match(/letterboxd\.com\/([^/?#]+)/i);
   const username = (m ? m[1] : input.trim()).replace(/^@/, "");
   if (!USERNAME_RE.test(username)) {
-    throw new AppError("LB_INVALID_USERNAME", "Ce pseudo Letterboxd n'est pas valide (lettres, chiffres et _ uniquement).");
+    throw new AppError("LB_INVALID_USERNAME", "lbInvalidUsername");
   }
   return username;
 }
@@ -81,10 +81,10 @@ export function parseRss(xml: string): RssEntry[] {
   try {
     doc = parser.parse(xml);
   } catch {
-    throw new AppError("LB_UNAVAILABLE", "Le flux RSS Letterboxd est illisible.", 502);
+    throw new AppError("LB_UNAVAILABLE", "lbFeedUnreadable", {}, 502);
   }
   if (!doc?.rss?.channel) {
-    throw new AppError("LB_UNAVAILABLE", "La réponse de Letterboxd n'est pas un flux RSS valide.", 502);
+    throw new AppError("LB_UNAVAILABLE", "lbNotRss", {}, 502);
   }
 
   const byId = new Map<number, RssEntry>();
@@ -137,20 +137,17 @@ export async function fetchLetterboxdRss(username: string): Promise<RssEntry[]> 
       cache: "no-store",
     });
   } catch {
-    throw new AppError("LB_UNAVAILABLE", "Impossible de joindre Letterboxd. Réessaie dans quelques instants.", 503);
+    throw new AppError("LB_UNAVAILABLE", "lbUnreachable", {}, 503);
   }
   if (res.status === 404) {
-    throw new AppError("LB_USER_NOT_FOUND", `Aucun profil Letterboxd public ne correspond au pseudo « ${username} ».`, 404);
+    throw new AppError("LB_USER_NOT_FOUND", "lbUserNotFound", { username }, 404);
   }
   if (!res.ok) {
-    throw new AppError("LB_UNAVAILABLE", `Letterboxd a refusé la requête (${res.status}). Réessaie plus tard.`, 502);
+    throw new AppError("LB_UNAVAILABLE", "lbRefused", { status: res.status }, 502);
   }
   const entries = parseRss(await res.text());
   if (entries.length === 0) {
-    throw new AppError(
-      "LB_EMPTY_FEED",
-      "Le flux de ce profil ne contient aucun film (journal vide ou privé). Essaie l'import complet.",
-    );
+    throw new AppError("LB_EMPTY_FEED", "lbEmptyFeed");
   }
   return entries;
 }

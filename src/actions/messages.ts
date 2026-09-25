@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "@/lib/errors";
 import { friendIds } from "@/lib/friends";
@@ -45,23 +46,24 @@ export async function sendMessageAction(input: {
   tmdbId?: number;
 }): Promise<ActionResult<{ message: MessageDTO }>> {
   const me = await requireUser();
+  const m = (await getI18n()).t.messages;
   const body = input.body?.trim() || null;
-  if (!body && !input.tmdbId) return { ok: false, error: "Écris un message ou choisis un film." };
+  if (!body && !input.tmdbId) return { ok: false, error: m.errEmpty };
   if (body && body.length > MESSAGE_MAX_LENGTH) {
-    return { ok: false, error: `Message trop long (${MESSAGE_MAX_LENGTH} caractères maximum).` };
+    return { ok: false, error: m.errTooLong(MESSAGE_MAX_LENGTH) };
   }
   if (!(await canMessage(me.id, input.toUserId))) {
-    return { ok: false, error: "Tu ne peux écrire qu'à tes amis." };
+    return { ok: false, error: m.errNotFriend };
   }
   const recent = await prisma.message.count({
     where: { senderId: me.id, createdAt: { gt: new Date(Date.now() - 60_000) } },
   });
-  if (recent >= MESSAGES_PER_MINUTE) return { ok: false, error: "Tu envoies beaucoup de messages : patiente une minute." };
+  if (recent >= MESSAGES_PER_MINUTE) return { ok: false, error: m.errRate };
 
   let filmId: string | null = null;
   if (input.tmdbId) {
     const film = await prisma.film.findUnique({ where: { tmdbId: input.tmdbId }, select: { id: true } });
-    if (!film) return { ok: false, error: "Film introuvable." };
+    if (!film) return { ok: false, error: m.errFilm };
     filmId = film.id;
   }
   const message = await prisma.message.create({
@@ -75,7 +77,7 @@ export async function sendMessageAction(input: {
 /** Nouveaux messages d'une conversation depuis `afterISO` ; les marque comme lus. */
 export async function pollThreadAction(friendId: string, afterISO: string | null): Promise<ActionResult<{ messages: MessageDTO[] }>> {
   const me = await requireUser();
-  if (!(await canMessage(me.id, friendId))) return { ok: false, error: "Cette conversation n'est plus disponible." };
+  if (!(await canMessage(me.id, friendId))) return { ok: false, error: (await getI18n()).t.messages.errConversation };
   const rows = await getThread(me.id, friendId, afterISO ? new Date(afterISO) : undefined);
   if (rows.some((m) => m.senderId === friendId && !m.readAt)) await markThreadRead(me.id, friendId);
   return { ok: true, data: { messages: rows.map((m) => toDTO(m, me.id)) } };

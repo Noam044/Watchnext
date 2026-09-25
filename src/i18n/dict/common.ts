@@ -1,0 +1,136 @@
+import { pair } from "@/i18n/config";
+
+export const common = pair(
+  {
+    language: "Langue de l'interface",
+    languageNames: { fr: "Français", en: "English" },
+    appDescription: "Watchnext lit tes notes Letterboxd et te propose des films qui te ressemblent, chacun avec sa raison.",
+    skipToContent: "Aller au contenu",
+    back: "Retour",
+    close: "Fermer",
+    cancel: "Annuler",
+    loading: "Chargement…",
+    later: "Plus tard",
+    logout: "Se déconnecter",
+    homeLabel: "Watchnext, accueil",
+    seeOnLetterboxd: "Voir sur Letterboxd",
+    letterboxd: "Letterboxd",
+    tmdbCredit:
+      "Données de films fournies par TMDB. Ce produit utilise l'API TMDB sans être approuvé ni certifié par TMDB. Watchnext n'est pas affilié à Letterboxd.",
+    rating: (value: string) => `${value} sur 5`,
+    films: (n: number) => (n > 1 ? "films" : "film"),
+    unexpectedError: "Une erreur inattendue est survenue. Réessaie dans un instant.",
+    notSignedIn: "Non connecté.",
+  },
+  {
+    language: "Interface language",
+    languageNames: { fr: "Français", en: "English" },
+    appDescription: "Watchnext reads your Letterboxd ratings and suggests films that feel like you, each with a reason.",
+    skipToContent: "Skip to content",
+    back: "Back",
+    close: "Close",
+    cancel: "Cancel",
+    loading: "Loading…",
+    later: "Later",
+    logout: "Sign out",
+    homeLabel: "Watchnext, home",
+    seeOnLetterboxd: "View on Letterboxd",
+    letterboxd: "Letterboxd",
+    tmdbCredit:
+      "Film data provided by TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. Watchnext is not affiliated with Letterboxd.",
+    rating: (value: string) => `${value} out of 5`,
+    films: (n: number) => (n === 1 ? "film" : "films"),
+    unexpectedError: "Something went wrong. Please try again in a moment.",
+    notSignedIn: "Not signed in.",
+  },
+);
+
+export const nav = pair(
+  {
+    main: "Navigation principale",
+    toWatch: "À voir",
+    friends: "Amis",
+    messages: "Messages",
+    import: "Importer",
+    profile: "Profil",
+  },
+  {
+    main: "Main navigation",
+    toWatch: "To watch",
+    friends: "Friends",
+    messages: "Messages",
+    import: "Import",
+    profile: "Profile",
+  },
+);
+
+export const landing = pair(
+  {
+    signIn: "Se connecter",
+    eyebrow: "Recommandations de films pour Letterboxd",
+    headline1: "Ton prochain film préféré est",
+    headline2: "déjà dans tes notes.",
+    intro: "Watchnext lit ce que tu as vu et noté sur Letterboxd et te propose des films qui te ressemblent, chacun avec sa raison.",
+    createAccount: "Créer mon compte",
+    haveAccount: "J'ai déjà un compte",
+    captionQuestion: "Parmi tous ces films, lequel est fait pour toi ?",
+    findMyFilm: "Trouver mon film",
+    nowShowing: "À l'affiche cette semaine · TMDB",
+    howEyebrow: "Comment ça marche",
+    howTitle1: "Chaque film arrive avec",
+    howTitle2: "sa raison.",
+    steps: [
+      {
+        title: "Importe ton Letterboxd",
+        text: "Ton pseudo suffit pour tes derniers films, via le flux RSS public. Dépose ton export pour tout ton historique.",
+      },
+      {
+        title: "Watchnext cerne tes goûts",
+        text: "Genres, réalisateurs, acteurs, thèmes et décennies, pondérés par tes notes. Les films que tu as détestés comptent aussi.",
+      },
+      {
+        title: "Tu choisis ta séance",
+        text: "Chaque film proposé dit pourquoi il est là. Compare aussi tes goûts avec ceux de tes amis.",
+      },
+    ],
+    demoPct: "pour toi",
+    demoSession: "Ta séance",
+    demoBecause: (a: string, b: string) => `Parce que tu as aimé ${a} et ${b}`,
+    example: "Exemple",
+    exampleNote: "Recommandation fictive, composée avec les films à l'affiche cette semaine.",
+  },
+  {
+    signIn: "Sign in",
+    eyebrow: "Film recommendations for Letterboxd",
+    headline1: "Your next favourite film is",
+    headline2: "already in your ratings.",
+    intro: "Watchnext reads what you've watched and rated on Letterboxd and suggests films that feel like you, each with a reason.",
+    createAccount: "Create my account",
+    haveAccount: "I already have an account",
+    captionQuestion: "Out of all these films, which one is made for you?",
+    findMyFilm: "Find my film",
+    nowShowing: "Showing this week · TMDB",
+    howEyebrow: "How it works",
+    howTitle1: "Every film comes with",
+    howTitle2: "its reason.",
+    steps: [
+      {
+        title: "Import your Letterboxd",
+        text: "Your username is enough for your latest films, through the public RSS feed. Drop your export for your whole history.",
+      },
+      {
+        title: "Watchnext learns your taste",
+        text: "Genres, directors, actors, themes and decades, weighted by your ratings. The films you disliked count too.",
+      },
+      {
+        title: "You pick tonight's screening",
+        text: "Every suggested film says why it's there. You can also compare your taste with your friends'.",
+      },
+    ],
+    demoPct: "match",
+    demoSession: "Tonight's screening",
+    demoBecause: (a: string, b: string) => `Because you liked ${a} and ${b}`,
+    example: "Example",
+    exampleNote: "Made-up recommendation, built with this week's films.",
+  },
+);

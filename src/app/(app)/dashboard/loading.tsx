@@ -1,7 +1,10 @@
+import { getI18n } from "@/i18n/server";
+
 /** Squelette de « À voir » pendant le chargement des recommandations. */
-export default function Loading() {
+export default async function Loading() {
+  const { t } = await getI18n();
   return (
-    <div className="space-y-8" aria-busy="true" aria-label="Chargement de ta sélection">
+    <div className="space-y-8" aria-busy="true" aria-label={t.dashboard.loading}>
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-2">
           <div className="skeleton h-3 w-48" />

@@ -6,18 +6,24 @@ import { CopyHandle } from "@/components/copy-handle";
 import { FriendButton } from "@/components/friend-button";
 import { SearchIcon } from "@/components/icons";
 import { ScopeScreen } from "@/components/scope-screen";
+import { formatNumber } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { relationFrom, tasteMatch } from "@/lib/friends";
 import { resolveEmblem } from "@/lib/profile";
 import { requireUser } from "@/lib/session";
 import { displayName } from "@/lib/users";
 
-export const metadata: Metadata = { title: "Amis" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t.friends.meta };
+}
 
 const userCard = { id: true, name: true, handle: true, bio: true, emblemFilm: true } as const;
 
 export default async function FriendsPage({ searchParams }: PageProps<"/friends">) {
   const me = await requireUser();
+  const { t, locale } = await getI18n();
+  const f = t.friends;
   const raw = (await searchParams).q;
   const q = (Array.isArray(raw) ? raw[0] : raw)?.trim().replace(/^@/, "").slice(0, 60) ?? "";
 
@@ -68,12 +74,12 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
       <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="eyebrow">
-            {friends.length} ami{friends.length > 1 ? "s" : ""}
-            {incoming.length > 0 && ` · ${incoming.length} demande${incoming.length > 1 ? "s" : ""} en attente`}
+            {f.count(friends.length)}
+            {incoming.length > 0 && f.pending(incoming.length)}
           </p>
-          <h1 className="marquee mt-1 text-6xl sm:text-7xl">Amis</h1>
+          <h1 className="marquee mt-1 text-6xl sm:text-7xl">{f.title}</h1>
           <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-dust-300">
-            Partage ton pseudo pour qu&apos;on te trouve : <CopyHandle handle={me.handle} />
+            {f.shareHandle} <CopyHandle handle={me.handle} />
           </p>
         </div>
         <form role="search" className="relative w-full lg:max-w-sm">
@@ -83,8 +89,8 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
             type="search"
             defaultValue={q}
             minLength={2}
-            placeholder="Chercher un nom ou un @pseudo"
-            aria-label="Chercher un membre"
+            placeholder={f.searchPlaceholder}
+            aria-label={f.searchLabel}
             className="input rounded-full py-3.5 pl-11 text-base"
             autoCapitalize="none"
             autoCorrect="off"
@@ -96,10 +102,10 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
         <section aria-labelledby="resultats" className="space-y-4">
           <div className="flex items-baseline justify-between">
             <h2 id="resultats" className="marquee text-3xl">
-              Résultats pour « {q} »
+              {f.resultsFor(q)}
             </h2>
             <Link href="/friends" className="meta hover:text-screen">
-              Effacer
+              {f.clear}
             </Link>
           </div>
           {results.length ? (
@@ -112,7 +118,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
             </ul>
           ) : (
             <p className="card px-6 py-8 text-center text-sm text-dust-300">
-              Aucun membre ne correspond. Vérifie l&apos;orthographe du pseudo, ou demande-le à ton ami.
+              {f.noResults}
             </p>
           )}
         </section>
@@ -121,7 +127,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
       {incoming.length > 0 && (
         <section aria-labelledby="demandes" className="space-y-4">
           <h2 id="demandes" className="marquee text-3xl">
-            Demandes reçues
+            {f.incoming}
           </h2>
           <ul className="divide-y divide-velvet-800 rounded-2xl border border-tungsten/25 bg-velvet-900/60">
             {incoming.map((u) => (
@@ -135,7 +141,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
 
       <section aria-labelledby="mes-amis" className="space-y-5">
         <h2 id="mes-amis" className="marquee text-3xl">
-          Mes amis
+          {f.myFriends}
         </h2>
         {friendCards.length ? (
           <ul className="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -153,7 +159,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                   >
                     {match.pct != null && (
                       <span className="absolute top-2 right-2 rounded-full bg-velvet-950/85 px-2 py-0.5 font-mono text-[11px] font-bold text-tungsten backdrop-blur">
-                        <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> d&apos;affinité
+                        <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> {f.affinity}
                       </span>
                     )}
                   </ScopeScreen>
@@ -162,7 +168,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                     <div className="min-w-0 pb-0.5">
                       <p className="truncate font-semibold group-hover:text-tungsten">{displayName(user)}</p>
                       <p className="meta truncate text-[11px]">
-                        @{user.handle} · {watched.toLocaleString("fr-FR")} films · {match.common} en commun
+                        {f.cardMeta(user.handle, formatNumber(watched, locale), match.common)}
                       </p>
                     </div>
                   </div>
@@ -172,11 +178,8 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
           </ul>
         ) : (
           <div className="card flex flex-col items-center gap-2 px-6 py-12 text-center">
-            <p className="marquee text-3xl">La salle est encore vide</p>
-            <p className="max-w-md text-sm text-dust-300">
-              Cherche le nom ou le pseudo d&apos;un ami ci-dessus. Une fois ta demande acceptée, tu verras ses notes, votre
-              affinité et ses coups de cœur que tu n&apos;as pas vus.
-            </p>
+            <p className="marquee text-3xl">{f.emptyTitle}</p>
+            <p className="max-w-md text-sm text-dust-300">{f.emptyText}</p>
           </div>
         )}
       </section>
@@ -184,7 +187,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
       {outgoing.length > 0 && (
         <section aria-labelledby="envoyees" className="space-y-4">
           <h2 id="envoyees" className="eyebrow">
-            Demandes envoyées
+            {f.outgoing}
           </h2>
           <ul className="divide-y divide-velvet-800 rounded-2xl border border-velvet-800">
             {outgoing.map((u) => (
