@@ -23,6 +23,9 @@ export async function syncRss(userId: string, rawUsername: string) {
       rating: e.rating,
       liked: e.liked,
       watchedAt: e.watchedAt,
+      review: e.review,
+      reviewSpoilers: e.reviewSpoilers,
+      reviewedAt: e.review ? e.watchedAt : null,
     });
     imported++;
     if (merged.changed) changed++;
@@ -117,6 +120,8 @@ export async function processImportBatch(userId: string, jobId: string, batchSiz
         rating: entry.rating,
         liked: entry.liked,
         watchedAt: entry.watchedAt,
+        review: entry.review,
+        reviewedAt: entry.reviewedAt,
       });
       await prisma.importEntry.update({ where: { id: entry.id }, data: { status: "MATCHED", tmdbId: match.id } });
       return "MATCHED" as const;

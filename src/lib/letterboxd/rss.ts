@@ -10,6 +10,8 @@ export type RssEntry = {
   liked: boolean;
   watchedAt: Date | null;
   rewatch: boolean;
+  review: string | null;
+  reviewSpoilers: boolean;
 };
 
 const USERNAME_RE = /^[A-Za-z0-9_]{1,40}$/;
@@ -27,6 +29,47 @@ export function normalizeUsername(input: string) {
 type RawItem = Record<string, unknown>;
 
 const str = (v: unknown) => (v === undefined || v === null ? "" : String(v).trim());
+
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+function decodeEntities(s: string) {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
+    if (e[0] === "#") {
+      const code = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : Number(e.slice(1));
+      return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+    }
+    return ENTITIES[e.toLowerCase()] ?? m;
+  });
+}
+
+/**
+ * Texte de la critique contenu dans la description d'une entrée : l'affiche puis un
+ * paragraphe par bloc de texte. Les entrées sans critique n'ont que « Watched on … ».
+ */
+export function parseReview(descriptionHtml: string): { review: string | null; spoilers: boolean } {
+  const paragraphs = [...descriptionHtml.matchAll(/<p>([\s\S]*?)<\/p>/gi)]
+    .map((m) => m[1])
+    .filter((p) => !/<img\b/i.test(p))
+    .map((p) =>
+      decodeEntities(
+        p
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<[^>]+>/g, "")
+          .replace(/[ \t]+\n/g, "\n"),
+      ).trim(),
+    )
+    .filter(Boolean);
+  let spoilers = false;
+  const body = paragraphs.filter((p) => {
+    if (/^This review may contain spoilers\.?$/i.test(p)) {
+      spoilers = true;
+      return false;
+    }
+    return true;
+  });
+  const onlyLogLine = body.length === 1 && /^(Watched|Rewatched|Added|Liked) (on|to)\b/i.test(body[0]);
+  if (body.length === 0 || onlyLogLine) return { review: null, spoilers: false };
+  return { review: body.join("\n\n").slice(0, 10_000), spoilers };
+}
 
 export function parseRss(xml: string): RssEntry[] {
   const parser = new XMLParser({
@@ -52,6 +95,7 @@ export function parseRss(xml: string): RssEntry[] {
     if (!tmdbId || !title) continue;
 
     const ratingRaw = str(item["letterboxd:memberRating"]);
+    const { review, spoilers } = parseReview(str(item["description"]));
     const dateRaw = str(item["letterboxd:watchedDate"]);
     const entry: RssEntry = {
       tmdbId,
@@ -61,6 +105,8 @@ export function parseRss(xml: string): RssEntry[] {
       liked: str(item["letterboxd:memberLike"]).toLowerCase() === "yes",
       watchedAt: dateRaw ? new Date(`${dateRaw}T12:00:00Z`) : null,
       rewatch: str(item["letterboxd:rewatch"]).toLowerCase() === "yes",
+      review,
+      reviewSpoilers: spoilers || /\(contains spoilers\)/i.test(str(item["title"])),
     };
 
     // Plusieurs entrées pour un même film (revisionnage) : on garde la plus récente
@@ -69,6 +115,11 @@ export function parseRss(xml: string): RssEntry[] {
     if (prev) {
       prev.liked ||= entry.liked;
       prev.rating ??= entry.rating;
+      // Critique la plus récente : celle d'une entrée plus ancienne ne sert que s'il n'y en a pas.
+      if (!prev.review && entry.review) {
+        prev.review = entry.review;
+        prev.reviewSpoilers = entry.reviewSpoilers;
+      }
     } else {
       byId.set(tmdbId, entry);
     }

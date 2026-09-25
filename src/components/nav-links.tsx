@@ -3,15 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/avatar";
-import { ScreenIcon, UploadIcon, UserIcon, UsersIcon } from "@/components/icons";
+import { ChatIcon, ScreenIcon, UploadIcon, UserIcon, UsersIcon } from "@/components/icons";
 
 const LINKS = [
   { href: "/dashboard", label: "À voir", Icon: ScreenIcon },
   { href: "/friends", label: "Amis", Icon: UsersIcon },
+  { href: "/messages", label: "Messages", Icon: ChatIcon },
   { href: "/import", label: "Importer", Icon: UploadIcon },
 ] as const;
 
-type Me = { name: string; handle: string; pendingRequests: number };
+type Me = { name: string; handle: string; pendingRequests: number; unreadMessages: number };
+
+/** Pastille de chaque onglet : demandes d'ami en attente, messages non lus. */
+function badgeFor(href: string, me: Me) {
+  if (href === "/friends") return me.pendingRequests;
+  if (href === "/messages") return me.unreadMessages;
+  return 0;
+}
 
 function isActive(pathname: string, href: string, handle: string) {
   if (href === "/profile") return pathname.startsWith("/profile") || pathname === `/u/${handle}`;
@@ -45,7 +53,7 @@ export function DesktopNav({ me }: { me: Me }) {
             }`}
           >
             {label}
-            {href === "/friends" && <Badge count={me.pendingRequests} />}
+            <Badge count={badgeFor(href, me)} />
           </Link>
         );
       })}
@@ -79,7 +87,7 @@ export function MobileTabBar({ me }: { me: Me }) {
       aria-label="Navigation principale"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-velvet-800 bg-velvet-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {tabs.map(({ href, label, Icon }) => {
           const active = isActive(pathname, href, me.handle);
           return (
@@ -93,9 +101,9 @@ export function MobileTabBar({ me }: { me: Me }) {
               >
                 <span className="relative">
                   <Icon className="size-5.5" />
-                  {href === "/friends" && me.pendingRequests > 0 && (
+                  {badgeFor(href, me) > 0 && (
                     <span className="absolute -top-1 -right-2">
-                      <Badge count={me.pendingRequests} />
+                      <Badge count={badgeFor(href, me)} />
                     </span>
                   )}
                 </span>

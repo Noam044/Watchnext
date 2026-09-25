@@ -7,7 +7,23 @@ export type IncomingFilm = {
   rating: number | null;
   liked: boolean;
   watchedAt: Date | null;
+  review?: string | null;
+  reviewSpoilers?: boolean;
+  /** Date de la critique (date de visionnage de l'entrée qui la porte). */
+  reviewedAt?: Date | null;
 };
+
+/** La critique la plus récente l'emporte ; sans date, une nouvelle critique remplace l'ancienne. */
+function pickReview(
+  old: { review: string | null; reviewSpoilers: boolean; reviewedAt: Date | null } | null,
+  inc: IncomingFilm,
+) {
+  const keep = { review: old?.review ?? null, reviewSpoilers: old?.reviewSpoilers ?? false, reviewedAt: old?.reviewedAt ?? null };
+  if (!inc.review) return keep;
+  const incAt = inc.reviewedAt ?? null;
+  if (old?.review && old.reviewedAt && incAt && incAt < old.reviewedAt) return keep;
+  return { review: inc.review, reviewSpoilers: inc.reviewSpoilers ?? false, reviewedAt: incAt ?? old?.reviewedAt ?? null };
+}
 
 function maxDate(a: Date | null, b: Date | null) {
   if (!a) return b;
@@ -29,6 +45,7 @@ export async function mergeUserFilm(userId: string, filmId: string, inc: Incomin
     rating: inc.rating ?? old?.rating ?? null,
     liked: (old?.liked ?? false) || inc.liked,
     watchedAt: maxDate(old?.watchedAt ?? null, inc.watchedAt),
+    ...pickReview(old, inc),
   };
   const changed =
     !old ||
@@ -36,7 +53,9 @@ export async function mergeUserFilm(userId: string, filmId: string, inc: Incomin
     old.inWatchlist !== data.inWatchlist ||
     old.rating !== data.rating ||
     old.liked !== data.liked ||
-    old.watchedAt?.getTime() !== data.watchedAt?.getTime();
+    old.watchedAt?.getTime() !== data.watchedAt?.getTime() ||
+    old.review !== data.review ||
+    old.reviewSpoilers !== data.reviewSpoilers;
   const uf = changed
     ? await prisma.userFilm.upsert({
         where: { userId_filmId: { userId, filmId } },

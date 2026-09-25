@@ -12,9 +12,11 @@ export type ExportEntry = {
   rating: number | null;
   liked: boolean;
   watchedAt: Date | null;
+  review: string | null;
+  reviewedAt: Date | null;
 };
 
-type Kind = "watched" | "ratings" | "diary" | "watchlist" | "likes";
+type Kind = "watched" | "ratings" | "diary" | "reviews" | "watchlist" | "likes";
 type Row = Record<string, string>;
 
 export type ExportFile = { name: string; content: string };
@@ -23,6 +25,7 @@ const KNOWN: Record<string, Kind> = {
   "watched.csv": "watched",
   "ratings.csv": "ratings",
   "diary.csv": "diary",
+  "reviews.csv": "reviews",
   "watchlist.csv": "watchlist",
   "likes/films.csv": "likes",
 };
@@ -48,6 +51,7 @@ function kindOf(file: ExportFile, headers: string[]): Kind | null {
     if (suffix.includes("/") ? path.endsWith(suffix) : path.split("/").pop() === suffix) return kind;
   }
   // Nom inattendu (fichier renommé) : on devine d'après les colonnes quand c'est possible.
+  if (headers.includes("Review")) return "reviews";
   if (headers.includes("Watched Date")) return "diary";
   if (headers.includes("Rating") && !headers.includes("Rewatch")) return "ratings";
   return null;
@@ -93,14 +97,25 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
     const key = `${normalizeTitle(title)}|${year ?? ""}`;
     let e = map.get(key);
     if (!e) {
-      e = { title, year, letterboxdUri: null, watched: false, inWatchlist: false, rating: null, liked: false, watchedAt: null };
+      e = {
+        title,
+        year,
+        letterboxdUri: null,
+        watched: false,
+        inWatchlist: false,
+        rating: null,
+        liked: false,
+        watchedAt: null,
+        review: null,
+        reviewedAt: null,
+      };
       map.set(key, e);
     }
     return e;
   };
 
   // Ordre de traitement : ratings.csv (note actuelle) après diary.csv (notes historiques).
-  const order: Kind[] = ["watched", "diary", "ratings", "likes", "watchlist"];
+  const order: Kind[] = ["watched", "diary", "reviews", "ratings", "likes", "watchlist"];
   const parsed = files
     .map((file) => {
       const csv = parseCsv(file);
@@ -139,6 +154,18 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
             e.rating = parseRating(row["Rating"]) ?? e.rating;
           } else {
             e.rating ??= parseRating(row["Rating"]);
+          }
+          break;
+        }
+        case "reviews": {
+          // Une ligne par critique : on garde la plus récente.
+          const text = row["Review"]?.trim();
+          if (!text) break;
+          e.watched = true;
+          const d = parseDate(row["Watched Date"]) ?? parseDate(row["Date"]);
+          if (!e.review || (d && (!e.reviewedAt || d > e.reviewedAt))) {
+            e.review = text.slice(0, 10_000);
+            e.reviewedAt = d;
           }
           break;
         }

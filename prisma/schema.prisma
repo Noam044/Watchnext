@@ -29,6 +29,8 @@ model User {
   films            UserFilm[]
   recommendations  Recommendation[]
   importJobs       ImportJob[]
+  messagesSent     Message[]          @relation("MessagesSent")
+  messagesReceived Message[]          @relation("MessagesReceived")
   sentRequests     Friendship[]       @relation("FriendshipRequester")
   receivedRequests Friendship[]       @relation("FriendshipAddressee")
 }
@@ -98,20 +100,25 @@ model Film {
   userFilms       UserFilm[]
   recommendations Recommendation[]
   emblemOf        User[]           @relation("UserEmblem")
+  messages        Message[]
 }
 
 model UserFilm {
-  id          String    @id @default(cuid())
-  userId      String
-  filmId      String
-  watched     Boolean   @default(false)
-  inWatchlist Boolean   @default(false)
+  id             String    @id @default(cuid())
+  userId         String
+  filmId         String
+  watched        Boolean   @default(false)
+  inWatchlist    Boolean   @default(false)
   /// Note Letterboxd de 0.5 à 5
-  rating      Float?
-  liked       Boolean   @default(false)
-  watchedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  rating         Float?
+  liked          Boolean   @default(false)
+  watchedAt      DateTime?
+  /// Critique écrite sur Letterboxd (la plus récente), avec son éventuel avertissement de spoiler
+  review         String?
+  reviewSpoilers Boolean   @default(false)
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   film Film @relation(fields: [filmId], references: [id], onDelete: Cascade)
@@ -192,10 +199,30 @@ model ImportEntry {
   rating        Float?
   liked         Boolean     @default(false)
   watchedAt     DateTime?
+  review        String?
+  reviewedAt    DateTime?
   status        EntryStatus @default(PENDING)
   tmdbId        Int?
 
   job ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId, status])
+}
+
+/// Message privé entre deux amis : du texte, un film partagé, ou les deux.
+model Message {
+  id          String    @id @default(cuid())
+  senderId    String
+  recipientId String
+  body        String?
+  filmId      String?
+  createdAt   DateTime  @default(now())
+  readAt      DateTime?
+
+  sender    User  @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User  @relation("MessagesReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+  film      Film? @relation(fields: [filmId], references: [id], onDelete: SetNull)
+
+  @@index([recipientId, readAt])
+  @@index([senderId, recipientId, createdAt])
 }

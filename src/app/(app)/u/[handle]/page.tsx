@@ -7,7 +7,7 @@ import { CutReveal } from "@/components/cut-reveal";
 import { Filmstrip } from "@/components/filmstrip";
 import { FriendButton } from "@/components/friend-button";
 import { FullImportReminder } from "@/components/full-import-reminder";
-import { ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
+import { ChatIcon, ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
 import { Library } from "@/components/library";
 import { ScopeScreen } from "@/components/scope-screen";
 import { prisma } from "@/lib/db";
@@ -105,7 +105,14 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
                 <PencilIcon /> Modifier le profil
               </Link>
             ) : (
-              <FriendButton userId={owner.id} name={name} relation={relation} />
+              <div className="flex flex-wrap items-center gap-2">
+                {relation === "friends" && (
+                  <Link href={`/messages/${owner.handle}`} className="btn-primary">
+                    <ChatIcon /> Écrire
+                  </Link>
+                )}
+                <FriendButton userId={owner.id} name={name} relation={relation} />
+              </div>
             )}
           </div>
         </div>

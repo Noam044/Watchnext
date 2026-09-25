@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { hideRecommendationAction, markSeenAction } from "@/actions/library";
 import { AnimatedNumber } from "@/components/animated-number";
 import { CutReveal } from "@/components/cut-reveal";
-import { EyeIcon, EyeOffIcon, ExternalIcon, InfoIcon, XIcon } from "@/components/icons";
+import { ArrowRightIcon, EyeIcon, EyeOffIcon, ExternalIcon, InfoIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { ScopeScreen } from "@/components/scope-screen";
 import { toast } from "@/components/toaster";
@@ -288,9 +289,9 @@ function FilmSheet({ r, onClose, onAct }: { r: RecoItem | null; onClose: () => v
             )}
           </div>
           <div className="sticky bottom-0 flex flex-wrap gap-2 border-t border-velvet-800 bg-velvet-900/95 px-5 py-4 backdrop-blur sm:px-7">
-            <a href={letterboxdUrl(r.tmdbId)} target="_blank" rel="noreferrer" className="btn-primary">
-              Voir sur Letterboxd <ExternalIcon className="size-3.5" />
-            </a>
+            <Link href={`/film/${r.tmdbId}`} className="btn-primary">
+              Fiche complète <ArrowRightIcon className="size-3.5" />
+            </Link>
             <button onClick={() => onAct(r, "seen")} className="btn-ghost">
               <EyeIcon /> Déjà vu
             </button>

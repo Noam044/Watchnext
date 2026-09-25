@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AnimatedNumber } from "@/components/animated-number";
-import { HeartIcon, SearchIcon, XIcon } from "@/components/icons";
+import { HeartIcon, PencilIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { Stars, formatRating } from "@/components/stars";
 import type { Film, UserFilm } from "@/generated/prisma/client";
@@ -172,7 +172,7 @@ export function Library({
         <ul className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 sm:gap-x-4 md:grid-cols-5 lg:grid-cols-6">
           {page.rows.map((uf) => (
             <li key={uf.id} className="group min-w-0">
-              <a href={`https://letterboxd.com/tmdb/${uf.film.tmdbId}/`} target="_blank" rel="noreferrer" className="block">
+              <Link href={`/film/${uf.film.tmdbId}`} className="block">
                 <Poster
                   path={uf.film.posterPath}
                   title={uf.film.title}
@@ -181,10 +181,15 @@ export function Library({
                   className="ring-1 ring-white/5 transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_14px_40px_-12px_rgb(242_184_75/0.35)]"
                 />
                 <p className="mt-2 truncate text-[13px] leading-tight font-medium group-hover:text-tungsten">{uf.film.title}</p>
-              </a>
+              </Link>
               <p className="mt-1 flex items-center gap-1.5 text-xs">
                 {showRatings && uf.rating != null && <Stars value={uf.rating} />}
                 {uf.liked && <HeartIcon className="size-3 text-curtain brightness-150" />}
+                {uf.review && (
+                  <span title="Critique écrite" aria-label="Critique écrite">
+                    <PencilIcon className="size-3 text-dust-300" />
+                  </span>
+                )}
                 <span className="meta truncate text-[11px]">
                   {query.sort === "recent" && uf.watchedAt ? dateFmt.format(uf.watchedAt) : (uf.film.year ?? "")}
                 </span>

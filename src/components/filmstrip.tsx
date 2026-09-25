@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ExternalIcon } from "@/components/icons";
+import { ArrowRightIcon } from "@/components/icons";
 import { formatRating } from "@/components/stars";
 import { backdropUrl, posterUrl } from "@/lib/tmdb-images";
 
@@ -88,10 +89,8 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
                   data-index={i}
                   className="relative w-64 shrink-0 snap-center sm:w-80"
                 >
-                  <a
-                    href={`https://letterboxd.com/tmdb/${f.tmdbId}/`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <Link
+                    href={`/film/${f.tmdbId}`}
                     tabIndex={isActive ? 0 : -1}
                     onClick={(e) => {
                       // Une image hors de la fenêtre est d'abord amenée au centre.
@@ -100,7 +99,7 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
                         goTo(i);
                       }
                     }}
-                    aria-label={`${f.title} sur Letterboxd`}
+                    aria-label={`Fiche de ${f.title}`}
                     className="group relative block aspect-[3/2] overflow-hidden rounded-[3px] bg-black"
                   >
                     {src && (
@@ -122,10 +121,10 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
                     />
                     {isActive && (
                       <span className="absolute right-2 bottom-2 grid size-7 place-items-center rounded-full bg-velvet-950/80 text-screen opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                        <ExternalIcon className="size-3.5" />
+                        <ArrowRightIcon className="size-3.5" />
                       </span>
                     )}
-                  </a>
+                  </Link>
                   {/* Marquages du bord de pellicule */}
                   <span className="absolute -top-6 left-1 font-mono text-[9px] tracking-[0.2em] text-[#d98b4c]/70 sm:-top-7">
                     WN 35 · {String(i + 1).padStart(2, "0")}A

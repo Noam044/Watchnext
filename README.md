@@ -53,7 +53,10 @@ Les images sont servies directement par le CDN de TMDB, dans la taille la plus p
    - Le flux ne contient ni la watchlist, ni les notes modifiées ou données sans entrée de journal : un rappel propose de refaire un export complet quand le dernier date de plus de 30 jours (« Plus tard » le masque 14 jours).
 5. **Profil** (`/profile` → `/u/{pseudo}`) : bannière du film fétiche, statistiques, goûts (genres, réalisateurs, acteurs), puis toute la bibliothèque. Elle est découpée en onglets (notes, vus, coups de cœur, watchlist), filtrable par note depuis l'histogramme, triable et paginée.
 6. **Modifier le profil** (`/profile/edit`) : nom, pseudo, bio, pseudo Letterboxd, visibilité de la bibliothèque, film fétiche, email (mot de passe demandé) et mot de passe.
-7. **Amis** (`/friends`) : recherche par nom ou @pseudo, demandes reçues et envoyées, liste d'amis triée par affinité. Sur le profil d'un ami : affinité de notes, films en commun et ses coups de cœur que tu n'as pas vus.
+7. **Fiche film** (`/film/{tmdbId}`) : ouverte depuis la bibliothèque, la pellicule d'un ami, un message ou la fiche rapide des recommandations. Affiche ton avis (note, like, date, critique), la raison de la recommandation, les notes et critiques de tes amis (critiques « spoiler » masquées par défaut), le synopsis et la fiche technique. Le film est récupéré sur TMDB s'il n'est pas encore en base.
+   - **Critiques** : lues dans le flux RSS (texte de l'entrée, avertissement de spoiler) et dans `reviews.csv` de l'export ; la plus récente est gardée.
+8. **Messages** (`/messages`) : conversations entre amis uniquement (vérifié côté serveur à l'envoi et à la lecture), texte et films partagés (« Envoyer à un ami » sur une fiche, ou film de sa bibliothèque joint depuis la conversation). Le fil se met à jour toutes les 4 s quand l'onglet est visible ; la navigation affiche les messages non lus et une notification apparaît dans l'app (vérification toutes les 20 s). Limite de 20 messages par minute.
+9. **Amis** (`/friends`) : recherche par nom ou @pseudo, demandes reçues et envoyées, liste d'amis triée par affinité. Sur le profil d'un ami : affinité de notes, films en commun et ses coups de cœur que tu n'as pas vus.
    - La bibliothèque d'un membre n'est visible que par ses amis, sauf s'il la rend publique. Le nom, le pseudo, la bio et le film fétiche restent visibles pour qu'on puisse le trouver.
    - Affinité : `1 − écart moyen des notes / 3` sur les films notés par les deux, calculée à partir de 5 films en commun.
 
@@ -108,9 +111,10 @@ Choix principaux :
 | `Friendship` | `requesterId` → `addresseeId`, `status` (`PENDING` / `ACCEPTED`). Une seule ligne par paire : une demande croisée vaut acceptation. |
 | `LetterboxdProfile` | pseudo, `lastRssSync`, `lastImportAt` (1–1 avec User) |
 | `Film` | `tmdbId` unique, titre, année, affiche, votes, `genres` / `directors` / `cast` / `keywords` en JSON, `detailsFetchedAt` |
-| `UserFilm` | (userId, filmId) unique : `watched`, `inWatchlist`, `rating` (0,5–5), `liked`, `watchedAt` |
+| `UserFilm` | (userId, filmId) unique : `watched`, `inWatchlist`, `rating` (0,5–5), `liked`, `watchedAt`, `review` (+ `reviewSpoilers`, `reviewedAt`) |
 | `Recommendation` | (userId, filmId) unique : `score`, `reason`, `details` (JSON : %, étiquettes, composantes), `hidden` |
 | `TmdbCache` | clé de requête → réponse JSON + `expiresAt` |
+| `Message` | `senderId` → `recipientId`, `body` et/ou `filmId` (film partagé), `readAt` |
 | `ImportJob` / `ImportEntry` | suivi d'un import complet. Les entrées `NOT_FOUND` forment la liste des films introuvables. |
 
 Règles de fusion : `watched` et `liked` se cumulent. La note la plus récente l'emporte, tout comme la date de visionnage. Un film vu sort de la watchlist et des recommandations.

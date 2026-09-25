@@ -112,3 +112,24 @@ export const LockIcon = ({ className }: P) => (
     <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
   </svg>
 );
+export const SendIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5 21 3Z" />
+  </svg>
+);
+export const ChatIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5v-9Z" />
+  </svg>
+);
+export const ArrowLeftIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="M19.5 12h-15m0 0 5.5-5.5M4.5 12l5.5 5.5" />
+  </svg>
+);
+export const FilmIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="2" />
+    <path d="M7.5 3.5v17M16.5 3.5v17M3.5 8h4M3.5 12h4M3.5 16h4M16.5 8h4M16.5 12h4M16.5 16h4" />
+  </svg>
+);
