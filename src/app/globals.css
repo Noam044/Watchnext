@@ -180,11 +180,11 @@ body::before {
 /*
  * Ticket de séance : chaque visionnage (le sien ou celui d'un ami) est imprimé sur un ticket.
  * Deux encoches se font face sur la ligne de perforation qui sépare le talon (daté) du corps.
- * --cut : position de la perforation depuis la gauche.
+ * --ticket-cut : position de la perforation depuis la gauche ; --ticket-notch : rayon des encoches.
  */
 @utility ticket {
-  --cut: 4.5rem;
-  --notch: 7px;
+  --cut: var(--ticket-cut, 4.5rem);
+  --notch: var(--ticket-notch, 7px);
   @apply relative bg-velvet-850;
   border-radius: 4px;
   mask:

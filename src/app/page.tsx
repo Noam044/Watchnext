@@ -110,20 +110,27 @@ export default async function Home() {
 
         {demo && (
           <figure className="reveal lg:-mr-10">
-            <ScopeScreen backdropPath={demo.backdropPath} posterPath={demo.posterPath} alt="" size="w1280" sizes="(max-width: 1024px) 100vw, 680px">
-              <div className="absolute inset-0 bg-linear-to-t from-velvet-950/95 via-velvet-950/35 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-                <p className="eyebrow text-tungsten">
-                  {l.demoSession} · <span className="font-bold">94 %</span> {l.demoPct}
-                </p>
-                <p className="marquee mt-1.5 text-3xl text-balance sm:text-5xl">{demo.title}</p>
-                {because.length === 2 && (
-                  <p className="mt-2 text-sm text-screen/90 sm:text-base">
-                    {l.demoBecause(because[0].title, because[1].title)}
-                  </p>
-                )}
+            <ScopeScreen backdropPath={demo.backdropPath} posterPath={demo.posterPath} alt="" size="w1280" sizes="(max-width: 1024px) 100vw, 680px" />
+            {/* Le ticket de séance, comme sur l'accueil d'un membre ; l'ombre est portée par le parent (le masque la découperait). */}
+            <div className="relative z-10 -mt-8 drop-shadow-[0_20px_36px_rgb(0_0_0/0.6)] sm:mx-5 sm:-mt-14">
+              <div className="ticket flex [--ticket-cut:4.75rem] [--ticket-notch:9px] sm:[--ticket-cut:6.5rem] sm:[--ticket-notch:11px]">
+                <div className="ticket-stub gap-1 py-5">
+                  <span className="font-mono text-[10px] tracking-[0.12em] uppercase opacity-70">{l.demoSession}</span>
+                  <span className="font-display text-3xl leading-none font-extrabold tabular-nums sm:text-5xl">
+                    94<span className="text-xl sm:text-2xl">%</span>
+                  </span>
+                  <span className="font-mono text-[10px] opacity-70">{l.demoPct}</span>
+                </div>
+                <div className="min-w-0 flex-1 p-4 sm:p-6">
+                  <p className="marquee text-3xl text-balance sm:text-5xl">{demo.title}</p>
+                  {because.length === 2 && (
+                    <p className="mt-2 text-sm text-screen/90 sm:text-base">
+                      {l.demoBecause(because[0].title, because[1].title)}
+                    </p>
+                  )}
+                </div>
               </div>
-            </ScopeScreen>
+            </div>
             <figcaption className="meta mt-3 flex items-center gap-2 text-[11px] text-dust-400">
               <span className="rounded-sm border border-velvet-700 px-1.5 py-0.5 text-dust-300">{l.example}</span>
               {l.exampleNote}

@@ -62,11 +62,7 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
   }, [optimistic]);
 
   if (optimistic.length === 0) {
-    return (
-      <div className="card p-10 text-center text-dust-300">
-        {t.dashboard.doneAll}
-      </div>
-    );
+    return <div className="card p-10 text-center text-dust-300">{t.dashboard.doneAll}</div>;
   }
 
   const activeGenre = genre && genres.some(([g]) => g === genre) ? genre : null;
@@ -134,99 +130,132 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
 type Act = (r: RecoItem, kind: "seen" | "hide") => void;
 type Open = (r: RecoItem) => void;
 
-/** Le film n°1, projeté sur l'écran Cinémascope. */
+/**
+ * Le film n°1 : projeté sur l'écran Cinémascope, avec son ticket de séance posé à cheval
+ * sur le bas de l'écran. Le talon porte l'affinité, le corps le titre, la raison et les actions.
+ */
 function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | null; onAct: Act }) {
   const { t } = useI18n();
   const [playing, setPlaying] = useState(false);
   const close = useCallback(() => setPlaying(false), []);
-  const onPlay = trailerKey ? () => setPlaying(true) : undefined;
+  const onPlay = trailerKey && !playing ? () => setPlaying(true) : undefined;
 
-  if (playing && trailerKey) {
-    return (
-      <section aria-label={t.film.sessionLabel(r.title)} className="relative">
-        <TrailerFrame videoKey={trailerKey} title={r.title} onClose={close} />
-        <div className="mt-6">
-          <FeatureText r={r} onAct={onAct} />
-        </div>
-      </section>
-    );
-  }
   return (
-    <section aria-label={t.film.sessionLabel(r.title)} className="relative">
-      {/* L'image se transforme en celle de la fiche du film (même nom de transition). */}
-      <ViewTransition name={`screen-${r.tmdbId}`} share="morph" default="none">
-        <ScopeScreen
-          backdropPath={r.backdropPath}
-          posterPath={r.posterPath}
-          alt=""
-          preload
-          animate
-          className="group/screen cursor-pointer transition-shadow duration-500 hover:shadow-[0_0_0_1px_rgb(246_236_220/0.14),0_50px_160px_-30px_rgb(242_184_75/0.45),0_10px_40px_-10px_rgb(0_0_0/0.8)]"
-          imageClassName="transition-[transform,filter] duration-[8s] ease-out group-hover/screen:scale-105 group-hover/screen:brightness-110"
-        >
-          {/* Tout l'écran ouvre la fiche du film ; les boutons posés dessus gardent leur action. */}
-          <Link href={`/film/${r.tmdbId}`} tabIndex={-1} aria-hidden className="absolute inset-0" />
-          {/* Faisceau du projecteur qui balaie l'écran une fois au survol */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(100deg,transparent_35%,rgb(255_236_200/0.16)_50%,transparent_65%)] transition-transform duration-[1.4s] ease-out group-hover/screen:translate-x-full motion-reduce:hidden"
-          />
-          <span
-            aria-hidden
-            className="meta pointer-events-none absolute top-4 right-4 hidden -translate-y-2 items-center gap-1.5 rounded-full bg-velvet-950/75 px-3 py-1.5 text-screen opacity-0 backdrop-blur transition duration-300 group-hover/screen:translate-y-0 group-hover/screen:opacity-100 md:inline-flex"
+    <section aria-label={t.film.sessionLabel(r.title)} className="group/feature relative">
+      {playing && trailerKey ? (
+        <TrailerFrame videoKey={trailerKey} title={r.title} onClose={close} />
+      ) : (
+        /* L'image se transforme en celle de la fiche du film (même nom de transition). */
+        <ViewTransition name={`screen-${r.tmdbId}`} share="morph" default="none">
+          <ScopeScreen
+            backdropPath={r.backdropPath}
+            posterPath={r.posterPath}
+            alt=""
+            preload
+            animate
+            className="group/screen cursor-pointer transition-shadow duration-500 hover:shadow-[0_0_0_1px_rgb(246_236_220/0.14),0_50px_160px_-30px_rgb(242_184_75/0.45),0_10px_40px_-10px_rgb(0_0_0/0.8)]"
+            imageClassName="transition-[transform,filter] duration-[8s] ease-out group-hover/screen:scale-105 group-hover/screen:brightness-110"
           >
-            {t.film.seeFilm} <ArrowRightIcon className="size-3.5" />
-          </span>
-          <div className="pointer-events-none absolute inset-0 hidden bg-linear-to-t from-velvet-950/95 via-velvet-950/40 to-transparent md:block" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden p-8 md:block lg:p-10 [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
-            <FeatureText r={r} onAct={onAct} onPlay={onPlay} />
-          </div>
-        </ScopeScreen>
-      </ViewTransition>
-      <div className="mt-5 md:hidden">
-        <FeatureText r={r} onAct={onAct} onPlay={onPlay} />
-      </div>
+            {/* Tout l'écran ouvre la fiche du film. */}
+            <Link href={`/film/${r.tmdbId}`} tabIndex={-1} aria-hidden className="absolute inset-0" />
+            {/* Faisceau du projecteur qui balaie l'écran une fois au survol */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(100deg,transparent_35%,rgb(255_236_200/0.16)_50%,transparent_65%)] transition-transform duration-[1.4s] ease-out group-hover/screen:translate-x-full motion-reduce:hidden"
+            />
+            <span
+              aria-hidden
+              className="meta pointer-events-none absolute top-4 right-4 hidden -translate-y-2 items-center gap-1.5 rounded-md bg-velvet-950/80 px-3 py-1.5 text-screen opacity-0 transition duration-300 group-hover/screen:translate-y-0 group-hover/screen:opacity-100 md:inline-flex"
+            >
+              {t.film.seeFilm} <ArrowRightIcon className="size-3.5" />
+            </span>
+          </ScopeScreen>
+        </ViewTransition>
+      )}
+      <FeatureTicket r={r} onAct={onAct} onPlay={onPlay} overlap={!playing} />
     </section>
   );
 }
 
-function FeatureText({ r, onAct, onPlay }: { r: RecoItem; onAct: Act; onPlay?: () => void }) {
+/** Ticket de la séance du jour. */
+function FeatureTicket({
+  r,
+  onAct,
+  onPlay,
+  overlap,
+}: {
+  r: RecoItem;
+  onAct: Act;
+  onPlay?: () => void;
+  overlap: boolean;
+}) {
   const { t } = useI18n();
   return (
-    <div className="max-w-3xl">
-      <p className="eyebrow text-tungsten">
-        {t.film.session} · <AnimatedNumber value={r.pct} suffix=" %" delay={500} className="font-bold" />{" "}
-        {t.film.pctForYou}
-      </p>
-      <h1 className="marquee mt-2 text-5xl text-balance transition-transform duration-500 ease-out group-hover/screen:-translate-y-1 sm:text-6xl lg:text-7xl">
-        <CutReveal text={r.title} delay={450} />
-      </h1>
-      <p className="meta mt-3 animate-rise [animation-delay:800ms]">
-        {metaLine(r, t)}
-        {r.genres.length > 0 && <span className="hidden sm:inline"> · {r.genres.slice(0, 3).join(", ")}</span>}
-      </p>
-      <p className="mt-3 max-w-xl animate-rise text-base leading-snug text-screen/90 [animation-delay:900ms]">
-        {r.reason}
-      </p>
-      <div className="mt-5 flex animate-rise flex-wrap gap-2 [animation-delay:1000ms]">
-        {onPlay && (
-          <button onClick={onPlay} className="btn-primary">
-            <PlayIcon className="size-3.5" /> {t.film.trailer}
-          </button>
-        )}
-        <Link
-          href={`/film/${r.tmdbId}`}
-          className={onPlay ? "btn-ghost bg-velvet-950/40 backdrop-blur" : "btn-primary"}
-        >
-          <InfoIcon /> {t.film.filmPage}
-        </Link>
-        <button onClick={() => onAct(r, "seen")} className="btn-quiet">
-          <EyeIcon /> {t.film.seen}
-        </button>
-        <button onClick={() => onAct(r, "hide")} className="btn-quiet">
-          <EyeOffIcon /> {t.film.notForMe}
-        </button>
+    // L'ombre est portée par le parent : le masque du ticket la découperait.
+    <div className={`relative z-10 ${overlap ? "-mt-6 sm:mx-4 md:-mt-20 md:mx-8 lg:mx-12" : "mt-6"}`}>
+      <div className="drop-shadow-[0_24px_40px_rgb(0_0_0/0.65)]">
+        <div className="ticket flex animate-rise [--ticket-cut:4.75rem] [--ticket-notch:9px] [animation-delay:250ms] sm:[--ticket-cut:8rem] sm:[--ticket-notch:12px]">
+          <div className="ticket-stub gap-1 py-5 sm:py-6">
+            <span className="font-mono text-[10px] tracking-[0.12em] uppercase opacity-70 sm:text-[11px]">
+              {t.film.session}
+            </span>
+            <span className="font-display text-3xl leading-none font-extrabold tabular-nums sm:text-6xl">
+              <AnimatedNumber value={r.pct} delay={500} />
+              <span className="text-xl sm:text-3xl">%</span>
+            </span>
+            <span className="font-mono text-[10px] opacity-70 sm:text-[11px]">{t.film.pctForYou}</span>
+          </div>
+          <div className="min-w-0 flex-1 p-4 sm:p-7 lg:p-8">
+            <h1 className="marquee text-4xl text-balance transition-transform duration-500 ease-out group-hover/feature:-translate-y-0.5 sm:text-6xl lg:text-7xl">
+              <Link href={`/film/${r.tmdbId}`} className="hover:text-tungsten">
+                <CutReveal text={r.title} delay={450} />
+              </Link>
+            </h1>
+            <p className="meta mt-3 animate-rise [animation-delay:800ms]">
+              {metaLine(r, t)}
+              {r.genres.length > 0 && <span className="hidden sm:inline"> · {r.genres.slice(0, 3).join(", ")}</span>}
+            </p>
+            <p className="mt-3 max-w-2xl animate-rise text-base leading-snug text-screen/90 [animation-delay:900ms]">
+              {r.reason}
+            </p>
+            <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-5 hidden sm:flex" />
+          </div>
+        </div>
       </div>
+      {/* Sur téléphone, le ticket est trop étroit : les actions passent dessous. */}
+      <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-4 flex sm:hidden" />
+    </div>
+  );
+}
+
+function FeatureActions({
+  r,
+  onAct,
+  onPlay,
+  className,
+}: {
+  r: RecoItem;
+  onAct: Act;
+  onPlay?: () => void;
+  className: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className={`animate-rise flex-wrap gap-2 [animation-delay:1000ms] ${className}`}>
+      {onPlay && (
+        <button onClick={onPlay} className="btn-primary">
+          <PlayIcon className="size-3.5" /> {t.film.trailer}
+        </button>
+      )}
+      <Link href={`/film/${r.tmdbId}`} className={onPlay ? "btn-ghost" : "btn-primary"}>
+        <InfoIcon /> {t.film.filmPage}
+      </Link>
+      <button onClick={() => onAct(r, "seen")} className="btn-quiet">
+        <EyeIcon /> {t.film.seen}
+      </button>
+      <button onClick={() => onAct(r, "hide")} className="btn-quiet">
+        <EyeOffIcon /> {t.film.notForMe}
+      </button>
     </div>
   );
 }
@@ -381,7 +410,11 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
             {r.voteAverage > 0 && (
               <span className="text-dust-400">
                 {" "}
-                · TMDB {formatNumber(r.voteAverage, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                · TMDB{" "}
+                {formatNumber(r.voteAverage, locale, {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })}
               </span>
             )}
           </p>
