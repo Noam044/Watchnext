@@ -140,7 +140,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
         {friendCards.length ? (
           <ul className="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
             {friendCards.map(({ user, emblem, match, watched }) => (
-              <li key={user.id}>
+              <li key={user.id} className="reveal">
                 <Link href={`/u/${user.handle}`} className="group block">
                   <ScopeScreen
                     backdropPath={emblem?.backdropPath}

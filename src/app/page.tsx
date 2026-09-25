@@ -105,7 +105,7 @@ export default async function Home() {
           </h2>
           <ol className="relative mt-10 space-y-8 border-l border-velvet-700 pl-8">
             {STEPS.map((s, i) => (
-              <li key={s.title} className="relative">
+              <li key={s.title} className="reveal relative">
                 <span className="absolute top-0 -left-[calc(2rem+0.8rem)] grid size-[1.6rem] place-items-center rounded-full border border-tungsten/50 bg-velvet-950 font-mono text-xs font-bold text-tungsten">
                   {i + 1}
                 </span>
@@ -120,7 +120,7 @@ export default async function Home() {
         </div>
 
         {demo && (
-          <figure className="lg:-mr-10">
+          <figure className="reveal lg:-mr-10">
             <ScopeScreen backdropPath={demo.backdropPath} posterPath={demo.posterPath} alt="" size="w1280" sizes="(max-width: 1024px) 100vw, 680px">
               <div className="absolute inset-0 bg-linear-to-t from-velvet-950/95 via-velvet-950/35 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">

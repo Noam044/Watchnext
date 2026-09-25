@@ -15,6 +15,7 @@ export function ScopeScreen({
   glow = true,
   sizes = "(max-width: 1152px) 100vw, 1152px",
   className = "",
+  imageClassName = "",
   children,
 }: {
   backdropPath: string | null | undefined;
@@ -27,6 +28,8 @@ export function ScopeScreen({
   glow?: boolean;
   sizes?: string;
   className?: string;
+  /** Classes ajoutées à l'image (ex. zoom lent au survol). */
+  imageClassName?: string;
   children?: React.ReactNode;
 }) {
   const src = backdropUrl(backdropPath, size);
@@ -37,7 +40,7 @@ export function ScopeScreen({
     >
       <div className={`absolute inset-0 ${animate ? "animate-projector" : ""}`}>
         {src ? (
-          <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" preload={preload} />
+          <Image src={src} alt={alt} fill sizes={sizes} className={`object-cover ${imageClassName}`} preload={preload} />
         ) : fallback ? (
           <Image src={fallback} alt={alt} fill sizes="400px" className="scale-110 object-cover opacity-60 blur-2xl" />
         ) : (

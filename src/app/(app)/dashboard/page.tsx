@@ -11,6 +11,7 @@ import { SyncStatus } from "@/components/sync-status";
 import { prisma } from "@/lib/db";
 import { refs } from "@/lib/films";
 import { requireUser } from "@/lib/session";
+import { getTrailerKey } from "@/lib/tmdb";
 import {
   AUTO_SYNC_INTERVAL,
   EXPORT_REMINDER_COOKIE,
@@ -68,6 +69,9 @@ export default async function DashboardPage() {
     };
   });
 
+  // Bande-annonce du film n°1 (réponse TMDB mise en cache) ; les autres sont demandées au clic.
+  const featureTrailer = items[0] ? await getTrailerKey(items[0].tmdbId).catch(() => null) : null;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -94,7 +98,7 @@ export default async function DashboardPage() {
       {exportStale && sync.lastImportAt && <FullImportReminder kind="stale" lastImportAt={sync.lastImportAt} />}
 
       {items.length > 0 ? (
-        <RecoProgramme items={items} />
+        <RecoProgramme items={items} featureTrailer={featureTrailer} />
       ) : (
         <div className="card flex flex-col items-center gap-3 px-6 py-16 text-center">
           <p className="marquee text-4xl">Aucune séance programmée</p>

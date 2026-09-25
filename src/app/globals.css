@@ -29,6 +29,7 @@
   --animate-projector: projector 1.6s ease-out both;
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-cut-in: cut-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-masking-open: masking-open 0.7s cubic-bezier(0.6, 0, 0.2, 1) both;
 
   @keyframes projector {
     0% {
@@ -59,6 +60,15 @@
     to {
       clip-path: inset(-0.3em -0.1em -0.3em -0.1em);
       transform: none;
+    }
+  }
+  /* Les caches de l'écran s'écartent : du Cinémascope (2.39:1) au 16:9 */
+  @keyframes masking-open {
+    from {
+      clip-path: inset(12.8% 0 12.8% 0 round 6px);
+    }
+    to {
+      clip-path: inset(0 0 0 0 round 6px);
     }
   }
   @keyframes rise {
@@ -138,7 +148,21 @@ body::before {
     disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
 }
 @utility btn-primary {
-  @apply btn bg-tungsten text-velvet-950 hover:bg-tungsten-strong;
+  @apply btn relative overflow-hidden bg-tungsten text-velvet-950 hover:bg-tungsten-strong
+    hover:shadow-[0_8px_30px_-8px_rgb(242_184_75/0.55)];
+  /* Éclat qui balaie le bouton au survol, comme un reflet sur une ampoule */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    translate: -120% 0;
+    background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.45) 50%, transparent 65%);
+    transition: translate 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  &:hover::after {
+    translate: 120% 0;
+  }
 }
 @utility btn-ghost {
   @apply btn border border-velvet-700 text-screen hover:border-velvet-600 hover:bg-velvet-800;
@@ -197,5 +221,65 @@ body::before {
 @keyframes beam {
   to {
     translate: 100% 0;
+  }
+}
+
+/* Apparition au défilement : chaque élément monte en fondu quand il entre à l'écran.
+   Animation pilotée par le défilement (sans JavaScript) ; ignorée si non prise en charge. */
+@utility reveal {
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+}
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.97);
+    filter: blur(3px);
+  }
+}
+
+/* Transitions entre pages (React <ViewTransition>) : la salle s'assombrit, puis l'écran
+   se rallume sur la page suivante ; l'affiche d'un film se transforme en celle de sa fiche. */
+::view-transition-old(.page-out) {
+  animation: 180ms ease-in both vt-dim;
+}
+::view-transition-new(.page-in) {
+  animation: 320ms cubic-bezier(0.2, 0.7, 0.2, 1) 120ms both vt-light;
+}
+::view-transition-group(.morph) {
+  animation-duration: 480ms;
+  animation-timing-function: cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+::view-transition-image-pair(.morph) {
+  animation-name: vt-morph-blur;
+}
+@keyframes vt-dim {
+  to {
+    opacity: 0;
+    filter: brightness(0.5);
+  }
+}
+@keyframes vt-light {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: brightness(1.7) saturate(0.6);
+  }
+}
+@keyframes vt-morph-blur {
+  35% {
+    filter: blur(2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

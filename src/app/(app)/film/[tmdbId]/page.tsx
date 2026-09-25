@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ViewTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import { BackButton } from "@/components/back-button";
 import { CutReveal } from "@/components/cut-reveal";
 import { ExternalIcon, HeartIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { ReviewText } from "@/components/review-text";
-import { ScopeScreen } from "@/components/scope-screen";
+import { FilmScreen } from "@/components/film-screen";
 import { ShareFilmButton } from "@/components/share-film-button";
 import { Stars } from "@/components/stars";
 import { prisma } from "@/lib/db";
 import { getFilmPage } from "@/lib/film-page";
 import { refs } from "@/lib/films";
 import { requireUser } from "@/lib/session";
+import { getTrailerKey } from "@/lib/tmdb";
 import { displayName } from "@/lib/users";
 
 export const maxDuration = 30;
@@ -35,7 +37,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
   const me = await requireUser();
   const id = parseId((await params).tmdbId);
   if (!id) notFound();
-  const data = await getFilmPage(id, me.id);
+  const [data, trailerKey] = await Promise.all([getFilmPage(id, me.id), getTrailerKey(id).catch(() => null)]);
   if (!data) notFound();
   const { film, mine, reco, friends } = data;
 
@@ -51,26 +53,24 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
       <BackButton />
 
       <header>
-        <ScopeScreen
+        <FilmScreen
           backdropPath={film.backdropPath}
           posterPath={film.posterPath}
-          alt=""
-          preload
-          animate
-          className="-mx-4 rounded-none sm:mx-0 sm:rounded-md"
-        >
-          <div className="absolute inset-0 bg-linear-to-t from-velvet-950/90 via-velvet-950/10 to-transparent" />
-        </ScopeScreen>
+          title={film.title}
+          trailerKey={trailerKey}
+        />
 
         <div className="relative flex gap-4 px-1 sm:gap-6 sm:px-6">
-          <Poster
-            path={film.posterPath}
-            title={film.title}
-            size="w342"
-            sizes="(max-width: 640px) 112px, 176px"
-            preload
-            className="-mt-16 w-28 shrink-0 shadow-2xl shadow-black/70 ring-1 ring-white/10 sm:-mt-24 sm:w-44"
-          />
+          <ViewTransition name={`poster-${film.tmdbId}`} share="morph" default="none">
+            <Poster
+              path={film.posterPath}
+              title={film.title}
+              size="w342"
+              sizes="(max-width: 640px) 112px, 176px"
+              preload
+              className="-mt-16 w-28 shrink-0 shadow-2xl shadow-black/70 ring-1 ring-white/10 sm:-mt-24 sm:w-44"
+            />
+          </ViewTransition>
           <div className="min-w-0 pt-3 sm:pt-5">
             {recoPct != null && (
               <p className="eyebrow text-tungsten">
@@ -122,7 +122,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
             </section>
           )}
 
-          <section aria-labelledby="ton-avis" className="space-y-3">
+          <section aria-labelledby="ton-avis" className="reveal space-y-3">
             <h2 id="ton-avis" className="marquee text-3xl">
               Ton avis
             </h2>
@@ -151,7 +151,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
           </section>
 
           {film.overview && (
-            <section aria-labelledby="synopsis" className="space-y-3">
+            <section aria-labelledby="synopsis" className="reveal space-y-3">
               <h2 id="synopsis" className="marquee text-3xl">
                 Synopsis
               </h2>
@@ -159,7 +159,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
             </section>
           )}
 
-          <section aria-labelledby="amis" className="space-y-3">
+          <section aria-labelledby="amis" className="reveal space-y-3">
             <h2 id="amis" className="marquee text-3xl">
               Tes amis{friendsWatched.length > 0 && <span className="text-dust-400"> · {friendsWatched.length}</span>}
             </h2>

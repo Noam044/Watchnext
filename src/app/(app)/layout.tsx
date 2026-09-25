@@ -3,6 +3,7 @@ import { LogoutIcon } from "@/components/icons";
 import { Logo } from "@/components/logo";
 import { DesktopNav, MobileTabBar, ProfileLink } from "@/components/nav-links";
 import { NotificationPoller } from "@/components/notification-poller";
+import { PageTransition } from "@/components/page-transition";
 import { pendingRequestCount } from "@/lib/friends";
 import { unreadMessageCount } from "@/lib/messages";
 import { requireUser } from "@/lib/session";
@@ -28,7 +29,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
       </header>
-      <main id="contenu" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 outline-none px-4 pt-6 pb-28 sm:px-6 sm:pt-10 md:pb-16">{children}</main>
+      <main id="contenu" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 outline-none px-4 pt-6 pb-28 sm:px-6 sm:pt-10 md:pb-16">
+        <PageTransition>{children}</PageTransition>
+      </main>
       <MobileTabBar me={me} />
       <NotificationPoller initial={{ pendingRequests, unreadMessages }} />
     </div>

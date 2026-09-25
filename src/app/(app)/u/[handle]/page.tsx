@@ -147,7 +147,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
       )}
 
       {match && (
-        <section aria-labelledby="affinite" className="grid gap-6 lg:grid-cols-[18rem_1fr] lg:items-start">
+        <section aria-labelledby="affinite" className="reveal grid gap-6 lg:grid-cols-[18rem_1fr] lg:items-start">
           <div className="card p-6">
             <p className="eyebrow" id="affinite">
               Affinité avec toi
@@ -186,7 +186,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
       )}
 
       {summary && summary.watchedCount > 0 && (
-        <section aria-labelledby="gouts" className="space-y-4">
+        <section aria-labelledby="gouts" className="reveal space-y-4">
           <h2 id="gouts" className="marquee text-4xl">
             {isSelf ? "Tes goûts" : "Ses goûts"}
           </h2>

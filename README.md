@@ -165,3 +165,6 @@ Thème « la salle » : velours bordeaux presque noir (`velvet-*`), texte ivoire
   - `CutReveal` : titres révélés lettre par lettre, en CSS seul.
   - `AnimatedNumber` : chiffres qui défilent (pourcentages, affinité, statistiques), avec [Number Flow](https://number-flow.barvian.me).
   - `Filmstrip` (profil d'un ami) : pellicule 35 mm, les images restent en négatif et se développent au centre.
+  - Bandes-annonces (`TrailerFrame`) : sur la fiche film, « Ta séance » et la fiche rapide, l'écran passe du Cinémascope au 16:9 puis lit la bande-annonce YouTube (domaine sans cookies, chargé seulement au clic). Choix via `/movie/{id}/videos` de TMDB (français d'abord, sinon anglais), mis en cache 7 jours.
+  - Transitions entre pages (`PageTransition`, React `<ViewTransition>`) : la page quittée s'assombrit, la suivante s'allume ; l'affiche d'un film de la bibliothèque se transforme en celle de sa fiche.
+  - Apparition au défilement (utilitaire `reveal`, animations CSS pilotées par le défilement) et inclinaison 3D des affiches au survol avec reflet (`Tilt`, souris uniquement).

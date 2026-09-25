@@ -133,3 +133,8 @@ export const FilmIcon = ({ className }: P) => (
     <path d="M7.5 3.5v17M16.5 3.5v17M3.5 8h4M3.5 12h4M3.5 16h4M16.5 8h4M16.5 12h4M16.5 16h4" />
   </svg>
 );
+export const PlayIcon = ({ className }: P) => (
+  <svg {...base(className)} fill="currentColor" stroke="none">
+    <path d="M7 4.5v15l12.5-7.5L7 4.5Z" />
+  </svg>
+);

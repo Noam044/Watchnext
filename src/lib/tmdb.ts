@@ -183,6 +183,27 @@ export async function trending() {
   return page?.results ?? [];
 }
 
+type TmdbVideo = { key: string; site: string; type: string; official: boolean; iso_639_1: string | null; size?: number };
+
+/**
+ * Clé YouTube de la bande-annonce à montrer : en français si possible, sinon en anglais,
+ * en préférant les bandes-annonces officielles aux teasers. Réponse mise en cache 7 jours.
+ */
+export async function getTrailerKey(tmdbId: number): Promise<string | null> {
+  const lang = language();
+  const res = await cached<{ results: TmdbVideo[] }>(
+    `/movie/${tmdbId}/videos`,
+    { language: lang, include_video_language: `${lang.slice(0, 2)},en,null` },
+    7 * DAY,
+  );
+  const videos = (res?.results ?? []).filter((v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser"));
+  const score = (v: TmdbVideo) =>
+    (v.iso_639_1 === lang.slice(0, 2) ? 8 : v.iso_639_1 === "en" ? 4 : 0) +
+    (v.type === "Trailer" ? 2 : 0) +
+    (v.official ? 1 : 0);
+  return videos.sort((a, b) => score(b) - score(a))[0]?.key ?? null;
+}
+
 /** Détails complets (non mis en cache ici : stockés dans la table Film). */
 export function getMovieDetails(tmdbId: number) {
   return request<TmdbMovieDetails>(`/movie/${tmdbId}`, {

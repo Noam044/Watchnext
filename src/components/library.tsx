@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { ViewTransition } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { HeartIcon, PencilIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { Stars, formatRating } from "@/components/stars";
+import { Tilt } from "@/components/tilt";
 import type { Film, UserFilm } from "@/generated/prisma/client";
 import type { LibraryQuery, LibrarySort, LibraryTab } from "@/lib/profile";
 
@@ -171,15 +173,19 @@ export function Library({
       {page.rows.length > 0 ? (
         <ul className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 sm:gap-x-4 md:grid-cols-5 lg:grid-cols-6">
           {page.rows.map((uf) => (
-            <li key={uf.id} className="group min-w-0">
+            <li key={uf.id} className="group reveal min-w-0">
               <Link href={`/film/${uf.film.tmdbId}`} className="block">
-                <Poster
-                  path={uf.film.posterPath}
-                  title={uf.film.title}
-                  size="w185"
-                  sizes="(max-width: 640px) 30vw, 160px"
-                  className="ring-1 ring-white/5 transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_14px_40px_-12px_rgb(242_184_75/0.35)]"
-                />
+                <Tilt className="rounded-[5px]">
+                  <ViewTransition name={`poster-${uf.film.tmdbId}`} share="morph" default="none">
+                    <Poster
+                      path={uf.film.posterPath}
+                      title={uf.film.title}
+                      size="w185"
+                      sizes="(max-width: 640px) 30vw, 160px"
+                      className="ring-1 ring-white/5 transition duration-300 group-hover:shadow-[0_14px_40px_-12px_rgb(242_184_75/0.45)]"
+                    />
+                  </ViewTransition>
+                </Tilt>
                 <p className="mt-2 truncate text-[13px] leading-tight font-medium group-hover:text-tungsten">{uf.film.title}</p>
               </Link>
               <p className="mt-1 flex items-center gap-1.5 text-xs">
