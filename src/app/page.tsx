@@ -89,8 +89,7 @@ export default async function Home() {
         className="mx-auto grid w-full max-w-6xl gap-14 px-4 pt-24 pb-28 sm:px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:gap-20"
       >
         <div>
-          <p className="eyebrow">{l.howEyebrow}</p>
-          <h2 id="comment" className="marquee mt-3 text-5xl text-balance sm:text-6xl">
+          <h2 id="comment" className="marquee text-5xl text-balance sm:text-6xl">
             {l.howTitle1} <span className="text-tungsten">{l.howTitle2}</span>
           </h2>
           <ol className="relative mt-10 space-y-8 border-l border-velvet-700 pl-8">

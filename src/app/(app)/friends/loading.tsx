@@ -7,10 +7,10 @@ export default async function Loading() {
     <div className="space-y-12" aria-busy="true" aria-label={t.friends.loading}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
-          <div className="skeleton h-3 w-24" />
           <div className="skeleton h-16 w-48" />
+          <div className="skeleton h-4 w-72" />
         </div>
-        <div className="skeleton h-13 w-full rounded-full lg:max-w-sm" />
+        <div className="skeleton h-13 w-full lg:max-w-sm" />
       </div>
       <ul className="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
@@ -24,6 +24,11 @@ export default async function Loading() {
               </div>
             </div>
           </li>
+        ))}
+      </ul>
+      <ul className="grid gap-3 md:grid-cols-2">
+        {Array.from({ length: 4 }, (_, i) => (
+          <li key={i} className="skeleton h-28 rounded-sm" />
         ))}
       </ul>
     </div>

@@ -3,7 +3,6 @@ import { pair } from "@/i18n/config";
 export const settings = pair(
   {
     meta: "Modifier le profil",
-    eyebrow: "Réglages",
     title: "Ton profil",
     viewProfile: "Voir mon profil",
     sections: "Sections",
@@ -57,7 +56,6 @@ export const settings = pair(
   },
   {
     meta: "Edit profile",
-    eyebrow: "Settings",
     title: "Your profile",
     viewProfile: "View my profile",
     sections: "Sections",

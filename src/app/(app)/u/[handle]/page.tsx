@@ -10,7 +10,7 @@ import { FullImportReminder } from "@/components/full-import-reminder";
 import { ChatIcon, ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
 import { Library } from "@/components/library";
 import { ScopeScreen } from "@/components/scope-screen";
-import { dateFormat } from "@/i18n/format";
+import { dateFormat, formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { getLocalizer } from "@/lib/localize";
@@ -126,12 +126,17 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
         {owner.bio && <p className="mt-5 max-w-2xl px-1 text-base leading-relaxed text-screen/90 sm:px-6">{owner.bio}</p>}
 
         {summary && (
-          <dl className="mt-8 grid grid-cols-3 divide-velvet-800 border-y border-velvet-800 sm:grid-cols-5 sm:divide-x">
-            <Stat label={p.statWatched} value={summary.watchedCount} />
-            <Stat label={p.statRated} value={summary.ratedCount} />
-            <Stat label={p.statAverage} value={summary.averageRating} decimals suffix="★" />
-            <Stat label={p.statLiked} value={summary.likedCount} />
-            <Stat label={p.statWatchlist} value={summary.watchlistCount} />
+          <dl className="mt-7 flex flex-wrap gap-x-7 gap-y-2 border-y border-velvet-800 px-1 py-4 sm:px-6">
+            <Stat value={formatNumber(summary.watchedCount, locale)} label={p.statWatched(summary.watchedCount)} />
+            <Stat value={formatNumber(summary.ratedCount, locale)} label={p.statRated(summary.ratedCount)} />
+            {summary.averageRating != null && (
+              <Stat
+                value={`${formatNumber(summary.averageRating, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}★`}
+                label={p.statAverage}
+              />
+            )}
+            <Stat value={formatNumber(summary.likedCount, locale)} label={p.statLiked(summary.likedCount)} />
+            <Stat value={formatNumber(summary.watchlistCount, locale)} label={p.statWatchlist} />
           </dl>
         )}
       </header>
@@ -154,21 +159,22 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
 
       {match && (
         <section aria-labelledby="affinite" className="reveal grid gap-6 lg:grid-cols-[18rem_1fr] lg:items-start">
-          <div className="card p-6">
-            <p className="eyebrow" id="affinite">
+          <div>
+            <h2 id="affinite" className="marquee text-3xl">
               {p.affinity}
-            </p>
-            <p className="marquee mt-2 text-7xl text-tungsten tabular-nums">
+            </h2>
+            <p className="mt-4 font-display text-7xl leading-none font-extrabold text-tungsten tabular-nums">
               {match.pct != null ? <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> : "—"}
             </p>
-            <p className="mt-3 text-sm text-dust-300">
-              {match.pct != null
-                ? p.affinityBasis(match.ratedTogether)
-                : p.affinityTooFew}
+            {match.pct != null && (
+              <div className="mt-4 h-1 rounded-full bg-velvet-800" aria-hidden>
+                <div className="h-full rounded-full bg-tungsten" style={{ width: `${match.pct}%` }} />
+              </div>
+            )}
+            <p className="mt-4 text-sm text-dust-300">
+              {match.pct != null ? p.affinityBasis(match.ratedTogether) : p.affinityTooFew}
             </p>
-            <p className="meta mt-4 border-t border-velvet-800 pt-4">
-              {p.affinityCommon(match.common, match.bothLiked)}
-            </p>
+            <p className="mt-2 text-sm text-dust-400">{p.affinityCommon(match.common, match.bothLiked)}</p>
           </div>
           {favorites && favorites.length > 0 && (
             <div className="min-w-0">
@@ -231,32 +237,12 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
   );
 }
 
-function Stat({
-  label,
-  value,
-  decimals = false,
-  suffix,
-}: {
-  label: string;
-  value: number | null;
-  decimals?: boolean;
-  suffix?: string;
-}) {
+/** Un chiffre suivi de ce qu'il compte, lu comme une phrase : « 185 films vus ». */
+function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col-reverse px-2 py-4 text-center sm:px-4">
-      <dt className="eyebrow mt-1 text-[10px] tracking-[0.14em]">{label}</dt>
-      <dd className="marquee text-3xl tabular-nums sm:text-4xl">
-        {value == null ? (
-          "—"
-        ) : (
-          <AnimatedNumber
-            value={decimals ? Math.round(value * 10) / 10 : value}
-            format={decimals ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : undefined}
-            suffix={suffix}
-            delay={450}
-          />
-        )}
-      </dd>
+    <div className="flex flex-row-reverse items-baseline justify-end gap-1.5">
+      <dt className="text-sm text-dust-300">{label}</dt>
+      <dd className="font-display text-2xl font-extrabold tabular-nums">{value}</dd>
     </div>
   );
 }

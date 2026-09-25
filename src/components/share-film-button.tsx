@@ -52,7 +52,7 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
             close();
           }
         }}
-        className="m-0 mt-auto w-full max-w-none rounded-t-2xl border border-velvet-700 bg-velvet-900 p-0 text-screen shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm open:animate-rise sm:m-auto sm:max-w-md sm:rounded-2xl"
+        className="m-0 mt-auto w-full max-w-none rounded-t-lg border border-velvet-700 bg-velvet-900 p-0 text-screen shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm open:animate-rise sm:m-auto sm:max-w-md sm:rounded-lg"
       >
         <div className="flex items-center justify-between border-b border-velvet-800 px-5 py-4">
           <h2 className="marquee text-2xl">{m.shareButton}</h2>
@@ -82,7 +82,7 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
                     role="radio"
                     aria-checked={to === t.id}
                     onClick={() => setTo(t.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition ${
+                    className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition ${
                       to === t.id ? "bg-tungsten-soft ring-1 ring-tungsten/60" : "hover:bg-velvet-800"
                     }`}
                   >

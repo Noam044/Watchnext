@@ -35,7 +35,7 @@ export function Toaster() {
         <p
           key={t.id}
           role={t.tone === "error" ? "alert" : "status"}
-          className={`pointer-events-auto flex max-w-md animate-rise items-center gap-2.5 rounded-full border px-4 py-2.5 text-sm shadow-xl shadow-black/50 backdrop-blur ${
+          className={`pointer-events-auto flex max-w-md animate-rise items-center gap-2.5 rounded-md border px-4 py-2.5 text-sm shadow-xl shadow-black/50 backdrop-blur ${
             t.tone === "error" ? "border-bad/40 bg-velvet-900/95 text-bad" : "border-velvet-700 bg-velvet-900/95 text-screen"
           }`}
         >

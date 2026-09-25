@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { syncStateAction, type SyncStateDTO } from "@/actions/sync";
+import { InfoIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
 import { formatAgo } from "@/i18n/format";
@@ -63,7 +64,8 @@ export function SyncStatus({ initial }: { initial: SyncStateDTO }) {
   }
   if (state.error) {
     return (
-      <p className="meta text-bad" role="status">
+      <p className="flex max-w-xl items-start gap-1.5 text-sm text-bad" role="status">
+        <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
         {t.dashboard.syncFailed(state.error)}
       </p>
     );

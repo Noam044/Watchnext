@@ -45,8 +45,7 @@ export default async function EditProfilePage() {
   return (
     <div className="grid gap-10 lg:grid-cols-[13rem_1fr]">
       <aside className="lg:sticky lg:top-24 lg:self-start">
-        <p className="eyebrow">{s.eyebrow}</p>
-        <h1 className="marquee mt-1 text-5xl">{s.title}</h1>
+        <h1 className="marquee text-5xl">{s.title}</h1>
         <Link href={`/u/${user.handle}`} className="meta mt-3 inline-flex items-center gap-1 hover:text-screen">
           {s.viewProfile} <ArrowRightIcon className="size-3.5" />
         </Link>

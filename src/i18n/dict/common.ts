@@ -21,6 +21,9 @@ export const common = pair(
     films: (n: number) => (n > 1 ? "films" : "film"),
     unexpectedError: "Une erreur inattendue est survenue. Réessaie dans un instant.",
     notSignedIn: "Non connecté.",
+    undated: "Sans date",
+    liked: "Coup de cœur",
+    quote: (text: string) => `« ${text} »`,
   },
   {
     language: "Interface language",
@@ -42,6 +45,9 @@ export const common = pair(
     films: (n: number) => (n === 1 ? "film" : "films"),
     unexpectedError: "Something went wrong. Please try again in a moment.",
     notSignedIn: "Not signed in.",
+    undated: "No date",
+    liked: "Liked",
+    quote: (text: string) => `“${text}”`,
   },
 );
 
@@ -76,7 +82,6 @@ export const landing = pair(
     captionQuestion: "Parmi tous ces films, lequel est fait pour toi ?",
     findMyFilm: "Trouver mon film",
     nowShowing: "À l'affiche cette semaine · TMDB",
-    howEyebrow: "Comment ça marche",
     howTitle1: "Chaque film arrive avec",
     howTitle2: "sa raison.",
     steps: [
@@ -110,7 +115,6 @@ export const landing = pair(
     captionQuestion: "Out of all these films, which one is made for you?",
     findMyFilm: "Find my film",
     nowShowing: "Showing this week · TMDB",
-    howEyebrow: "How it works",
     howTitle1: "Every film comes with",
     howTitle2: "its reason.",
     steps: [

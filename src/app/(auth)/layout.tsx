@@ -27,7 +27,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
         <div className="mb-8">
           <Logo />
         </div>
-        <div className="w-full max-w-sm rounded-2xl border border-velvet-700/70 bg-velvet-900/85 p-6 shadow-2xl shadow-black/60 backdrop-blur-md sm:p-8">
+        <div className="w-full max-w-sm rounded-lg border border-velvet-700/70 bg-velvet-900/85 p-6 shadow-2xl shadow-black/60 backdrop-blur-md sm:p-8">
           {children}
         </div>
       </main>

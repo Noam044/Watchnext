@@ -174,7 +174,7 @@ export async function Library({
                       title={uf.film.title}
                       size="w185"
                       sizes="(max-width: 640px) 30vw, 160px"
-                      className="ring-1 ring-white/5 transition duration-300 group-hover:shadow-[0_14px_40px_-12px_rgb(242_184_75/0.45)]"
+                      className="ring-1 ring-white/5 transition duration-300 group-hover:ring-screen/25"
                     />
                   </ViewTransition>
                 </Tilt>

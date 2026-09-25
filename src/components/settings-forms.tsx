@@ -97,7 +97,7 @@ export function ProfileForm({ defaults }: { defaults: ProfileDefaults }) {
         <span className="block text-xs text-dust-400">{s.letterboxdHint}</span>
       </label>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-velvet-700 p-4 transition hover:border-velvet-600">
+      <label className="flex cursor-pointer items-start gap-3 rounded-md border border-velvet-700 p-4 transition hover:border-velvet-600">
         <input
           type="checkbox"
           name="publicProfile"

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AnimatedNumber } from "@/components/animated-number";
 import { Avatar } from "@/components/avatar";
 import { CopyHandle } from "@/components/copy-handle";
 import { FriendButton } from "@/components/friend-button";
 import { SearchIcon } from "@/components/icons";
 import { ScopeScreen } from "@/components/scope-screen";
+import { Ticket, TicketFilm } from "@/components/ticket";
 import { formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
+import { getFriendsActivity } from "@/lib/activity";
 import { prisma } from "@/lib/db";
 import { relationFrom, tasteMatch } from "@/lib/friends";
 import { resolveEmblem } from "@/lib/profile";
@@ -37,7 +38,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
   const incoming = links.filter((f) => f.status === "PENDING" && f.addresseeId === me.id).map((f) => f.requester);
   const outgoing = links.filter((f) => f.status === "PENDING" && f.requesterId === me.id).map((f) => f.addressee);
 
-  const [results, friendCards] = await Promise.all([
+  const [results, friendCards, activity] = await Promise.all([
     q.length >= 2
       ? prisma.user.findMany({
           where: {
@@ -59,6 +60,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
         return { user: u, emblem, match, watched };
       }),
     ),
+    friends.length ? getFriendsActivity(me.id, 12) : [],
   ]);
   friendCards.sort((a, b) => (b.match.pct ?? -1) - (a.match.pct ?? -1));
 
@@ -73,12 +75,12 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
     <div className="space-y-12">
       <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="eyebrow">
-            {f.count(friends.length)}
-            {incoming.length > 0 && f.pending(incoming.length)}
-          </p>
-          <h1 className="marquee mt-1 text-6xl sm:text-7xl">{f.title}</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-dust-300">
+          <h1 className="marquee text-6xl sm:text-7xl">{f.title}</h1>
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-dust-300">
+            <span className="text-screen">
+              {f.count(friends.length)}
+              {incoming.length > 0 && f.pending(incoming.length)}.
+            </span>
             {f.shareHandle} <CopyHandle handle={me.handle} />
           </p>
         </div>
@@ -91,7 +93,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
             minLength={2}
             placeholder={f.searchPlaceholder}
             aria-label={f.searchLabel}
-            className="input rounded-full py-3.5 pl-11 text-base"
+            className="input py-3.5 pl-11 text-base"
             autoCapitalize="none"
             autoCorrect="off"
           />
@@ -109,7 +111,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
             </Link>
           </div>
           {results.length ? (
-            <ul className="divide-y divide-velvet-800 rounded-2xl border border-velvet-800 bg-velvet-900/60">
+            <ul className="divide-y divide-velvet-800 rounded-lg border border-velvet-800 bg-velvet-900/60">
               {results.map((u) => (
                 <PersonRow key={u.id} user={u}>
                   <FriendButton userId={u.id} name={displayName(u)} relation={relationOf(u.id)} compact />
@@ -129,7 +131,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
           <h2 id="demandes" className="marquee text-3xl">
             {f.incoming}
           </h2>
-          <ul className="divide-y divide-velvet-800 rounded-2xl border border-tungsten/25 bg-velvet-900/60">
+          <ul className="divide-y divide-velvet-800 rounded-lg border border-tungsten/25 bg-velvet-900/60">
             {incoming.map((u) => (
               <PersonRow key={u.id} user={u}>
                 <FriendButton userId={u.id} name={displayName(u)} relation="incoming" compact />
@@ -155,18 +157,20 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                     size="w780"
                     sizes="(max-width: 640px) 100vw, 360px"
                     glow={false}
-                    className="ring-1 ring-white/5 transition duration-300 group-hover:screen-glow"
-                  >
-                    {match.pct != null && (
-                      <span className="absolute top-2 right-2 rounded-full bg-velvet-950/85 px-2 py-0.5 font-mono text-[11px] font-bold text-tungsten backdrop-blur">
-                        <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> {f.affinity}
-                      </span>
-                    )}
-                  </ScopeScreen>
+                    className="ring-1 ring-white/5 transition duration-300 group-hover:ring-screen/25"
+                    imageClassName="transition duration-500 group-hover:brightness-110"
+                  />
                   <div className="relative flex items-end gap-3 px-3">
                     <Avatar name={displayName(user)} handle={user.handle} size="lg" className="-mt-7 ring-4" />
-                    <div className="min-w-0 pb-0.5">
-                      <p className="truncate font-semibold group-hover:text-tungsten">{displayName(user)}</p>
+                    <div className="min-w-0 flex-1 pb-0.5">
+                      <p className="flex items-baseline justify-between gap-2">
+                        <span className="truncate font-semibold group-hover:text-tungsten">{displayName(user)}</span>
+                        {match.pct != null && (
+                          <span className="meta shrink-0 text-tungsten">
+                            {match.pct} % {f.affinity}
+                          </span>
+                        )}
+                      </p>
                       <p className="meta truncate text-[11px]">
                         {f.cardMeta(user.handle, formatNumber(watched, locale), match.common)}
                       </p>
@@ -184,12 +188,55 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
         )}
       </section>
 
+      {friendCards.length > 0 && (
+        <section aria-labelledby="seances" className="space-y-5">
+          <div>
+            <h2 id="seances" className="marquee text-3xl sm:text-4xl">
+              {f.activityTitle}
+            </h2>
+            <p className="mt-1.5 text-sm text-dust-300">{f.activityText}</p>
+          </div>
+          {activity.length ? (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {activity.map((a) => (
+                <li key={a.id} className="reveal">
+                  <Ticket date={a.watchedAt} locale={locale} undated={t.common.undated}>
+                    <TicketFilm
+                      tmdbId={a.film.tmdbId}
+                      title={a.film.title}
+                      year={a.film.year}
+                      posterPath={a.film.posterPath}
+                      rating={a.rating}
+                      liked={a.liked}
+                      likedLabel={t.common.liked}
+                      kicker={
+                        <Link href={`/u/${a.user.handle}`} className="font-semibold text-dust-300 hover:text-tungsten">
+                          {displayName(a.user)}
+                        </Link>
+                      }
+                    >
+                      {a.review && (
+                        <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-dust-300">
+                          {a.reviewSpoilers ? <span className="italic">{f.spoilerReview}</span> : t.common.quote(a.review)}
+                        </p>
+                      )}
+                    </TicketFilm>
+                  </Ticket>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-dust-400">{f.activityEmpty}</p>
+          )}
+        </section>
+      )}
+
       {outgoing.length > 0 && (
         <section aria-labelledby="envoyees" className="space-y-4">
-          <h2 id="envoyees" className="eyebrow">
+          <h2 id="envoyees" className="text-sm font-semibold text-dust-300">
             {f.outgoing}
           </h2>
-          <ul className="divide-y divide-velvet-800 rounded-2xl border border-velvet-800">
+          <ul className="divide-y divide-velvet-800 rounded-lg border border-velvet-800">
             {outgoing.map((u) => (
               <PersonRow key={u.id} user={u}>
                 <FriendButton userId={u.id} name={displayName(u)} relation="outgoing" compact />

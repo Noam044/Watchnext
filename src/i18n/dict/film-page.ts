@@ -9,7 +9,6 @@ export const filmPage = pair(
     yourTake: "Ton avis",
     watchedNoRating: "Vu, sans note",
     liked: "Coup de cœur",
-    watchedOn: (date: string) => `Vu le ${date}`,
     noReview: "Pas de critique écrite sur Letterboxd pour ce film.",
     inWatchlist: "Dans ta watchlist : tu ne l'as pas encore vu.",
     notSeen: "Tu n'as pas encore vu ce film.",
@@ -23,6 +22,10 @@ export const filmPage = pair(
     release: "Sortie",
     tmdbRating: "Note TMDB",
     votes: (n: string) => `(${n} votes)`,
+    moreBy: (name: string) => `Autres films de ${name}`,
+    moreByText: "Ceux que Watchnext connaît déjà, et ce que tu en as pensé.",
+    seen: "Vu",
+    unseen: "Pas encore vu",
   },
   {
     metaFallback: "Film",
@@ -32,7 +35,6 @@ export const filmPage = pair(
     yourTake: "Your take",
     watchedNoRating: "Watched, not rated",
     liked: "Liked",
-    watchedOn: (date: string) => `Watched on ${date}`,
     noReview: "No review written on Letterboxd for this film.",
     inWatchlist: "On your watchlist: you haven't seen it yet.",
     notSeen: "You haven't seen this film yet.",
@@ -46,6 +48,10 @@ export const filmPage = pair(
     release: "Release",
     tmdbRating: "TMDB rating",
     votes: (n: string) => `(${n} votes)`,
+    moreBy: (name: string) => `More from ${name}`,
+    moreByText: "The ones Watchnext already knows, and what you thought of them.",
+    seen: "Seen",
+    unseen: "Not seen yet",
   },
 );
 

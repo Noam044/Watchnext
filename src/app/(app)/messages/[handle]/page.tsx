@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Avatar } from "@/components/avatar";
 import { BackButton } from "@/components/back-button";
 import { LockIcon } from "@/components/icons";
-import { Thread } from "@/components/thread";
+import { Thread, type FilmChoice } from "@/components/thread";
 import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { canMessage, getThread, markThreadRead } from "@/lib/messages";
@@ -23,7 +23,20 @@ export async function generateMetadata({ params }: PageProps<"/messages/[handle]
   return { title: user ? m.metaThread(displayName(user)) : m.meta };
 }
 
-export default async function ThreadPage({ params }: PageProps<"/messages/[handle]">) {
+/** Film à joindre d'office (?film=tmdbId), avec la note que lui a donnée l'utilisateur. */
+async function filmToAttach(raw: string | string[] | undefined, userId: string): Promise<FilmChoice | null> {
+  const tmdbId = Number(Array.isArray(raw) ? raw[0] : raw);
+  if (!Number.isInteger(tmdbId) || tmdbId <= 0) return null;
+  const film = await prisma.film.findUnique({
+    where: { tmdbId },
+    select: { tmdbId: true, title: true, year: true, posterPath: true, userFilms: { where: { userId }, select: { rating: true } } },
+  });
+  if (!film) return null;
+  const { userFilms, ...rest } = film;
+  return { ...rest, rating: userFilms[0]?.rating ?? null };
+}
+
+export default async function ThreadPage({ params, searchParams }: PageProps<"/messages/[handle]">) {
   const me = await requireUser();
   const friend = await getUser((await params).handle);
   if (!friend || friend.id === me.id) notFound();
@@ -46,7 +59,10 @@ export default async function ThreadPage({ params }: PageProps<"/messages/[handl
     );
   }
 
-  const messages = await getThread(me.id, friend.id);
+  const [messages, initialFilm] = await Promise.all([
+    getThread(me.id, friend.id),
+    filmToAttach((await searchParams).film, me.id),
+  ]);
   await markThreadRead(me.id, friend.id);
 
   return (
@@ -63,6 +79,7 @@ export default async function ThreadPage({ params }: PageProps<"/messages/[handl
       </header>
       <Thread
         friend={{ id: friend.id, name }}
+        initialFilm={initialFilm}
         initial={messages.map((m) => ({
           id: m.id,
           mine: m.senderId === me.id,

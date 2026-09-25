@@ -18,7 +18,7 @@ export async function FullImportReminder(
   return (
     <aside
       aria-label={props.kind === "rss-only" ? d.reminderRssLabel : d.reminderStaleLabel}
-      className="flex flex-col gap-4 rounded-2xl border border-tungsten/30 bg-tungsten-soft p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+      className="flex flex-col gap-4 rounded-lg border border-tungsten/30 bg-tungsten-soft p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
     >
       <InfoIcon className="hidden size-5 shrink-0 text-tungsten sm:block" />
       {props.kind === "rss-only" ? (

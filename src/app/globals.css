@@ -137,32 +137,18 @@ body::before {
 }
 /* Surtitres et fiches techniques : machine à écrire de scénario */
 @utility eyebrow {
-  @apply font-mono text-[11px] uppercase tracking-[0.2em] text-dust-400;
+  @apply font-mono text-[11px] uppercase tracking-[0.12em] text-dust-400;
 }
 @utility meta {
   @apply font-mono text-xs text-dust-300 tabular-nums;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4.5 py-2.5 text-sm font-semibold transition
     disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
 }
 @utility btn-primary {
-  @apply btn relative overflow-hidden bg-tungsten text-velvet-950 hover:bg-tungsten-strong
-    hover:shadow-[0_8px_30px_-8px_rgb(242_184_75/0.55)];
-  /* Éclat qui balaie le bouton au survol, comme un reflet sur une ampoule */
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    translate: -120% 0;
-    background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.45) 50%, transparent 65%);
-    transition: translate 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-  &:hover::after {
-    translate: 120% 0;
-  }
+  @apply btn bg-tungsten text-velvet-950 hover:bg-tungsten-strong;
 }
 @utility btn-ghost {
   @apply btn border border-velvet-700 text-screen hover:border-velvet-600 hover:bg-velvet-800;
@@ -174,21 +160,42 @@ body::before {
   @apply btn border border-bad/30 text-bad hover:bg-bad/10;
 }
 @utility input {
-  @apply w-full rounded-xl border border-velvet-700 bg-velvet-900 px-4 py-3 text-sm text-screen placeholder:text-dust-400
+  @apply w-full rounded-md border border-velvet-700 bg-velvet-900 px-4 py-3 text-sm text-screen placeholder:text-dust-400
     transition focus:border-tungsten focus:outline-none disabled:opacity-60;
 }
 @utility card {
-  @apply rounded-2xl border border-velvet-800 bg-velvet-900/80;
+  @apply rounded-lg border border-velvet-800 bg-velvet-900;
 }
 @utility field-label {
   @apply text-sm font-medium text-dust-300;
 }
 @utility chip {
-  @apply inline-flex items-center gap-1.5 rounded-full border border-velvet-700 px-3 py-1 text-xs font-medium text-dust-300 transition
+  @apply inline-flex items-center gap-1.5 rounded-md border border-velvet-700 px-2.5 py-1 text-xs font-medium text-dust-300 transition
     hover:border-velvet-600 hover:text-screen;
 }
 @utility chip-active {
   @apply chip border-tungsten/60 bg-tungsten-soft text-tungsten hover:border-tungsten hover:text-tungsten;
+}
+
+/*
+ * Ticket de séance : chaque visionnage (le sien ou celui d'un ami) est imprimé sur un ticket.
+ * Deux encoches se font face sur la ligne de perforation qui sépare le talon (daté) du corps.
+ * --cut : position de la perforation depuis la gauche.
+ */
+@utility ticket {
+  --cut: 4.5rem;
+  --notch: 7px;
+  @apply relative bg-velvet-850;
+  border-radius: 4px;
+  mask:
+    radial-gradient(circle at var(--cut) 0, transparent var(--notch), #000 calc(var(--notch) + 0.5px)) top / 100% 51% no-repeat,
+    radial-gradient(circle at var(--cut) 100%, transparent var(--notch), #000 calc(var(--notch) + 0.5px)) bottom / 100% 51% no-repeat;
+}
+/* Talon du ticket : papier ivoire, imprimé comme un billet de caisse */
+@utility ticket-stub {
+  @apply flex w-(--cut) shrink-0 flex-col items-center justify-center bg-screen px-1 py-3 text-center text-velvet-950;
+  background-image: repeating-linear-gradient(0deg, rgb(18 8 9 / 0.035) 0 1px, transparent 1px 3px);
+  border-right: 2px dashed var(--color-velvet-850);
 }
 
 /* Squelette de chargement : un faisceau de projecteur balaie la forme à venir */
@@ -238,8 +245,7 @@ body::before {
 @keyframes reveal {
   from {
     opacity: 0;
-    transform: translateY(28px) scale(0.97);
-    filter: blur(3px);
+    transform: translateY(16px);
   }
 }
 

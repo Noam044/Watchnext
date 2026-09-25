@@ -219,7 +219,7 @@ export function ImportPanel({
                     addFiles(e.dataTransfer.files);
                   }}
                   onClick={() => !busy && inputRef.current?.click()}
-                  className={`mt-1 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-4 py-9 text-center transition ${
+                  className={`mt-1 flex cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-4 py-9 text-center transition ${
                     dragging ? "border-tungsten bg-tungsten-soft" : "border-velvet-600 hover:border-dust-400"
                   }`}
                 >
@@ -313,7 +313,7 @@ function StatusBox({
   }
   if (status.kind === "error") {
     return (
-      <div role="alert" className="mt-6 rounded-xl border border-bad/30 bg-bad/10 p-4 text-sm text-bad">
+      <div role="alert" className="mt-6 rounded-md border border-bad/30 bg-bad/10 p-4 text-sm text-bad">
         <p>{status.message}</p>
         {status.resumeJobId && (
           <button onClick={() => onResume(status.resumeJobId!)} className="btn-ghost mt-3 text-screen">
@@ -324,7 +324,7 @@ function StatusBox({
     );
   }
   return (
-    <div className="mt-6 flex flex-col gap-3 rounded-xl border border-exit/25 bg-exit/10 p-4 text-sm sm:flex-row sm:items-center">
+    <div className="mt-6 flex flex-col gap-3 rounded-md border border-exit/25 bg-exit/10 p-4 text-sm sm:flex-row sm:items-center">
       <p className="flex-1 text-screen">{status.message}</p>
       <div className="flex gap-2">
         {!!status.notFound && (

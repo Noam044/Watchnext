@@ -13,10 +13,19 @@ import { dateFormat } from "@/i18n/format";
 
 const POLL_MS = 4000;
 
-type FilmChoice = { tmdbId: number; title: string; year: number | null; posterPath: string | null; rating: number | null };
+export type FilmChoice = { tmdbId: number; title: string; year: number | null; posterPath: string | null; rating: number | null };
 
 /** Fil de discussion avec un ami : messages, films partagés, envoi et mise à jour automatique. */
-export function Thread({ friend, initial }: { friend: { id: string; name: string }; initial: MessageDTO[] }) {
+export function Thread({
+  friend,
+  initial,
+  initialFilm = null,
+}: {
+  friend: { id: string; name: string };
+  initial: MessageDTO[];
+  /** Film déjà joint au message (lien « envoyer ce film »). */
+  initialFilm?: FilmChoice | null;
+}) {
   const router = useRouter();
   const { t, locale } = useI18n();
   const m = t.messages;
@@ -24,7 +33,7 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
   const timeFmt = dateFormat(locale, { hour: "2-digit", minute: "2-digit" });
   const [messages, setMessages] = useState(initial);
   const [body, setBody] = useState("");
-  const [film, setFilm] = useState<FilmChoice | null>(null);
+  const [film, setFilm] = useState<FilmChoice | null>(initialFilm);
   const [picking, setPicking] = useState(false);
   const [pending, startTransition] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
@@ -95,7 +104,7 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
                 {msg.film && <SharedFilm film={msg.film} mine={msg.mine} />}
                 {msg.body && (
                   <p
-                    className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
+                    className={`rounded-lg px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
                       msg.mine ? "rounded-br-md bg-tungsten text-velvet-950" : "rounded-bl-md bg-velvet-800 text-screen"
                     }`}
                   >
@@ -119,10 +128,10 @@ export function Thread({ friend, initial }: { friend: { id: string; name: string
           e.preventDefault();
           send();
         }}
-        className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] rounded-2xl border border-velvet-700 bg-velvet-900/95 p-2 shadow-2xl shadow-black/60 backdrop-blur md:bottom-4"
+        className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] rounded-lg border border-velvet-700 bg-velvet-900/95 p-2 shadow-2xl shadow-black/60 backdrop-blur md:bottom-4"
       >
         {film && (
-          <div className="mb-2 flex items-center gap-3 rounded-xl bg-velvet-850 p-2">
+          <div className="mb-2 flex items-center gap-3 rounded-md bg-velvet-850 p-2">
             <Poster path={film.posterPath} title={film.title} size="w185" sizes="40px" className="w-10 shrink-0" />
             <span className="min-w-0 flex-1 truncate text-sm">
               <span className="font-semibold">{film.title}</span> <span className="meta">{film.year ?? ""}</span>
@@ -186,7 +195,7 @@ function SharedFilm({ film, mine }: { film: NonNullable<MessageDTO["film"]>; min
   return (
     <Link
       href={`/film/${film.tmdbId}`}
-      className={`group flex w-64 items-center gap-3 rounded-2xl border p-2 pr-4 transition ${
+      className={`group flex w-64 items-center gap-3 rounded-lg border p-2 pr-4 transition ${
         mine ? "border-tungsten/40 bg-tungsten-soft" : "border-velvet-700 bg-velvet-850"
       } hover:border-tungsten`}
     >
@@ -219,7 +228,7 @@ function FilmPicker({ onPick, onClose }: { onPick: (f: FilmChoice) => void; onCl
   }, [q]);
 
   return (
-    <div className="mb-2 rounded-xl border border-velvet-700 bg-velvet-950/80 p-2">
+    <div className="mb-2 rounded-md border border-velvet-700 bg-velvet-950/80 p-2">
       <div className="flex items-center gap-2">
         <input
           autoFocus

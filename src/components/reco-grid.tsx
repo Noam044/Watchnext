@@ -86,10 +86,11 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
         <section aria-labelledby="programme" className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow">{t.dashboard.othersCount(rest.length)}</p>
-              <h2 id="programme" className="marquee mt-1 text-4xl sm:text-5xl">
+              <h2 id="programme" className="marquee text-4xl sm:text-5xl">
                 {t.dashboard.programme}
+                <span className="text-dust-400"> · {rest.length}</span>
               </h2>
+              <p className="mt-1.5 text-sm text-dust-300">{t.dashboard.programmeText}</p>
             </div>
           </div>
           {genres.length > 1 && (
@@ -245,9 +246,9 @@ function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; on
             path={r.posterPath}
             title={r.title}
             preload={preload}
-            className="shadow-lg shadow-black/50 ring-1 ring-white/5 transition group-hover:shadow-[0_18px_50px_-12px_rgb(242_184_75/0.35)]"
+            className="shadow-lg shadow-black/50 ring-1 ring-white/5 transition group-hover:ring-screen/25"
           />
-          <span className="absolute top-2 left-2 rounded-full bg-velvet-950/85 px-2 py-0.5 font-mono text-[11px] font-bold text-tungsten backdrop-blur">
+          <span className="absolute top-2 left-2 rounded-sm bg-velvet-950/90 px-1.5 py-0.5 font-mono text-[11px] font-bold text-tungsten">
             {r.pct} %
           </span>
           {r.overview && (
@@ -317,7 +318,7 @@ function FilmSheet({ r, onClose, onAct }: { r: RecoItem | null; onClose: () => v
         if (e.target === e.currentTarget) onClose(); // clic sur le fond
       }}
       aria-label={r ? t.film.detailsOf(r.title) : undefined}
-      className="m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-velvet-700 bg-velvet-900 p-0 text-screen shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm open:animate-rise sm:m-auto sm:max-w-2xl sm:rounded-2xl"
+      className="m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-lg border border-velvet-700 bg-velvet-900 p-0 text-screen shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm open:animate-rise sm:m-auto sm:max-w-2xl sm:rounded-lg"
     >
       {r && <SheetBody key={r.id} r={r} onAct={onAct} />}
     </dialog>

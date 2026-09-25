@@ -66,7 +66,7 @@ export function PlayOverlay({ onPlay, label }: { onPlay: () => void; label?: str
       className="group/play absolute inset-0 z-10 grid place-items-center focus-visible:outline-none"
       aria-label={label}
     >
-      <span className="flex items-center gap-3 rounded-full bg-velvet-950/70 py-2 pr-5 pl-2 text-sm font-semibold text-screen ring-1 ring-white/15 backdrop-blur transition duration-300 group-hover/play:scale-105 group-hover/play:bg-tungsten group-hover/play:text-velvet-950 group-hover/play:shadow-[0_0_60px_rgb(242_184_75/0.55)] group-focus-visible/play:ring-2 group-focus-visible/play:ring-tungsten">
+      <span className="flex items-center gap-3 rounded-full bg-velvet-950/70 py-2 pr-5 pl-2 text-sm font-semibold text-screen ring-1 ring-white/15 backdrop-blur transition duration-300 group-hover/play:scale-105 group-hover/play:bg-tungsten group-hover/play:text-velvet-950 group-focus-visible/play:ring-2 group-focus-visible/play:ring-tungsten">
         <span className="grid size-10 place-items-center rounded-full bg-tungsten text-velvet-950 transition group-hover/play:bg-velvet-950 group-hover/play:text-tungsten">
           <PlayIcon className="size-4 translate-x-px" />
         </span>

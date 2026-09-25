@@ -20,6 +20,10 @@ export const friends = pair(
     emptyText:
       "Cherche le nom ou le pseudo d'un ami ci-dessus. Une fois ta demande acceptée, tu verras ses notes, votre affinité et ses coups de cœur que tu n'as pas vus.",
     outgoing: "Demandes envoyées",
+    activityTitle: "Leurs dernières séances",
+    activityText: "Les films que tes amis ont notés dans leur journal Letterboxd.",
+    activityEmpty: "Tes amis n'ont encore rien noté avec une date dans leur journal.",
+    spoilerReview: "Critique avec spoilers : lis-la sur la fiche du film.",
     loading: "Chargement de tes amis",
     linkCopied: "Lien de ton profil copié.",
     copyFailed: "Copie impossible : sélectionne le pseudo à la main.",
@@ -47,6 +51,10 @@ export const friends = pair(
     emptyText:
       "Search for a friend's name or username above. Once your request is accepted, you'll see their ratings, your taste match and their favourites you haven't seen.",
     outgoing: "Requests sent",
+    activityTitle: "Their latest screenings",
+    activityText: "The films your friends logged in their Letterboxd diary.",
+    activityEmpty: "Your friends haven't logged any dated film in their diary yet.",
+    spoilerReview: "Review with spoilers: read it on the film page.",
     loading: "Loading your friends",
     linkCopied: "Profile link copied.",
     copyFailed: "Couldn't copy: select the username by hand.",

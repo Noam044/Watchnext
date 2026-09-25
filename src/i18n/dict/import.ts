@@ -3,8 +3,6 @@ import { pair } from "@/i18n/config";
 export const importPage = pair(
   {
     meta: "Importer",
-    welcome: "Bienvenue",
-    dataEyebrow: "Données Letterboxd",
     connectYour: "Connecte ton",
     title: "Importer et synchroniser",
     introOnboarding:
@@ -15,6 +13,14 @@ export const importPage = pair(
     lastRss: "Dernière synchro RSS",
     lastImport: "Dernier import complet",
     never: "Jamais",
+    libraryTitle: "Ta bibliothèque",
+    recentTitle: "Derniers films de ton journal",
+    recentText: "Tes visionnages les plus récents connus de Watchnext : vérifie que les derniers sont bien arrivés.",
+    historyTitle: "Imports précédents",
+    historyEmpty: "Aucun export importé pour l'instant.",
+    historyMatched: (matched: number, total: number) => `${matched} films reconnus sur ${total}`,
+    jobStatus: { PENDING: "En attente", PROCESSING: "En cours", DONE: "Terminé", FAILED: "Échec" },
+    exportFile: "Export Letterboxd",
     unmatchedTitle: (n: number) => `${n} film${n > 1 ? "s" : ""} introuvable${n > 1 ? "s" : ""} sur TMDB`,
     unmatchedText: (date: string) =>
       `Lors de l'import du ${date}, ces titres n'ont pas pu être associés à un film TMDB (titre différent, court-métrage, épisode de série…). Ils sont ignorés pour les recommandations.`,
@@ -69,8 +75,6 @@ export const importPage = pair(
   },
   {
     meta: "Import",
-    welcome: "Welcome",
-    dataEyebrow: "Letterboxd data",
     connectYour: "Connect your",
     title: "Import and sync",
     introOnboarding:
@@ -81,6 +85,14 @@ export const importPage = pair(
     lastRss: "Last RSS sync",
     lastImport: "Last full import",
     never: "Never",
+    libraryTitle: "Your library",
+    recentTitle: "Latest from your diary",
+    recentText: "Your most recent viewings known to Watchnext: check that the latest ones made it.",
+    historyTitle: "Past imports",
+    historyEmpty: "No export imported yet.",
+    historyMatched: (matched: number, total: number) => `${matched} of ${total} films matched`,
+    jobStatus: { PENDING: "Waiting", PROCESSING: "In progress", DONE: "Done", FAILED: "Failed" },
+    exportFile: "Letterboxd export",
     unmatchedTitle: (n: number) => `${n} film${n === 1 ? "" : "s"} not found on TMDB`,
     unmatchedText: (date: string) =>
       `During the import of ${date}, these titles couldn't be matched to a TMDB film (different title, short film, TV episode…). They are ignored for recommendations.`,

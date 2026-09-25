@@ -11,8 +11,10 @@ import { ReviewText } from "@/components/review-text";
 import { FilmScreen } from "@/components/film-screen";
 import { ShareFilmButton } from "@/components/share-film-button";
 import { Stars } from "@/components/stars";
+import { Ticket } from "@/components/ticket";
 import { dateFormat, formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
+import { getSameDirector } from "@/lib/activity";
 import { prisma } from "@/lib/db";
 import { getLocalizer } from "@/lib/localize";
 import { getFilmPage } from "@/lib/film-page";
@@ -49,7 +51,9 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
   const score = (v: number) => formatNumber(v, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   const genres = refs(film.genres).map(loc.genre);
-  const directors = refs(film.directors).map((d) => d.name);
+  const directorRefs = refs(film.directors);
+  const directors = directorRefs.map((d) => d.name);
+  const sameDirector = directorRefs[0] ? await getSameDirector(film.id, directorRefs[0].id, me.id, 10) : [];
   const cast = refs(film.cast).map((c) => c.name);
   const recoPct = (reco?.details as { pct?: number } | null)?.pct;
   const friendsWatched = friends.filter((f) => f.watched);
@@ -124,7 +128,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-10">
           {reco && (
-            <section aria-label={fp.whyLabel} className="rounded-2xl border border-tungsten/30 bg-tungsten-soft p-5">
+            <section aria-label={fp.whyLabel} className="rounded-lg border border-tungsten/30 bg-tungsten-soft p-5">
               <p className="eyebrow text-tungsten">{fp.recommended}</p>
               <p className="mt-2 text-base text-screen">
                 {loc.reco(reco.reason, [], (reco.details as { because?: string[] } | null)?.because ?? []).reason}
@@ -137,26 +141,29 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
               {fp.yourTake}
             </h2>
             {mine?.watched ? (
-              <div className="card space-y-3 p-5">
-                <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {mine.rating != null ? <Stars value={mine.rating} className="text-lg" /> : <span className="text-sm text-dust-300">{fp.watchedNoRating}</span>}
-                  {mine.liked && (
-                    <span className="inline-flex items-center gap-1 text-sm text-dust-300">
-                      <HeartIcon className="size-4 text-curtain brightness-150" /> {fp.liked}
-                    </span>
+              <Ticket date={mine.watchedAt} locale={locale} undated={t.common.undated}>
+                <div className="min-w-0 flex-1 space-y-3 py-1 pr-1">
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {mine.rating != null ? (
+                      <Stars value={mine.rating} className="text-lg" />
+                    ) : (
+                      <span className="text-sm text-dust-300">{fp.watchedNoRating}</span>
+                    )}
+                    {mine.liked && (
+                      <span className="inline-flex items-center gap-1 text-sm text-dust-300">
+                        <HeartIcon className="size-4 text-curtain brightness-150" /> {fp.liked}
+                      </span>
+                    )}
+                  </p>
+                  {mine.review ? (
+                    <ReviewText text={mine.review} spoilers={mine.reviewSpoilers} />
+                  ) : (
+                    <p className="text-sm text-dust-400">{fp.noReview}</p>
                   )}
-                  {mine.watchedAt && <span className="meta">{fp.watchedOn(dateFmt.format(mine.watchedAt))}</span>}
-                </p>
-                {mine.review ? (
-                  <ReviewText text={mine.review} spoilers={mine.reviewSpoilers} />
-                ) : (
-                  <p className="text-sm text-dust-400">{fp.noReview}</p>
-                )}
-              </div>
+                </div>
+              </Ticket>
             ) : (
-              <p className="card p-5 text-sm text-dust-300">
-                {mine?.inWatchlist ? fp.inWatchlist : fp.notSeen}
-              </p>
+              <p className="text-sm text-dust-300">{mine?.inWatchlist ? fp.inWatchlist : fp.notSeen}</p>
             )}
           </section>
 
@@ -181,25 +188,64 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                   fp.inFriendsWatchlist(friendsWatchlist.map((f) => displayName(f.user)).join(", "))}
               </p>
             ) : (
-              <ul className="divide-y divide-velvet-800 rounded-2xl border border-velvet-800 bg-velvet-900/60">
+              <ul className="space-y-3">
                 {friendsWatched.map((f) => (
-                  <li key={f.id} className="space-y-3 p-4 sm:p-5">
-                    <div className="flex items-center gap-3">
-                      <Link href={`/u/${f.user.handle}`} className="flex min-w-0 flex-1 items-center gap-3 hover:text-tungsten">
-                        <Avatar name={displayName(f.user)} handle={f.user.handle} size="sm" />
-                        <span className="truncate font-semibold">{displayName(f.user)}</span>
-                      </Link>
-                      <span className="flex shrink-0 items-center gap-2">
-                        {f.rating != null && <Stars value={f.rating} />}
-                        {f.liked && <HeartIcon className="size-3.5 text-curtain brightness-150" />}
-                      </span>
-                    </div>
-                    {f.review && <ReviewText text={f.review} spoilers={f.reviewSpoilers} />}
+                  <li key={f.id}>
+                    <Ticket date={f.watchedAt} locale={locale} undated={t.common.undated}>
+                      <div className="min-w-0 flex-1 space-y-2.5 py-1 pr-1">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <Link href={`/u/${f.user.handle}`} className="flex min-w-0 items-center gap-2.5 hover:text-tungsten">
+                            <Avatar name={displayName(f.user)} handle={f.user.handle} size="sm" />
+                            <span className="truncate font-semibold">{displayName(f.user)}</span>
+                          </Link>
+                          <span className="flex shrink-0 items-center gap-2">
+                            {f.rating != null && <Stars value={f.rating} />}
+                            {f.liked && <HeartIcon className="size-3.5 text-curtain brightness-150" />}
+                          </span>
+                        </div>
+                        {f.review && <ReviewText text={f.review} spoilers={f.reviewSpoilers} />}
+                      </div>
+                    </Ticket>
                   </li>
                 ))}
               </ul>
             )}
           </section>
+
+          {sameDirector.length > 0 && (
+            <section aria-labelledby="realisateur" className="reveal space-y-4">
+              <div>
+                <h2 id="realisateur" className="marquee text-3xl">
+                  {fp.moreBy(directors[0])}
+                </h2>
+                <p className="mt-1 text-sm text-dust-300">{fp.moreByText}</p>
+              </div>
+              <ul className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-5">
+                {sameDirector.map((d) => (
+                  <li key={d.id}>
+                    <Link href={`/film/${d.tmdbId}`} className="group block">
+                      <Poster
+                        path={d.posterPath}
+                        title={d.title}
+                        size="w185"
+                        sizes="(max-width: 640px) 30vw, 140px"
+                        className={`ring-1 ring-white/5 transition group-hover:ring-screen/30 ${d.mine?.watched ? "" : "opacity-60 group-hover:opacity-100"}`}
+                      />
+                      <p className="mt-2 line-clamp-1 text-sm font-semibold group-hover:text-tungsten">{d.title}</p>
+                    </Link>
+                    <p className="mt-0.5 text-xs text-dust-400">
+                      {d.year && `${d.year} · `}
+                      {d.mine?.watched ? (
+                        d.mine.rating != null ? <Stars value={d.mine.rating} /> : fp.seen
+                      ) : (
+                        fp.unseen
+                      )}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
 
         <aside aria-label={fp.credits} className="space-y-5 lg:pt-12">
