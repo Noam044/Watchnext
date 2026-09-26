@@ -8,7 +8,7 @@ import { CutReveal } from "@/components/cut-reveal";
 import { Filmstrip } from "@/components/filmstrip";
 import { FriendButton } from "@/components/friend-button";
 import { FullImportReminder } from "@/components/full-import-reminder";
-import { ArrowRightIcon, ChatIcon, ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
+import { ArrowRightIcon, ChatIcon, ExternalIcon, LockIcon, PencilIcon, UsersIcon } from "@/components/icons";
 import { Library } from "@/components/library";
 import { ScopeScreen } from "@/components/scope-screen";
 import { dateFormat, formatNumber } from "@/i18n/format";
@@ -128,9 +128,14 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 {relation === "friends" && (
-                  <Link href={`/messages/${owner.handle}`} className="btn-primary">
-                    <ChatIcon /> {p.write}
-                  </Link>
+                  <>
+                    <Link href={`/duo/${owner.handle}`} className="btn-primary">
+                      <UsersIcon /> {t.duo.open}
+                    </Link>
+                    <Link href={`/messages/${owner.handle}`} className="btn-ghost">
+                      <ChatIcon /> {p.write}
+                    </Link>
+                  </>
                 )}
                 <FriendButton userId={owner.id} name={name} relation={relation} />
               </div>

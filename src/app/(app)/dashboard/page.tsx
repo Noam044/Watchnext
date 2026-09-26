@@ -14,7 +14,10 @@ import { prisma } from "@/lib/db";
 import { describeStoredError } from "@/lib/errors";
 import { getLocalizer } from "@/lib/localize";
 import { refs } from "@/lib/films";
+import { offersFor } from "@/lib/providers";
+import { FILTERS_COOKIE, matchesFilters, parseFilters } from "@/lib/reco-filters";
 import { requireUser } from "@/lib/session";
+import { getStreamingPrefs, providerCatalog, withFreshOffers } from "@/lib/streaming";
 import { getTrailerKey } from "@/lib/tmdb";
 import {
   AUTO_SYNC_INTERVAL,
@@ -38,7 +41,7 @@ export default async function DashboardPage() {
   const syncUsername = await claimSync(user.id, AUTO_SYNC_INTERVAL);
   if (syncUsername) after(() => runClaimedSync(user.id, syncUsername));
 
-  const [watchedCount, libraryCount, recos, hiddenCount, sync, cookieStore, { t, locale }] = await Promise.all([
+  const [watchedCount, libraryCount, recos, hiddenCount, sync, cookieStore, { t, locale }, prefs] = await Promise.all([
     prisma.userFilm.count({ where: { userId: user.id, watched: true } }),
     prisma.userFilm.count({ where: { userId: user.id } }),
     prisma.recommendation.findMany({
@@ -50,6 +53,7 @@ export default async function DashboardPage() {
     getSyncState(user.id),
     cookies(),
     getI18n(),
+    getStreamingPrefs(user.id),
   ]);
   const loc = await getLocalizer(locale);
   const d = t.dashboard;
@@ -58,29 +62,53 @@ export default async function DashboardPage() {
 
   if (libraryCount === 0) redirect("/import?welcome=1");
 
+  // Où voir chaque film : les offres inconnues sont chargées maintenant, les anciennes après la réponse.
+  const { refreshed, refreshLater } = await withFreshOffers(recos.map((r) => r.film));
+  after(refreshLater);
+  const watchlist = new Set(
+    (
+      await prisma.userFilm.findMany({
+        where: { userId: user.id, inWatchlist: true, watched: false, filmId: { in: recos.map((r) => r.filmId) } },
+        select: { filmId: true },
+      })
+    ).map((w) => w.filmId),
+  );
+
   const items: RecoItem[] = recos.map((r) => {
+    const film = refreshed.get(r.film.tmdbId) ?? r.film;
     const details = (r.details ?? {}) as { tags?: string[]; pct?: number; because?: string[] };
     const text = loc.reco(r.reason, details.tags ?? [], details.because ?? []);
     return {
       id: r.id,
-      tmdbId: r.film.tmdbId,
-      title: r.film.title,
-      year: r.film.year,
-      posterPath: r.film.posterPath,
-      backdropPath: r.film.backdropPath,
-      overview: r.film.overview,
-      genres: refs(r.film.genres).map(loc.genre),
-      directors: refs(r.film.directors).map((d) => d.name),
-      voteAverage: r.film.voteAverage,
-      runtime: r.film.runtime,
+      tmdbId: film.tmdbId,
+      title: film.title,
+      year: film.year,
+      posterPath: film.posterPath,
+      backdropPath: film.backdropPath,
+      overview: film.overview,
+      genres: refs(film.genres).map(loc.genre),
+      directors: refs(film.directors).map((d) => d.name),
+      voteAverage: film.voteAverage,
+      runtime: film.runtime,
+      language: film.originalLanguage,
+      inWatchlist: watchlist.has(r.filmId),
+      offers: offersFor(film.providers, prefs.region),
       reason: text.reason,
       tags: text.tags,
       pct: details.pct ?? 0,
     };
   });
 
-  // Bande-annonce du film n°1 (réponse TMDB mise en cache) ; les autres sont demandées au clic.
-  const featureTrailer = items[0] ? await getTrailerKey(items[0].tmdbId).catch(() => null) : null;
+  const filters = parseFilters(cookieStore.get(FILTERS_COOKIE)?.value);
+  const shownIds = new Set([...items.flatMap((i) => i.offers?.stream ?? []), ...prefs.providers]);
+  const catalog = await providerCatalog(prefs.region, shownIds);
+
+  // Bande-annonce du film à l'affiche avec les filtres enregistrés (réponse TMDB mise en cache) ;
+  // les autres sont demandées au clic.
+  const first = items.find((i) => matchesFilters(i, filters, prefs.providers));
+  const featureTrailer = first
+    ? { tmdbId: first.tmdbId, key: await getTrailerKey(first.tmdbId).catch(() => null) }
+    : null;
 
   return (
     <div className="space-y-8">
@@ -89,7 +117,10 @@ export default async function DashboardPage() {
           <p className="eyebrow">{d.showingFor(user.name ?? `@${user.handle}`)}</p>
           <p className="mt-1.5 text-sm text-dust-300">
             {d.basedOn(formatNumber(watchedCount, locale))}{" "}
-            <Link href="/profile" className="inline-flex items-center gap-1 text-screen underline-offset-4 hover:underline">
+            <Link
+              href="/profile"
+              className="inline-flex items-center gap-1 text-screen underline-offset-4 hover:underline"
+            >
               {d.seeTaste} <ArrowRightIcon className="size-3.5" />
             </Link>
           </p>
@@ -112,7 +143,13 @@ export default async function DashboardPage() {
       {exportStale && sync.lastImportAt && <FullImportReminder kind="stale" lastImportAt={sync.lastImportAt} />}
 
       {items.length > 0 ? (
-        <RecoProgramme items={items} featureTrailer={featureTrailer} />
+        <RecoProgramme
+          items={items}
+          featureTrailer={featureTrailer}
+          catalog={catalog}
+          myProviders={prefs.providers}
+          initialFilters={filters}
+        />
       ) : (
         <div className="card flex flex-col items-center gap-3 px-6 py-16 text-center">
           <p className="marquee text-4xl">{d.emptyTitle}</p>

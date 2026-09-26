@@ -47,18 +47,21 @@ Les images sont servies directement par le CDN de TMDB, dans la taille la plus p
 2. **Import** (`/import`) :
    - **Import rapide** : pseudo Letterboxd → lecture de `https://letterboxd.com/{pseudo}/rss/`. Seules les ~50 dernières entrées du journal sont disponibles. L'ID TMDB vient directement du flux (`tmdb:movieId`).
    - **Import complet** : export `.zip` (Settings → Data → Export your data) ou CSV séparés. Les fichiers lus sont `watched.csv`, `ratings.csv`, `diary.csv`, `watchlist.csv` et `likes/films.csv`. Les dossiers `deleted/` et `orphaned/` sont ignorés. Chaque film est retrouvé sur TMDB par titre et année. Les films introuvables sont listés sur la page.
-3. **À voir** (`/dashboard`) : la recommandation n°1 en grand, puis le reste de la sélection, filtrable par genre. Chaque film affiche son explication.
+3. **À voir** (`/dashboard`) : la recommandation n°1 en grand sur son ticket de séance, puis le reste de la sélection (20 films, puis « Afficher plus »). Chaque film affiche son explication et les plateformes où le voir.
+   - **Filtres « Ce soir »** : sur mes plateformes, durée maximale, décennie, langue originale, genre, dans ma watchlist. Ils s'appliquent aussi au film à l'affiche et sont retenus dans un cookie (`wn_filters`).
 4. **Mettre à jour** : resynchroniser le RSS, recalculer, réimporter un export ou réafficher les films masqués. Les imports se fusionnent sans doublon.
    - **Synchronisation automatique** du flux RSS (nouvelles entrées de journal, avec note et like) : à l'ouverture de « À voir » si la dernière tentative date de plus de 6 h (lancée après l'envoi de la page avec `after()`, suivie par `SyncStatus`), et chaque jour à 5 h UTC pour tous les comptes via la tâche planifiée Vercel (`vercel.json` → `/api/cron/sync`). Un verrou en base (`syncStartedAt`) empêche deux synchronisations simultanées ; les recommandations ne sont recalculées que si des entrées ont changé.
    - Le flux ne contient ni la watchlist, ni les notes modifiées ou données sans entrée de journal : un rappel propose de refaire un export complet quand le dernier date de plus de 30 jours (« Plus tard » le masque 14 jours).
 5. **Profil** (`/profile` → `/u/{pseudo}`) : bannière du film fétiche, statistiques, goûts (genres, réalisateurs, acteurs), puis toute la bibliothèque. Elle est découpée en onglets (notes, vus, coups de cœur, watchlist), filtrable par note depuis l'histogramme, triable et paginée.
-6. **Modifier le profil** (`/profile/edit`) : nom, pseudo, bio, pseudo Letterboxd, visibilité de la bibliothèque, film fétiche, email (mot de passe demandé) et mot de passe.
-7. **Fiche film** (`/film/{tmdbId}`) : ouverte depuis la bibliothèque, la pellicule d'un ami, un message ou la fiche rapide des recommandations. Affiche ton avis (note, like, date, critique), la raison de la recommandation, les notes et critiques de tes amis (critiques « spoiler » masquées par défaut), le synopsis et la fiche technique. Le film est récupéré sur TMDB s'il n'est pas encore en base.
+6. **Modifier le profil** (`/profile/edit`) : photo, nom, pseudo, bio, pseudo Letterboxd, visibilité de la bibliothèque, film fétiche, pays et abonnements de streaming, email (mot de passe demandé) et mot de passe.
+7. **Fiche film** (`/film/{tmdbId}`) : ouverte depuis la bibliothèque, la pellicule d'un ami, un message ou la fiche rapide des recommandations. Affiche ton avis (note, like, date, critique), la raison de la recommandation, les notes et critiques de tes amis (critiques « spoiler » masquées par défaut), le synopsis, où le regarder dans ton pays (abonnement, location, achat) et la fiche technique.
+   - **Où le regarder** : offres JustWatch fournies par TMDB (`watch/providers`, demandé avec les détails du film). Elles sont gardées par pays dans `Film.providers` et rafraîchies au bout de 7 jours ; la source JustWatch est créditée. Le film est récupéré sur TMDB s'il n'est pas encore en base.
    - **Critiques** : lues dans le flux RSS (texte de l'entrée, avertissement de spoiler) et dans `reviews.csv` de l'export ; la plus récente est gardée.
 8. **Messages** (`/messages`) : conversations entre amis uniquement (vérifié côté serveur à l'envoi et à la lecture), texte et films partagés (« Envoyer à un ami » sur une fiche, ou film de sa bibliothèque joint depuis la conversation). Le fil se met à jour toutes les 4 s quand l'onglet est visible ; la navigation affiche les messages non lus et une notification apparaît dans l'app (vérification toutes les 20 s). Limite de 20 messages par minute.
 9. **Amis** (`/friends`) : recherche par nom ou @pseudo, demandes reçues et envoyées, liste d'amis triée par affinité. Sur le profil d'un ami : affinité de notes, films en commun et ses coups de cœur que tu n'as pas vus.
    - La bibliothèque d'un membre n'est visible que par ses amis, sauf s'il la rend publique. Le nom, le pseudo, la bio et le film fétiche restent visibles pour qu'on puisse le trouver.
    - Affinité : `1 − écart moyen des notes / 3` sur les films notés par les deux, calculée à partir de 5 films en commun.
+10. **Séance à deux** (`/duo/{pseudo}`, depuis le profil d'un ami, la conversation ou la liste d'amis) : des films que ni l'un ni l'autre n'a vus, choisis pour les deux goûts. Chaque idée dit ce que chacun a aimé de proche, l'affinité de chacun, et peut être proposée à l'ami dans la messagerie. Filtres : sur nos plateformes (abonnements réunis), 2 h max.
 
 ## Architecture
 
@@ -107,10 +110,11 @@ Choix principaux :
 
 | Modèle | Rôle |
 |---|---|
-| `User` | email unique, `passwordHash` bcrypt, `handle` unique (@pseudo), `bio`, `publicProfile`, `emblemFilmId` (film fétiche) |
+| `User` | email unique, `passwordHash` bcrypt, `handle` unique (@pseudo), `bio`, `publicProfile`, `emblemFilmId` (film fétiche), `avatarAt` (version de la photo), `watchRegion` et `streamingProviders` (pays et abonnements) |
+| `UserAvatar` | photo de profil (WebP 256 px), servie par `/api/avatar/{userId}` aux membres connectés |
 | `Friendship` | `requesterId` → `addresseeId`, `status` (`PENDING` / `ACCEPTED`). Une seule ligne par paire : une demande croisée vaut acceptation. |
 | `LetterboxdProfile` | pseudo, `lastRssSync`, `lastImportAt` (1–1 avec User) |
-| `Film` | `tmdbId` unique, titre, année, affiche, votes, `genres` / `directors` / `cast` / `keywords` en JSON, `detailsFetchedAt` |
+| `Film` | `tmdbId` unique, titre, année, affiche, votes, `originalLanguage`, `genres` / `directors` / `cast` / `keywords` en JSON, `providers` (offres de streaming par pays) + `providersAt`, `detailsFetchedAt` |
 | `UserFilm` | (userId, filmId) unique : `watched`, `inWatchlist`, `rating` (0,5–5), `liked`, `watchedAt`, `review` (+ `reviewSpoilers`, `reviewedAt`) |
 | `Recommendation` | (userId, filmId) unique : `score`, `reason`, `details` (JSON : %, étiquettes, composantes), `hidden` |
 | `TmdbCache` | clé de requête → réponse JSON + `expiresAt` |
@@ -135,10 +139,11 @@ Règles de fusion : `watched` et `liked` se cumulent. La note la plus récente l
    - Proximité au profil : genres 28 %, mots-clés 27 %, réalisateur 20 %, acteurs 15 %, décennie 10 %.
    - Qualité : note bayésienne TMDB, avec m = 400 et C = 6,4.
    - Support : nombre de films aimés qui mènent au candidat.
-   - Seuls les 80 meilleurs candidats du pré-score reçoivent leurs détails complets. On garde au plus 3 films par réalisateur, puis les 40 premiers.
+   - Seuls les 140 meilleurs candidats du pré-score reçoivent leurs détails complets. On garde au plus 3 films par réalisateur, puis les 80 premiers, dont les offres de streaming sont mises à jour.
 6. **Explication** :
    - « Parce que tu as aimé X et Y » : les films aimés qui ont mené au candidat. À défaut, ceux qui partagent le plus de caractéristiques avec lui.
    - S'y ajoutent des étiquettes : réalisateur apprécié, acteur récurrent, watchlist.
+7. **Séance à deux** (`src/lib/duo.ts`) : candidats = recommandations et watchlists des deux amis, moins les films vus ou masqués par l'un d'eux. Chaque film est noté avec le profil de chacun (`0,65 × proximité + 0,35 × qualité`, +0,06 s'il est dans sa watchlist) ; le score commun vaut `0,6 × le plus faible + 0,4 × la moyenne`, pour qu'aucun des deux ne s'ennuie. Au plus 2 films par réalisateur.
 
 ## Gestion des erreurs
 

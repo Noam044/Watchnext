@@ -138,3 +138,8 @@ export const PlayIcon = ({ className }: P) => (
     <path d="M7 4.5v15l12.5-7.5L7 4.5Z" />
   </svg>
 );
+export const ChevronDownIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);

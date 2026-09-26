@@ -25,6 +25,10 @@ model User {
   emblemFilmId  String?
   /// Date de la photo de profil actuelle (sert de version dans son URL) ; null sans photo
   avatarAt      DateTime?
+  /// Pays des offres de streaming affichées (code ISO 3166-1, ex. FR)
+  watchRegion        String @default("FR")
+  /// Plateformes auxquelles l'utilisateur est abonné (identifiants de fournisseurs TMDB)
+  streamingProviders Int[]  @default([])
 
   emblemFilm       Film?              @relation("UserEmblem", fields: [emblemFilmId], references: [id], onDelete: SetNull)
   avatar           UserAvatar?
@@ -105,6 +109,11 @@ model Film {
   cast             Json      @default("[]")
   /// [{ id, name }]
   keywords         Json      @default("[]")
+  /// Langue originale (code ISO 639-1, ex. en)
+  originalLanguage String?
+  /// Où voir le film, par pays : { FR: { link, stream: [ids], rent: [ids], buy: [ids] } } (données JustWatch via TMDB)
+  providers        Json?
+  providersAt      DateTime?
   /// null tant que seules les données "liste" (search/discover) sont connues.
   detailsFetchedAt DateTime?
   updatedAt        DateTime  @updatedAt

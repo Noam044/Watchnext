@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/avatar";
 import { BackButton } from "@/components/back-button";
-import { LockIcon } from "@/components/icons";
+import { LockIcon, UsersIcon } from "@/components/icons";
 import { Thread, type FilmChoice } from "@/components/thread";
 import { getI18n } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
@@ -42,7 +42,8 @@ export default async function ThreadPage({ params, searchParams }: PageProps<"/m
   const friend = await getUser((await params).handle);
   if (!friend || friend.id === me.id) notFound();
   const name = displayName(friend);
-  const m = (await getI18n()).t.messages;
+  const { t } = await getI18n();
+  const m = t.messages;
 
   if (!(await canMessage(me.id, friend.id))) {
     return (
@@ -76,6 +77,9 @@ export default async function ThreadPage({ params, searchParams }: PageProps<"/m
             <span className="block truncate text-lg font-semibold">{name}</span>
             <span className="meta block truncate text-[11px]">@{friend.handle}</span>
           </span>
+        </Link>
+        <Link href={`/duo/${friend.handle}`} className="btn-ghost ml-auto shrink-0 px-3 py-2 text-xs">
+          <UsersIcon className="size-3.5" /> {t.duo.open}
         </Link>
       </header>
       <Thread

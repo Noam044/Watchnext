@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRightIcon } from "@/components/icons";
-import { AvatarForm, EmailForm, EmblemPicker, PasswordForm, ProfileForm } from "@/components/settings-forms";
+import {
+  AvatarForm,
+  EmailForm,
+  EmblemPicker,
+  PasswordForm,
+  ProfileForm,
+  StreamingForm,
+} from "@/components/settings-forms";
+import { INTL } from "@/i18n/config";
 import { getI18n } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { emblemCandidates } from "@/lib/profile";
+import { WATCH_REGIONS, isWatchRegion } from "@/lib/providers";
+import { providerCatalog } from "@/lib/streaming";
 import { requireUser } from "@/lib/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,13 +25,15 @@ export async function generateMetadata(): Promise<Metadata> {
 const SECTIONS = [
   { id: "profil", key: "sectionProfile" },
   { id: "film-fetiche", key: "sectionEmblem" },
+  { id: "plateformes", key: "sectionPlatforms" },
   { id: "email", key: "sectionEmail" },
   { id: "mot-de-passe", key: "sectionPassword" },
 ] as const;
 
 export default async function EditProfilePage() {
   const me = await requireUser();
-  const s = (await getI18n()).t.settings;
+  const { t, locale } = await getI18n();
+  const s = t.settings;
   const [user, candidates] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: me.id },
@@ -34,11 +46,25 @@ export default async function EditProfilePage() {
         publicProfile: true,
         emblemFilmId: true,
         avatarAt: true,
+        watchRegion: true,
+        streamingProviders: true,
         letterboxd: true,
       },
     }),
     emblemCandidates(me.id),
   ]);
+
+  // Plateformes du pays : les plus répandues, plus celles déjà choisies qui n'y figureraient pas.
+  const region = isWatchRegion(user.watchRegion) ? user.watchRegion : "FR";
+  const allProviders = await providerCatalog(region);
+  const platforms = [
+    ...allProviders.slice(0, 36),
+    ...allProviders.slice(36).filter((p) => user.streamingProviders.includes(p.id)),
+  ];
+  const regionNames = new Intl.DisplayNames(INTL[locale], { type: "region" });
+  const regions = WATCH_REGIONS.map((code): [string, string] => [code, regionNames.of(code) ?? code]).sort((a, b) =>
+    a[1].localeCompare(b[1], INTL[locale]),
+  );
 
   // Le film fétiche actuel reste proposé même s'il ne fait plus partie des mieux notés.
   const options = candidates.map((c) => ({
@@ -50,7 +76,14 @@ export default async function EditProfilePage() {
   }));
   if (user.emblemFilmId && !options.some((o) => o.filmId === user.emblemFilmId)) {
     const film = await prisma.film.findUnique({ where: { id: user.emblemFilmId } });
-    if (film) options.unshift({ filmId: film.id, title: film.title, year: film.year, backdropPath: film.backdropPath, rating: null });
+    if (film)
+      options.unshift({
+        filmId: film.id,
+        title: film.title,
+        year: film.year,
+        backdropPath: film.backdropPath,
+        rating: null,
+      });
   }
 
   return (
@@ -62,7 +95,11 @@ export default async function EditProfilePage() {
         </Link>
         <nav aria-label={s.sections} className="mt-8 hidden flex-col gap-1 border-l border-velvet-800 lg:flex">
           {SECTIONS.map((sec) => (
-            <a key={sec.id} href={`#${sec.id}`} className="-ml-px border-l border-transparent py-1 pl-4 text-sm text-dust-300 hover:border-tungsten hover:text-screen">
+            <a
+              key={sec.id}
+              href={`#${sec.id}`}
+              className="-ml-px border-l border-transparent py-1 pl-4 text-sm text-dust-300 hover:border-tungsten hover:text-screen"
+            >
               {s[sec.key]}
             </a>
           ))}
@@ -85,6 +122,9 @@ export default async function EditProfilePage() {
         <Section id="film-fetiche" title={s.sectionEmblem} hint={s.sectionEmblemHint}>
           <EmblemPicker options={options} selected={user.emblemFilmId} />
         </Section>
+        <Section id="plateformes" title={s.sectionPlatforms} hint={s.sectionPlatformsHint}>
+          <StreamingForm region={region} regions={regions} catalog={platforms} selected={user.streamingProviders} />
+        </Section>
         <Section id="email" title={s.sectionEmail} hint={s.sectionEmailHint}>
           <EmailForm email={user.email} />
         </Section>
@@ -96,7 +136,17 @@ export default async function EditProfilePage() {
   );
 }
 
-function Section({ id, title, hint, children }: { id: string; title: string; hint?: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  hint,
+  children,
+}: {
+  id: string;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="card scroll-mt-24 p-5 sm:p-7">
       <h2 id={`${id}-title`} className="marquee text-3xl">

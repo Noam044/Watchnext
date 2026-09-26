@@ -9,7 +9,7 @@ import { friendIds } from "@/lib/friends";
  * avis de ses amis (seuls les amis voient les notes et critiques les uns des autres).
  */
 export async function getFilmPage(tmdbId: number, viewerId: string) {
-  const film = await ensureFilmDetails(tmdbId);
+  const film = await ensureFilmDetails(tmdbId, true);
   if (!film) return null;
   const ids = await friendIds(viewerId);
   const [mine, reco, friends] = await Promise.all([

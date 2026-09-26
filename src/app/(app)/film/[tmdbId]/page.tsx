@@ -7,11 +7,13 @@ import { BackButton } from "@/components/back-button";
 import { CutReveal } from "@/components/cut-reveal";
 import { ExternalIcon, HeartIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
+import { ProviderLogos } from "@/components/provider-logos";
 import { ReviewText } from "@/components/review-text";
 import { FilmScreen } from "@/components/film-screen";
 import { ShareFilmButton } from "@/components/share-film-button";
 import { Stars } from "@/components/stars";
 import { Ticket } from "@/components/ticket";
+import { INTL } from "@/i18n/config";
 import { dateFormat, formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { getSameDirector } from "@/lib/activity";
@@ -20,12 +22,13 @@ import { prisma } from "@/lib/db";
 import { getLocalizer } from "@/lib/localize";
 import { getFilmPage } from "@/lib/film-page";
 import { refs } from "@/lib/films";
+import { offersFor, type ProviderInfo } from "@/lib/providers";
 import { requireUser } from "@/lib/session";
+import { getStreamingPrefs, providerCatalog } from "@/lib/streaming";
 import { getTrailerKey } from "@/lib/tmdb";
 import { displayName } from "@/lib/users";
 
 export const maxDuration = 30;
-
 
 function parseId(raw: string) {
   const id = Number(raw);
@@ -35,7 +38,9 @@ function parseId(raw: string) {
 export async function generateMetadata({ params }: PageProps<"/film/[tmdbId]">): Promise<Metadata> {
   const id = parseId((await params).tmdbId);
   const film = id ? await prisma.film.findUnique({ where: { tmdbId: id }, select: { title: true, year: true } }) : null;
-  return { title: film ? `${film.title}${film.year ? ` (${film.year})` : ""}` : (await getI18n()).t.filmPage.metaFallback };
+  return {
+    title: film ? `${film.title}${film.year ? ` (${film.year})` : ""}` : (await getI18n()).t.filmPage.metaFallback,
+  };
 }
 
 export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) {
@@ -45,8 +50,17 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
   const [data, trailerKey] = await Promise.all([getFilmPage(id, me.id), getTrailerKey(id).catch(() => null)]);
   if (!data) notFound();
   const { film, mine, reco, friends } = data;
-  const { t, locale } = await getI18n();
+  const [{ t, locale }, prefs] = await Promise.all([getI18n(), getStreamingPrefs(me.id)]);
   const fp = t.filmPage;
+  const offers = offersFor(film.providers, prefs.region);
+  const catalog = offers
+    ? new Map(
+        (await providerCatalog(prefs.region, [...offers.stream, ...offers.rent, ...offers.buy])).map((p) => [p.id, p]),
+      )
+    : new Map<number, ProviderInfo>();
+  const streams = (offers?.stream ?? []).flatMap((id) => catalog.get(id) ?? []);
+  const stores = [...new Set([...(offers?.rent ?? []), ...(offers?.buy ?? [])])].flatMap((id) => catalog.get(id) ?? []);
+  const regionName = new Intl.DisplayNames(INTL[locale], { type: "region" }).of(prefs.region) ?? prefs.region;
   const loc = await getLocalizer(locale);
   const dateFmt = dateFormat(locale, { day: "numeric", month: "long", year: "numeric" });
   const score = (v: number) => formatNumber(v, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -120,7 +134,12 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
 
         <div className="mt-6 flex flex-wrap gap-2 px-1 sm:px-6">
           <ShareFilmButton tmdbId={film.tmdbId} title={film.title} />
-          <a href={`https://letterboxd.com/tmdb/${film.tmdbId}/`} target="_blank" rel="noreferrer" className="btn-ghost">
+          <a
+            href={`https://letterboxd.com/tmdb/${film.tmdbId}/`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-ghost"
+          >
             {t.common.seeOnLetterboxd} <ExternalIcon className="size-3.5" />
           </a>
         </div>
@@ -195,8 +214,16 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                     <Ticket date={f.watchedAt} locale={locale} undated={t.common.undated}>
                       <div className="min-w-0 flex-1 space-y-2.5 py-1 pr-1">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <Link href={`/u/${f.user.handle}`} className="flex min-w-0 items-center gap-2.5 hover:text-tungsten">
-                            <Avatar name={displayName(f.user)} handle={f.user.handle} src={avatarUrl(f.user)} size="sm" />
+                          <Link
+                            href={`/u/${f.user.handle}`}
+                            className="flex min-w-0 items-center gap-2.5 hover:text-tungsten"
+                          >
+                            <Avatar
+                              name={displayName(f.user)}
+                              handle={f.user.handle}
+                              src={avatarUrl(f.user)}
+                              size="sm"
+                            />
                             <span className="truncate font-semibold">{displayName(f.user)}</span>
                           </Link>
                           <span className="flex shrink-0 items-center gap-2">
@@ -236,11 +263,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                     </Link>
                     <p className="mt-0.5 text-xs text-dust-400">
                       {d.year && `${d.year} · `}
-                      {d.mine?.watched ? (
-                        d.mine.rating != null ? <Stars value={d.mine.rating} /> : fp.seen
-                      ) : (
-                        fp.unseen
-                      )}
+                      {d.mine?.watched ? d.mine.rating != null ? <Stars value={d.mine.rating} /> : fp.seen : fp.unseen}
                     </p>
                   </li>
                 ))}
@@ -250,6 +273,68 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
         </div>
 
         <aside aria-label={fp.credits} className="space-y-5 lg:pt-12">
+          {offers && (
+            <section aria-labelledby="ou-regarder" className="card p-4">
+              <h2 id="ou-regarder" className="eyebrow">
+                {fp.whereToWatch(regionName)}
+              </h2>
+              {streams.length || stores.length ? (
+                <div className="mt-3 space-y-4">
+                  {streams.length > 0 && (
+                    <div>
+                      <p className="text-xs text-dust-400">{fp.offerStream}</p>
+                      <ul className="mt-2 space-y-2">
+                        {streams.slice(0, 5).map((p) => (
+                          <li key={p.id} className="flex items-center gap-2.5 text-sm">
+                            <ProviderLogos providers={[p]} mine={prefs.providers} size={26} max={1} />
+                            <span className="min-w-0 truncate">{p.name}</span>
+                            {prefs.providers.includes(p.id) && (
+                              <span className="meta ml-auto shrink-0 text-[11px] text-tungsten">
+                                {fp.yourSubscription}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {stores.length > 0 && (
+                    <div>
+                      <p className="text-xs text-dust-400">{fp.offerRentBuy}</p>
+                      <ProviderLogos providers={stores} size={26} max={7} className="mt-2 flex-wrap" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-dust-300">{fp.notOnline}</p>
+              )}
+              {prefs.providers.length === 0 && (
+                <Link
+                  href="/profile/edit#plateformes"
+                  className="mt-4 block text-xs text-dust-300 underline-offset-4 hover:text-screen hover:underline"
+                >
+                  {fp.choosePlatforms}
+                </Link>
+              )}
+              <p className="mt-4 flex items-center justify-between gap-2 border-t border-velvet-800 pt-3 text-[11px] text-dust-400">
+                {offers.link ? (
+                  <a
+                    href={offers.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-screen"
+                  >
+                    {fp.seeOffers} <ExternalIcon className="size-3" />
+                  </a>
+                ) : (
+                  <span />
+                )}
+                <a href="https://www.justwatch.com" target="_blank" rel="noreferrer" className="hover:text-screen">
+                  {fp.justwatch}
+                </a>
+              </p>
+            </section>
+          )}
           <dl className="card divide-y divide-velvet-800 text-sm">
             {directors.length > 0 && (
               <div className="p-4">

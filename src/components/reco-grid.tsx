@@ -1,20 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { ViewTransition, useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
+import {
+  ViewTransition,
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { hideRecommendationAction, markSeenAction } from "@/actions/library";
 import { trailerKeyAction } from "@/actions/trailer";
 import { AnimatedNumber } from "@/components/animated-number";
 import { CutReveal } from "@/components/cut-reveal";
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, InfoIcon, PlayIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
+import { ProviderLogos } from "@/components/provider-logos";
+import { RecoFiltersBar, type FilterOptions } from "@/components/reco-filters-bar";
 import { ScopeScreen } from "@/components/scope-screen";
 import { Tilt } from "@/components/tilt";
 import { toast } from "@/components/toaster";
 import { TrailerFrame } from "@/components/trailer";
 import { useI18n } from "@/i18n/client";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { formatNumber } from "@/i18n/format";
+import { formatList, formatNumber } from "@/i18n/format";
+import { onMyPlatforms, type ProviderInfo, type RegionOffers } from "@/lib/providers";
+import { FILTERS_COOKIE, matchesFilters, serializeFilters, type RecoFilters } from "@/lib/reco-filters";
 
 export type RecoItem = {
   id: string;
@@ -28,6 +43,11 @@ export type RecoItem = {
   directors: string[];
   voteAverage: number;
   runtime: number | null;
+  /** Langue originale (ISO 639-1). */
+  language: string | null;
+  inWatchlist: boolean;
+  /** Offres de streaming dans le pays de l'utilisateur ; null si inconnues. */
+  offers: RegionOffers | null;
   reason: string;
   tags: string[];
   pct: number;
@@ -39,12 +59,51 @@ function metaLine(r: RecoItem, t: Dictionary) {
     .join(" · ");
 }
 
-export function RecoProgramme({ items, featureTrailer = null }: { items: RecoItem[]; featureTrailer?: string | null }) {
+/** Plateformes connues (nom, logo) et abonnements de l'utilisateur, partagés par toutes les cartes. */
+const Streaming = createContext<{ catalog: Map<number, ProviderInfo>; mine: number[] }>({
+  catalog: new Map(),
+  mine: [],
+});
+
+function useStreams(r: RecoItem) {
+  const { catalog, mine } = use(Streaming);
+  const providers = (r.offers?.stream ?? []).flatMap((id) => catalog.get(id) ?? []);
+  return { providers, mine, onMine: onMyPlatforms(r.offers, mine) };
+}
+
+/** Films affichés dans le programme, puis à chaque clic sur « Afficher plus ». */
+const PAGE = 20;
+
+function counted<K>(keys: K[]) {
+  const counts = new Map<K, number>();
+  for (const k of keys) counts.set(k, (counts.get(k) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+export function RecoProgramme({
+  items,
+  featureTrailer = null,
+  catalog,
+  myProviders,
+  initialFilters,
+}: {
+  items: RecoItem[];
+  /** Bande-annonce déjà connue du film à l'affiche (avec les filtres enregistrés). */
+  featureTrailer?: { tmdbId: number; key: string | null } | null;
+  catalog: ProviderInfo[];
+  myProviders: number[];
+  initialFilters: RecoFilters;
+}) {
   const [optimistic, removeItem] = useOptimistic(items, (state, id: string) => state.filter((i) => i.id !== id));
   const [, startTransition] = useTransition();
-  const [genre, setGenre] = useState<string | null>(null);
+  const [filters, setFilters] = useState(initialFilters);
+  const [limit, setLimit] = useState(PAGE);
   const [sheet, setSheet] = useState<RecoItem | null>(null);
   const { t } = useI18n();
+  const streaming = useMemo(
+    () => ({ catalog: new Map(catalog.map((p) => [p.id, p])), mine: myProviders }),
+    [catalog, myProviders],
+  );
 
   const act = (r: RecoItem, kind: "seen" | "hide") =>
     startTransition(async () => {
@@ -55,75 +114,113 @@ export function RecoProgramme({ items, featureTrailer = null }: { items: RecoIte
       else toast(kind === "seen" ? t.film.addedToWatched(r.title) : t.film.wontSuggest(r.title));
     });
 
-  const genres = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of optimistic) for (const g of r.genres) counts.set(g, (counts.get(g) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 9);
-  }, [optimistic]);
+  // Les filtres sont retenus pour la prochaine visite (cookie lu par le serveur au rendu de la page).
+  const updateFilters = (next: RecoFilters) => {
+    setFilters(next);
+    setLimit(PAGE);
+    document.cookie = `${FILTERS_COOKIE}=${serializeFilters(next)}; path=/; max-age=31536000; samesite=lax`;
+  };
+
+  const options: FilterOptions = useMemo(
+    () => ({
+      decades: counted(optimistic.flatMap((r) => (r.year ? [Math.floor(r.year / 10) * 10] : []))).sort(
+        (a, b) => b[0] - a[0],
+      ),
+      langs: counted(optimistic.flatMap((r) => (r.language ? [r.language] : []))).slice(0, 10),
+      genres: counted(optimistic.flatMap((r) => r.genres)).slice(0, 14),
+    }),
+    [optimistic],
+  );
 
   if (optimistic.length === 0) {
     return <div className="card p-10 text-center text-dust-300">{t.dashboard.doneAll}</div>;
   }
 
-  const activeGenre = genre && genres.some(([g]) => g === genre) ? genre : null;
-  const [feature, ...rest] = optimistic;
-  const programme = activeGenre ? rest.filter((r) => r.genres.includes(activeGenre)) : rest;
+  // Un filtre sur une valeur disparue (genre dans une autre langue, décennie vidée…) est ignoré.
+  const effective: RecoFilters = {
+    ...filters,
+    genre: filters.genre && options.genres.some(([g]) => g === filters.genre) ? filters.genre : null,
+    lang: filters.lang && options.langs.some(([l]) => l === filters.lang) ? filters.lang : null,
+    decade: filters.decade != null && options.decades.some(([dec]) => dec === filters.decade) ? filters.decade : null,
+    mine: filters.mine && myProviders.length > 0,
+  };
+  const shown = optimistic.filter((r) => matchesFilters(r, effective, myProviders));
+  const [feature, ...rest] = shown;
+  const page = rest.slice(0, limit);
 
   return (
-    <div className="space-y-14">
-      <Feature
-        key={feature.id}
-        r={feature}
-        trailerKey={feature.id === items[0]?.id ? featureTrailer : null}
-        onAct={act}
-      />
+    <Streaming value={streaming}>
+      <div className="space-y-8">
+        <RecoFiltersBar
+          filters={effective}
+          onChange={updateFilters}
+          options={options}
+          hasPlatforms={myProviders.length > 0}
+          count={shown.length}
+        />
 
-      {rest.length > 0 && (
-        <section aria-labelledby="programme" className="space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 id="programme" className="marquee text-4xl sm:text-5xl">
-                {t.dashboard.programme}
-                <span className="text-dust-400"> · {rest.length}</span>
-              </h2>
-              <p className="mt-1.5 text-sm text-dust-300">{t.dashboard.programmeText}</p>
-            </div>
+        {!feature ? (
+          <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <p className="marquee text-3xl">{t.dashboard.noMatchTitle}</p>
+            <p className="max-w-md text-sm text-dust-300">{t.dashboard.noMatchText}</p>
           </div>
-          {genres.length > 1 && (
-            <div
-              role="group"
-              aria-label={t.dashboard.filterByGenre}
-              className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
-            >
-              <button
-                onClick={() => setGenre(null)}
-                className={`shrink-0 ${activeGenre ? "chip" : "chip-active"}`}
-                aria-pressed={!activeGenre}
-              >
-                {t.dashboard.all}
-              </button>
-              {genres.map(([g, n]) => (
-                <button
-                  key={g}
-                  onClick={() => setGenre(activeGenre === g ? null : g)}
-                  className={`shrink-0 ${activeGenre === g ? "chip-active" : "chip"}`}
-                  aria-pressed={activeGenre === g}
-                >
-                  {g} <span className="font-mono text-[10px] opacity-70">{n}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
-            {programme.map((r, i) => (
-              <Card key={r.id} r={r} preload={i < 4} onAct={act} onOpen={setSheet} />
-            ))}
-          </ul>
-        </section>
-      )}
+        ) : (
+          <div className="space-y-14">
+            <Feature
+              key={feature.id}
+              r={feature}
+              trailerKey={featureTrailer?.tmdbId === feature.tmdbId ? featureTrailer.key : undefined}
+              onAct={act}
+            />
 
-      <FilmSheet r={sheet} onClose={() => setSheet(null)} onAct={act} />
-    </div>
+            {rest.length > 0 && (
+              <section aria-labelledby="programme" className="space-y-6">
+                <div>
+                  <h2 id="programme" className="marquee text-4xl sm:text-5xl">
+                    {t.dashboard.programme}
+                    <span className="text-dust-400"> · {rest.length}</span>
+                  </h2>
+                  <p className="mt-1.5 text-sm text-dust-300">{t.dashboard.programmeText}</p>
+                </div>
+                <ul className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
+                  {page.map((r, i) => (
+                    <Card key={r.id} r={r} preload={i < 4} onAct={act} onOpen={setSheet} />
+                  ))}
+                </ul>
+                {rest.length > limit && (
+                  <div className="flex justify-center">
+                    <button type="button" onClick={() => setLimit((l) => l + PAGE)} className="btn-ghost">
+                      {t.dashboard.showMore(Math.min(PAGE, rest.length - limit))}
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+
+        <FilmSheet r={sheet} onClose={() => setSheet(null)} onAct={act} />
+      </div>
+    </Streaming>
+  );
+}
+
+/** Où voir le film : logos des plateformes et phrase (« Inclus dans ton abonnement Netflix »). */
+function StreamLine({ r, className = "" }: { r: RecoItem; className?: string }) {
+  const { t, locale } = useI18n();
+  const { providers, mine, onMine } = useStreams(r);
+  if (providers.length === 0) {
+    if (!r.offers || (r.offers.rent.length === 0 && r.offers.buy.length === 0)) return null;
+    return <p className={`text-sm text-dust-400 ${className}`}>{t.film.rentOrBuy}</p>;
+  }
+  const names = (onMine ? providers.filter((p) => mine.includes(p.id)) : providers).slice(0, 2).map((p) => p.name);
+  return (
+    <p className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm ${onMine ? "text-screen" : "text-dust-300"} ${className}`}>
+      <ProviderLogos providers={providers} mine={mine} size={22} max={3} />
+      <span>
+        {onMine ? t.film.onYourPlatform(formatList(names, locale)) : t.film.streamingOn(formatList(names, locale))}
+      </span>
+    </p>
   );
 }
 
@@ -134,11 +231,29 @@ type Open = (r: RecoItem) => void;
  * Le film n°1 : projeté sur l'écran Cinémascope, avec son ticket de séance posé à cheval
  * sur le bas de l'écran. Le talon porte l'affinité, le corps le titre, la raison et les actions.
  */
-function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | null; onAct: Act }) {
+function Feature({
+  r,
+  trailerKey: known,
+  onAct,
+}: {
+  r: RecoItem;
+  /** Clé YouTube connue (null : aucune bande-annonce) ; undefined : demandée au premier clic. */
+  trailerKey: string | null | undefined;
+  onAct: Act;
+}) {
   const { t } = useI18n();
+  const [trailerKey, setTrailerKey] = useState(known);
   const [playing, setPlaying] = useState(false);
+  const [loading, startLoading] = useTransition();
   const close = useCallback(() => setPlaying(false), []);
-  const onPlay = trailerKey && !playing ? () => setPlaying(true) : undefined;
+  const play = () =>
+    startLoading(async () => {
+      const key = trailerKey === undefined ? await trailerKeyAction(r.tmdbId) : trailerKey;
+      setTrailerKey(key);
+      if (key) setPlaying(true);
+      else toast(t.film.noTrailer, "error");
+    });
+  const onPlay = trailerKey !== null && !playing && !loading ? play : undefined;
 
   return (
     <section aria-label={t.film.sessionLabel(r.title)} className="group/feature relative">
@@ -218,6 +333,7 @@ function FeatureTicket({
             <p className="mt-3 max-w-2xl animate-rise text-base leading-snug text-screen/90 [animation-delay:900ms]">
               {r.reason}
             </p>
+            <StreamLine r={r} className="mt-3 animate-rise [animation-delay:950ms]" />
             <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-5 hidden sm:flex" />
           </div>
         </div>
@@ -260,6 +376,14 @@ function FeatureActions({
   );
 }
 
+/** Logos des plateformes sous le titre d'une carte. */
+function CardStreams({ r }: { r: RecoItem }) {
+  const { providers, mine } = useStreams(r);
+  return providers.length ? (
+    <ProviderLogos providers={providers} mine={mine} size={20} max={3} className="mt-2" />
+  ) : null;
+}
+
 function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; onAct: Act; onOpen: Open }) {
   const { t } = useI18n();
   return (
@@ -295,6 +419,7 @@ function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; on
           </button>
         </h3>
         <p className="meta mt-1">{metaLine(r, t)}</p>
+        <CardStreams r={r} />
         <p className="mt-2 line-clamp-3 text-sm leading-snug text-dust-300">{r.reason}</p>
         <div className="mt-auto -ml-2 flex gap-0.5 pt-2">
           <button
@@ -424,6 +549,7 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
       </div>
       <div className="space-y-5 border-t border-velvet-800 px-5 py-6 sm:px-7">
         <p className="text-base leading-snug text-screen">{r.reason}</p>
+        <StreamLine r={r} />
         {(r.genres.length > 0 || r.tags.length > 0) && (
           <ul className="flex flex-wrap gap-1.5" aria-label={t.film.genresAndTags}>
             {r.tags.map((tag) => (

@@ -18,8 +18,9 @@ import type { Film, Prisma } from "@/generated/prisma/client";
 
 const MIN_VOTES = 150;
 const SEED_COUNT = 12;
-const DETAILED_CANDIDATES = 80;
-const RESULT_COUNT = 40;
+const DETAILED_CANDIDATES = 140;
+/** Assez de films pour que les filtres (durée, plateformes…) laissent toujours du choix. */
+const RESULT_COUNT = 80;
 const MIN_WATCHED = 3;
 
 type Source = "recommendations" | "similar" | "discover" | "watchlist";
@@ -189,6 +190,12 @@ export async function generateRecommendations(userId: string) {
 
   scored.sort((a, b) => b.score - a.score);
   const top = diversify(scored).slice(0, RESULT_COUNT);
+  // Offres de streaming à jour pour les films retenus (filtre « Sur mes plateformes »).
+  await ensureManyDetails(
+    top.map((r) => r.film.tmdbId),
+    6,
+    true,
+  );
 
   // 5. Persistance : on remplace les recommandations visibles, les masquées restent masquées.
   await prisma.$transaction([
@@ -208,7 +215,7 @@ export async function generateRecommendations(userId: string) {
   return { count: top.length, candidates: candidates.size };
 }
 
-function quality(f: Pick<Film, "voteAverage" | "voteCount">) {
+export function quality(f: Pick<Film, "voteAverage" | "voteCount">) {
   return clamp01((bayesian(f.voteAverage, f.voteCount) - 5.5) / 2.5);
 }
 
@@ -217,7 +224,7 @@ function supportScore(support: number) {
 }
 
 /** Score brut (~[-0.5, 1.1]) → pourcentage d'affinité lisible. */
-function toPct(score: number) {
+export function toPct(score: number) {
   return Math.round(100 / (1 + Math.exp(-6 * (score - 0.35))));
 }
 
@@ -233,6 +240,22 @@ function diversify<T extends { film: Film }>(list: T[]) {
   });
 }
 
+/** Films aimés les plus proches d'un film (même réalisateur, acteurs, thèmes…), du plus proche au moins proche. */
+export function closestLiked(film: Film, rated: { film: Film; weight: number }[], take = 2) {
+  const weights: Record<FeatureType, number> = { director: 3, cast: 1.2, keyword: 1, genre: 0.3, decade: 0.1 };
+  const candKeys = new Map(filmFeatures(film).map((f) => [featureKey(f), weights[f.type]]));
+  return rated
+    .filter((r) => r.weight >= 0.45 && r.film.id !== film.id)
+    .map((r) => ({
+      title: r.film.title,
+      overlap: filmFeatures(r.film).reduce((s, f) => s + (candKeys.get(featureKey(f)) ?? 0), 0) * r.weight,
+    }))
+    .filter((r) => r.overlap >= 1.5)
+    .sort((a, b) => b.overlap - a.overlap)
+    .slice(0, take)
+    .map((r) => r.title);
+}
+
 /** Construit l'explication : « Parce que tu as aimé X et Y » + étiquettes. */
 function explain(
   film: Film,
@@ -241,28 +264,14 @@ function explain(
   rated: { film: Film; weight: number }[],
   seedFilms: Map<number, { film: Film; weight: number }>,
 ) {
-  let because: string[];
-  if (c.seeds.size > 0) {
-    because = [...c.seeds.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 2)
-      .map(([id]) => seedFilms.get(id)!.film.title);
-  } else {
-    // Pas de graine directe : on cherche les films aimés les plus proches.
-    const cand = filmFeatures(film);
-    const weights: Record<FeatureType, number> = { director: 3, cast: 1.2, keyword: 1, genre: 0.3, decade: 0.1 };
-    const candKeys = new Map(cand.map((f) => [featureKey(f), weights[f.type]]));
-    because = rated
-      .filter((r) => r.weight >= 0.45)
-      .map((r) => ({
-        title: r.film.title,
-        overlap: filmFeatures(r.film).reduce((s, f) => s + (candKeys.get(featureKey(f)) ?? 0), 0) * r.weight,
-      }))
-      .filter((r) => r.overlap >= 1.5)
-      .sort((a, b) => b.overlap - a.overlap)
-      .slice(0, 2)
-      .map((r) => r.title);
-  }
+  const because =
+    c.seeds.size > 0
+      ? [...c.seeds.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 2)
+          .map(([id]) => seedFilms.get(id)!.film.title)
+      : // Pas de graine directe : on cherche les films aimés les plus proches.
+        closestLiked(film, rated);
 
   const tags: string[] = [];
   const director = refs(film.directors).find((d) => (profile.affinity.get(`director:${d.id}`) ?? 0) > 0.25);

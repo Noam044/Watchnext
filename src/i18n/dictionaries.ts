@@ -1,6 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import { auth } from "@/i18n/dict/auth";
 import { common, landing, nav } from "@/i18n/dict/common";
+import { duo } from "@/i18n/dict/duo";
 import { errors } from "@/i18n/dict/errors";
 import { dashboard, film } from "@/i18n/dict/film";
 import { errorsPage, filmPage } from "@/i18n/dict/film-page";
@@ -10,7 +11,7 @@ import { messages } from "@/i18n/dict/messages";
 import { profile } from "@/i18n/dict/profile";
 import { settings } from "@/i18n/dict/settings";
 
-const groups = { common, nav, landing, auth, errors, film, dashboard, importPage, profile, settings, friends, messages, filmPage, errorsPage };
+const groups = { common, nav, landing, auth, errors, film, dashboard, importPage, profile, settings, friends, messages, duo, filmPage, errorsPage };
 
 type Groups = typeof groups;
 export type Dictionary = { [K in keyof Groups]: Groups[K]["fr"] };

@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { getI18n } from "@/i18n/server";
 import { AVATAR_SIZE } from "@/lib/avatar";
+import { isWatchRegion } from "@/lib/providers";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "@/lib/errors";
 import { requireUser } from "@/lib/session";
@@ -71,6 +72,30 @@ export async function setEmblemAction(filmId: string | null): Promise<ActionResu
   return { ok: true };
 }
 
+export async function setWatchRegionAction(region: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isWatchRegion(region)) return { ok: false, error: (await getI18n()).t.settings.errRegion };
+  await prisma.user.update({ where: { id: user.id }, data: { watchRegion: region } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Abonnements de streaming : identifiants de fournisseurs TMDB (les mêmes dans tous les pays). */
+export async function updateStreamingAction(_: FormState, form: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const ids = [
+    ...new Set(
+      form
+        .getAll("provider")
+        .map((v) => Number(v))
+        .filter((n) => Number.isInteger(n) && n > 0 && n < 1e6),
+    ),
+  ].slice(0, 60);
+  await prisma.user.update({ where: { id: user.id }, data: { streamingProviders: ids } });
+  revalidatePath("/", "layout");
+  return { ok: true, message: (await getI18n()).t.settings.platformsSaved };
+}
+
 /** Poids maximal d'une photo reçue (le navigateur la réduit avant l'envoi). */
 const AVATAR_MAX_BYTES = 900 * 1024;
 
@@ -124,7 +149,11 @@ export async function updateEmailAction(_: FormState, form: FormData): Promise<F
   const user = await requireUser();
   const { t } = await getI18n();
   const s = t.settings;
-  const parsed = z.email(t.auth.errInvalidEmail).safeParse(String(form.get("email") ?? "").trim().toLowerCase());
+  const parsed = z.email(t.auth.errInvalidEmail).safeParse(
+    String(form.get("email") ?? "")
+      .trim()
+      .toLowerCase(),
+  );
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const email = parsed.data;
   if (email === user.email) return { error: s.errSameEmail };

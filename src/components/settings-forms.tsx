@@ -6,7 +6,9 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import {
   removeAvatarAction,
   setEmblemAction,
+  setWatchRegionAction,
   updateAvatarAction,
+  updateStreamingAction,
   updateEmailAction,
   updatePasswordAction,
   updateProfileAction,
@@ -15,8 +17,10 @@ import {
 import { Avatar } from "@/components/avatar";
 import { CheckIcon, UploadIcon } from "@/components/icons";
 import { PasswordInput } from "@/components/password-input";
+import { ProviderLogos } from "@/components/provider-logos";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
+import type { ProviderInfo } from "@/lib/providers";
 import { backdropUrl } from "@/lib/tmdb-images";
 
 function useFormFeedback(state: FormState) {
@@ -149,7 +153,9 @@ export function ProfileForm({ defaults }: { defaults: ProfileDefaults }) {
         <label className="block space-y-1.5">
           <span className="field-label">{s.handle}</span>
           <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm text-dust-400">@</span>
+            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm text-dust-400">
+              @
+            </span>
             <input
               name="handle"
               className="input pl-8"
@@ -168,7 +174,9 @@ export function ProfileForm({ defaults }: { defaults: ProfileDefaults }) {
       <label className="block space-y-1.5">
         <span className="flex items-baseline justify-between">
           <span className="field-label">{s.bio}</span>
-          <span className={`font-mono text-[11px] ${bio.length > 280 ? "text-bad" : "text-dust-400"}`}>{bio.length}/280</span>
+          <span className={`font-mono text-[11px] ${bio.length > 280 ? "text-bad" : "text-dust-400"}`}>
+            {bio.length}/280
+          </span>
         </span>
         <textarea
           name="bio"
@@ -219,7 +227,98 @@ export function ProfileForm({ defaults }: { defaults: ProfileDefaults }) {
   );
 }
 
-type EmblemOption = { filmId: string; title: string; year: number | null; backdropPath: string | null; rating: number | null };
+export function StreamingForm({
+  region,
+  regions,
+  catalog,
+  selected,
+}: {
+  region: string;
+  /** Pays proposés : [code, nom]. */
+  regions: [string, string][];
+  catalog: ProviderInfo[];
+  selected: number[];
+}) {
+  const [state, action, pending] = useActionState(updateStreamingAction, undefined);
+  const [switching, startSwitch] = useTransition();
+  const router = useRouter();
+  const s = useI18n().t.settings;
+  useFormFeedback(state);
+
+  // Changer de pays recharge la liste des plateformes de ce pays.
+  const switchRegion = (next: string) =>
+    startSwitch(async () => {
+      const res = await setWatchRegionAction(next);
+      if (!res.ok) toast(res.error, "error");
+      router.refresh();
+    });
+
+  return (
+    <div className="space-y-6">
+      <label className="block max-w-xs space-y-1.5">
+        <span className="field-label">{s.watchRegion}</span>
+        <select
+          className="input cursor-pointer"
+          value={region}
+          disabled={switching}
+          onChange={(e) => switchRegion(e.target.value)}
+        >
+          {regions.map(([code, name]) => (
+            <option key={code} value={code}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <form action={action} className={`space-y-5 ${switching ? "opacity-60" : ""}`}>
+        <fieldset>
+          <legend className="field-label">{s.platforms}</legend>
+          {/* La clé force la remise à zéro des cases quand la liste du pays change. */}
+          <ul key={region} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {catalog.map((p) => (
+              <li key={p.id}>
+                <label className="flex cursor-pointer items-center gap-3 rounded-md border border-velvet-700 px-3 py-2 transition hover:border-velvet-600 has-checked:border-tungsten/70 has-checked:bg-tungsten-soft has-focus-visible:outline-2 has-focus-visible:outline-tungsten">
+                  <input
+                    type="checkbox"
+                    name="provider"
+                    value={p.id}
+                    defaultChecked={selected.includes(p.id)}
+                    className="peer sr-only"
+                  />
+                  <ProviderLogos providers={[p]} size={28} max={1} />
+                  <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+                  <CheckIcon className="hidden size-4 shrink-0 text-tungsten peer-checked:block" />
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+        <ErrorLine state={state} />
+        <div className="flex flex-wrap items-center gap-4">
+          <button className="btn-primary" disabled={pending || switching}>
+            {pending ? "…" : s.savePlatforms}
+          </button>
+          <a
+            href="https://www.justwatch.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-dust-400 hover:text-screen"
+          >
+            {s.platformsCredit}
+          </a>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+type EmblemOption = {
+  filmId: string;
+  title: string;
+  year: number | null;
+  backdropPath: string | null;
+  rating: number | null;
+};
 
 export function EmblemPicker({ options, selected }: { options: EmblemOption[]; selected: string | null }) {
   const [current, setCurrent] = useState(selected);
@@ -238,21 +337,24 @@ export function EmblemPicker({ options, selected }: { options: EmblemOption[]; s
     });
 
   if (options.length === 0) {
-    return (
-      <p className="text-sm text-dust-300">
-        {s.emblemEmpty}
-      </p>
-    );
+    return <p className="text-sm text-dust-300">{s.emblemEmpty}</p>;
   }
 
   return (
-    <div role="radiogroup" aria-label={s.sectionEmblem} aria-busy={pending} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div
+      role="radiogroup"
+      aria-label={s.sectionEmblem}
+      aria-busy={pending}
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+    >
       <button
         role="radio"
         aria-checked={current === null}
         onClick={() => choose(null)}
         className={`relative grid aspect-[2.39/1] place-items-center rounded-md border border-dashed text-center text-xs transition ${
-          current === null ? "border-tungsten bg-tungsten-soft text-tungsten" : "border-velvet-600 text-dust-300 hover:border-dust-400"
+          current === null
+            ? "border-tungsten bg-tungsten-soft text-tungsten"
+            : "border-velvet-600 text-dust-300 hover:border-dust-400"
         }`}
       >
         <span>
@@ -273,7 +375,15 @@ export function EmblemPicker({ options, selected }: { options: EmblemOption[]; s
               active ? "ring-tungsten" : "ring-transparent hover:ring-velvet-600"
             }`}
           >
-            {src && <Image src={src} alt="" fill sizes="(max-width: 640px) 45vw, 240px" className="object-cover transition group-hover:scale-105" />}
+            {src && (
+              <Image
+                src={src}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 45vw, 240px"
+                className="object-cover transition group-hover:scale-105"
+              />
+            )}
             <span className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
             <span className="absolute inset-x-2 bottom-1.5 truncate text-[11px] font-semibold text-screen">
               {o.title} {o.year && <span className="font-mono font-normal opacity-70">{o.year}</span>}

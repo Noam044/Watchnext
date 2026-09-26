@@ -25,6 +25,7 @@ export type TmdbMovieListItem = {
   popularity: number;
   genre_ids?: number[];
   adult?: boolean;
+  original_language?: string;
 };
 
 export type TmdbPage = {
@@ -42,6 +43,17 @@ export type TmdbMovieDetails = Omit<TmdbMovieListItem, "genre_ids"> & {
     crew: { id: number; name: string; job: string }[];
   };
   keywords?: { keywords: { id: number; name: string }[] };
+  "watch/providers"?: { results?: Record<string, TmdbRegionProviders> };
+};
+
+type TmdbProvider = { provider_id: number; provider_name: string; logo_path: string | null; display_priority?: number };
+export type TmdbRegionProviders = {
+  link?: string;
+  flatrate?: TmdbProvider[];
+  free?: TmdbProvider[];
+  ads?: TmdbProvider[];
+  rent?: TmdbProvider[];
+  buy?: TmdbProvider[];
 };
 
 function apiKey() {
@@ -200,10 +212,26 @@ export async function getTrailerKey(tmdbId: number): Promise<string | null> {
   return videos.sort((a, b) => score(b) - score(a))[0]?.key ?? null;
 }
 
-/** Détails complets (non mis en cache ici : stockés dans la table Film). */
+/**
+ * Détails complets, avec les offres de streaming de chaque pays
+ * (non mis en cache ici : stockés dans la table Film).
+ */
 export function getMovieDetails(tmdbId: number) {
   return request<TmdbMovieDetails>(`/movie/${tmdbId}`, {
     language: language(),
-    append_to_response: "credits,keywords",
+    append_to_response: "credits,keywords,watch/providers",
   });
+}
+
+/**
+ * Plateformes disponibles dans un pays, des plus répandues aux plus confidentielles
+ * (liste JustWatch via TMDB, mise en cache 7 jours).
+ */
+export async function getProviderCatalog(region: string) {
+  const res = await cached<{
+    results: (TmdbProvider & { display_priorities?: Record<string, number> })[];
+  }>("/watch/providers/movie", { language: language(), watch_region: region }, 7 * DAY);
+  return (res?.results ?? [])
+    .map((p) => ({ id: p.provider_id, name: p.provider_name, logo: p.logo_path, rank: p.display_priorities?.[region] ?? p.display_priority ?? 999 }))
+    .sort((a, b) => a.rank - b.rank);
 }

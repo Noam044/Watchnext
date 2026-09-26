@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { mapLimit } from "@/lib/limit";
+import { WATCH_REGIONS, type FilmProviders } from "@/lib/providers";
 import { normalizeTitle } from "@/lib/text";
 import {
   getGenreMap,
@@ -8,12 +9,16 @@ import {
   searchMovie,
   type TmdbMovieDetails,
   type TmdbMovieListItem,
+  type TmdbRegionProviders,
 } from "@/lib/tmdb";
-import type { Film } from "@/generated/prisma/client";
+import type { Film, Prisma } from "@/generated/prisma/client";
 
 export type NamedRef = { id: number; name: string };
 
-const DETAILS_TTL = 30 * 24 * 60 * 60 * 1000;
+const DAY = 24 * 60 * 60 * 1000;
+const DETAILS_TTL = 30 * DAY;
+/** Les offres de streaming changent souvent : elles sont rafraîchies chaque semaine. */
+const PROVIDERS_TTL = 7 * DAY;
 const MAX_CAST = 6;
 const MAX_KEYWORDS = 25;
 
@@ -34,7 +39,22 @@ function listData(item: TmdbMovieListItem) {
     voteAverage: item.vote_average ?? 0,
     voteCount: item.vote_count ?? 0,
     popularity: item.popularity ?? 0,
+    originalLanguage: item.original_language ?? null,
   };
+}
+
+/** Offres des pays proposés dans l'app, réduites aux identifiants de fournisseurs. */
+function providersData(results: Record<string, TmdbRegionProviders> | undefined): FilmProviders {
+  const ids = (...lists: (TmdbRegionProviders["flatrate"] | undefined)[]) => [
+    ...new Set(lists.flatMap((l) => (l ?? []).map((p) => p.provider_id))),
+  ];
+  const out: FilmProviders = {};
+  for (const region of WATCH_REGIONS) {
+    const r = results?.[region];
+    if (!r) continue;
+    out[region] = { link: r.link, stream: ids(r.flatrate, r.free, r.ads), rent: ids(r.rent), buy: ids(r.buy) };
+  }
+  return out;
 }
 
 /**
@@ -87,18 +107,30 @@ function detailsData(d: TmdbMovieDetails) {
     directors: crew.filter((c) => c.job === "Director").map((c) => ({ id: c.id, name: c.name })),
     cast: cast.slice(0, MAX_CAST).map((c) => ({ id: c.id, name: c.name })),
     keywords: (d.keywords?.keywords ?? []).slice(0, MAX_KEYWORDS).map((k) => ({ id: k.id, name: k.name })),
+    originalLanguage: d.original_language ?? null,
+    providers: providersData(d["watch/providers"]?.results) as Prisma.InputJsonValue,
+    providersAt: new Date(),
     detailsFetchedAt: new Date(),
   };
 }
 
-function isFresh(f: Film | null | undefined) {
-  return !!f?.detailsFetchedAt && Date.now() - f.detailsFetchedAt.getTime() < DETAILS_TTL;
+function isFresh(f: Film | null | undefined, withProviders = false) {
+  if (!f?.detailsFetchedAt || Date.now() - f.detailsFetchedAt.getTime() >= DETAILS_TTL) return false;
+  return !withProviders || (!!f.providersAt && Date.now() - f.providersAt.getTime() < PROVIDERS_TTL);
 }
 
-/** Garantit que le film existe en base avec ses détails (genres, équipe, mots-clés). */
-export async function ensureFilmDetails(tmdbId: number): Promise<Film | null> {
+/** Les offres de streaming du film sont-elles à rafraîchir (inconnues ou vieilles d'une semaine) ? */
+export function providersStale(f: Pick<Film, "providersAt">) {
+  return !f.providersAt || Date.now() - f.providersAt.getTime() >= PROVIDERS_TTL;
+}
+
+/**
+ * Garantit que le film existe en base avec ses détails (genres, équipe, mots-clés),
+ * et, avec `withProviders`, des offres de streaming de moins d'une semaine.
+ */
+export async function ensureFilmDetails(tmdbId: number, withProviders = false): Promise<Film | null> {
   const existing = await prisma.film.findUnique({ where: { tmdbId } });
-  if (isFresh(existing)) return existing;
+  if (isFresh(existing, withProviders)) return existing;
 
   const d = await getMovieDetails(tmdbId);
   if (!d) return existing; // 404 TMDB : on garde ce qu'on a
@@ -106,14 +138,18 @@ export async function ensureFilmDetails(tmdbId: number): Promise<Film | null> {
   return prisma.film.upsert({ where: { tmdbId }, create: { tmdbId, ...data }, update: data });
 }
 
-/** Version groupée : ne récupère que les films sans détails frais. */
-export async function ensureManyDetails(tmdbIds: number[], concurrency = 6): Promise<Map<number, Film>> {
+/** Version groupée : ne récupère que les films sans détails frais (ni offres fraîches, avec `withProviders`). */
+export async function ensureManyDetails(
+  tmdbIds: number[],
+  concurrency = 6,
+  withProviders = false,
+): Promise<Map<number, Film>> {
   const ids = [...new Set(tmdbIds)];
   const existing = await prisma.film.findMany({ where: { tmdbId: { in: ids } } });
   const out = new Map(existing.map((f) => [f.tmdbId, f]));
-  const toFetch = ids.filter((id) => !isFresh(out.get(id)));
+  const toFetch = ids.filter((id) => !isFresh(out.get(id), withProviders));
   await mapLimit(toFetch, concurrency, async (id) => {
-    const f = await ensureFilmDetails(id);
+    const f = await ensureFilmDetails(id, withProviders);
     if (f) out.set(id, f);
   });
   return out;

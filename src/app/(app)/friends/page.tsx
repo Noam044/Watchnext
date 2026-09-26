@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { CopyHandle } from "@/components/copy-handle";
 import { FriendButton } from "@/components/friend-button";
-import { SearchIcon } from "@/components/icons";
+import { ArrowRightIcon, SearchIcon, UsersIcon } from "@/components/icons";
 import { ScopeScreen } from "@/components/scope-screen";
 import { Ticket, TicketFilm } from "@/components/ticket";
 import { formatNumber } from "@/i18n/format";
@@ -177,6 +177,12 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                       </p>
                     </div>
                   </div>
+                </Link>
+                <Link
+                  href={`/duo/${user.handle}`}
+                  className="mt-2 ml-[4.75rem] inline-flex items-center gap-1.5 text-xs text-dust-300 hover:text-tungsten"
+                >
+                  <UsersIcon className="size-3.5" /> {t.duo.open} <ArrowRightIcon className="size-3" />
                 </Link>
               </li>
             ))}
