@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRightIcon } from "@/components/icons";
-import { EmailForm, EmblemPicker, PasswordForm, ProfileForm } from "@/components/settings-forms";
+import { AvatarForm, EmailForm, EmblemPicker, PasswordForm, ProfileForm } from "@/components/settings-forms";
 import { getI18n } from "@/i18n/server";
+import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { emblemCandidates } from "@/lib/profile";
 import { requireUser } from "@/lib/session";
@@ -24,7 +25,17 @@ export default async function EditProfilePage() {
   const [user, candidates] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: me.id },
-      select: { name: true, handle: true, bio: true, email: true, publicProfile: true, emblemFilmId: true, letterboxd: true },
+      select: {
+        id: true,
+        name: true,
+        handle: true,
+        bio: true,
+        email: true,
+        publicProfile: true,
+        emblemFilmId: true,
+        avatarAt: true,
+        letterboxd: true,
+      },
     }),
     emblemCandidates(me.id),
   ]);
@@ -60,6 +71,7 @@ export default async function EditProfilePage() {
 
       <div className="min-w-0 space-y-6">
         <Section id="profil" title={s.sectionProfile} hint={s.sectionProfileHint}>
+          <AvatarForm name={user.name?.trim() || user.handle} handle={user.handle} src={avatarUrl(user)} />
           <ProfileForm
             defaults={{
               name: user.name ?? "",

@@ -1,15 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
+  removeAvatarAction,
   setEmblemAction,
+  updateAvatarAction,
   updateEmailAction,
   updatePasswordAction,
   updateProfileAction,
   type FormState,
 } from "@/actions/profile";
-import { CheckIcon } from "@/components/icons";
+import { Avatar } from "@/components/avatar";
+import { CheckIcon, UploadIcon } from "@/components/icons";
 import { PasswordInput } from "@/components/password-input";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
@@ -27,6 +31,103 @@ function ErrorLine({ state }: { state: FormState }) {
     <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">
       {state.error}
     </p>
+  );
+}
+
+/**
+ * Réduit la photo dans le navigateur avant l'envoi (carré central de 768 px au plus, en JPEG) :
+ * l'envoi reste léger même depuis un téléphone. Le serveur la recadre et la réencode ensuite.
+ */
+async function shrinkPhoto(file: File, max = 768): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const side = Math.min(bitmap.width, bitmap.height);
+  const out = Math.min(side, max);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = out;
+  canvas
+    .getContext("2d")!
+    .drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, out, out);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode"))), "image/jpeg", 0.9),
+  );
+}
+
+export function AvatarForm({ name, handle, src }: { name: string; handle: string; src: string | null }) {
+  const s = useI18n().t.settings;
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const [pending, startTransition] = useTransition();
+  // Aperçu local pendant l'envoi, remplacé par la photo du serveur une fois la page rafraîchie.
+  const [preview, setPreview] = useState<string | null>(null);
+  const [lastSrc, setLastSrc] = useState(src);
+  if (src !== lastSrc) {
+    setLastSrc(src);
+    setPreview(null);
+  }
+
+  const upload = (file: File) =>
+    startTransition(async () => {
+      const photo = await shrinkPhoto(file).catch(() => null);
+      if (!photo) {
+        toast(s.errAvatarFormat, "error");
+        return;
+      }
+      setPreview(URL.createObjectURL(photo));
+      const form = new FormData();
+      form.append("avatar", photo, "avatar.jpg");
+      const res = await updateAvatarAction(form);
+      if (!res.ok) {
+        setPreview(null);
+        toast(res.error, "error");
+        return;
+      }
+      toast(s.avatarSaved);
+      router.refresh();
+    });
+
+  const remove = () =>
+    startTransition(async () => {
+      const res = await removeAvatarAction();
+      if (!res.ok) return toast(res.error, "error");
+      setPreview(null);
+      toast(s.avatarRemoved);
+      router.refresh();
+    });
+
+  const shown = preview ?? src;
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-5 border-b border-velvet-800 pb-6">
+      <Avatar name={name} handle={handle} src={shown} size="xl" className={pending ? "opacity-60" : ""} />
+      <div className="space-y-3">
+        <p className="field-label">{s.avatar}</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => input.current?.click()} disabled={pending} className="btn-ghost">
+            <UploadIcon className="size-4" />
+            {pending ? s.avatarSending : shown ? s.avatarChange : s.avatarChoose}
+          </button>
+          {src && !pending && (
+            <button type="button" onClick={remove} className="btn-quiet">
+              {s.avatarRemove}
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-dust-400">{s.avatarHint}</p>
+        <input
+          ref={input}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          tabIndex={-1}
+          aria-label={s.avatarChoose}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) upload(file);
+          }}
+        />
+      </div>
+    </div>
   );
 }
 

@@ -8,7 +8,7 @@ import { SendIcon, XIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
 
-type Target = { id: string; name: string; handle: string };
+type Target = { id: string; name: string; handle: string; avatar: string | null };
 
 /** « Envoyer à un ami » : choisit un ami, ajoute un mot, et envoie la fiche du film en message. */
 export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { tmdbId: number; title: string; className?: string }) {
@@ -86,7 +86,7 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
                       to === t.id ? "bg-tungsten-soft ring-1 ring-tungsten/60" : "hover:bg-velvet-800"
                     }`}
                   >
-                    <Avatar name={t.name} handle={t.handle} size="sm" />
+                    <Avatar name={t.name} handle={t.handle} src={t.avatar} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{t.name}</span>
                       <span className="meta block truncate text-[11px]">@{t.handle}</span>

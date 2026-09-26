@@ -11,6 +11,7 @@ export const publicUserSelect = {
   publicProfile: true,
   createdAt: true,
   emblemFilm: true,
+  avatarAt: true,
   letterboxd: { select: { username: true } },
 } satisfies Prisma.UserSelect;
 

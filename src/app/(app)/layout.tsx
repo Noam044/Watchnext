@@ -8,6 +8,7 @@ import { PageTransition } from "@/components/page-transition";
 import { pendingRequestCount } from "@/lib/friends";
 import { unreadMessageCount } from "@/lib/messages";
 import { getI18n } from "@/i18n/server";
+import { avatarUrl } from "@/lib/avatar";
 import { requireUser } from "@/lib/session";
 import { displayName } from "@/lib/users";
 
@@ -18,7 +19,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     unreadMessageCount(user.id),
     getI18n(),
   ]);
-  const me = { name: displayName(user), handle: user.handle, pendingRequests, unreadMessages };
+  const me = { name: displayName(user), handle: user.handle, avatar: avatarUrl(user), pendingRequests, unreadMessages };
   return (
     <div className="relative z-10 flex flex-1 flex-col">
       <header className="sticky top-0 z-30 border-b border-velvet-800/80 bg-velvet-950/85 backdrop-blur-lg">

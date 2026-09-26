@@ -2,8 +2,10 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import sharp from "sharp";
 import { z } from "zod";
 import { getI18n } from "@/i18n/server";
+import { AVATAR_SIZE } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "@/lib/errors";
 import { requireUser } from "@/lib/session";
@@ -65,6 +67,50 @@ export async function setEmblemAction(filmId: string | null): Promise<ActionResu
     if (!owned) return { ok: false, error: (await getI18n()).t.settings.errEmblemNotSeen };
   }
   await prisma.user.update({ where: { id: user.id }, data: { emblemFilmId: filmId } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Poids maximal d'une photo reçue (le navigateur la réduit avant l'envoi). */
+const AVATAR_MAX_BYTES = 900 * 1024;
+
+/**
+ * Nouvelle photo de profil : recadrée en carré, réduite et réencodée en WebP sur le serveur,
+ * ce qui retire aussi ses métadonnées (position GPS, appareil…).
+ */
+export async function updateAvatarAction(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const s = (await getI18n()).t.settings;
+  const file = form.get("avatar");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: s.errAvatarMissing };
+  if (file.size > AVATAR_MAX_BYTES) return { ok: false, error: s.errAvatarTooBig };
+
+  let data: Uint8Array<ArrayBuffer>;
+  try {
+    const webp = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 50_000_000 })
+      .rotate()
+      .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: "cover" })
+      .webp({ quality: 82 })
+      .toBuffer();
+    data = new Uint8Array(webp);
+  } catch {
+    return { ok: false, error: s.errAvatarFormat };
+  }
+
+  await prisma.$transaction([
+    prisma.userAvatar.upsert({ where: { userId: user.id }, create: { userId: user.id, data }, update: { data } }),
+    prisma.user.update({ where: { id: user.id }, data: { avatarAt: new Date() } }),
+  ]);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function removeAvatarAction(): Promise<ActionResult> {
+  const user = await requireUser();
+  await prisma.$transaction([
+    prisma.userAvatar.deleteMany({ where: { userId: user.id } }),
+    prisma.user.update({ where: { id: user.id }, data: { avatarAt: null } }),
+  ]);
   revalidatePath("/", "layout");
   return { ok: true };
 }

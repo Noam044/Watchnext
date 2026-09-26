@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getI18n } from "@/i18n/server";
+import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "@/lib/errors";
 import { friendIds } from "@/lib/friends";
@@ -105,15 +106,15 @@ export async function notificationSummaryAction(): Promise<NotificationSummary> 
 }
 
 /** Amis à qui envoyer un film (fenêtre « Envoyer à un ami »). */
-export async function shareTargetsAction(): Promise<{ id: string; name: string; handle: string }[]> {
+export async function shareTargetsAction(): Promise<{ id: string; name: string; handle: string; avatar: string | null }[]> {
   const me = await requireUser();
   const ids = await friendIds(me.id);
   const users = await prisma.user.findMany({
     where: { id: { in: ids } },
-    select: { id: true, name: true, handle: true },
+    select: { id: true, name: true, handle: true, avatarAt: true },
     orderBy: { handle: "asc" },
   });
-  return users.map((u) => ({ id: u.id, name: u.name?.trim() || u.handle, handle: u.handle }));
+  return users.map((u) => ({ id: u.id, name: u.name?.trim() || u.handle, handle: u.handle, avatar: avatarUrl(u) }));
 }
 
 /** Films de ta bibliothèque à joindre à un message, recherchés par titre. */

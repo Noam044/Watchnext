@@ -31,7 +31,7 @@ export async function getConversations(userId: string) {
   const ids = await friendIds(userId);
   if (ids.length === 0) return [];
   const [friends, unread] = await Promise.all([
-    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, handle: true } }),
+    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, handle: true, avatarAt: true } }),
     prisma.message.groupBy({
       by: ["senderId"],
       where: { recipientId: userId, readAt: null, senderId: { in: ids } },

@@ -6,6 +6,7 @@ import { BackButton } from "@/components/back-button";
 import { LockIcon } from "@/components/icons";
 import { Thread, type FilmChoice } from "@/components/thread";
 import { getI18n } from "@/i18n/server";
+import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { canMessage, getThread, markThreadRead } from "@/lib/messages";
 import { requireUser } from "@/lib/session";
@@ -14,7 +15,7 @@ import { displayName } from "@/lib/users";
 const getUser = (handle: string) =>
   prisma.user.findUnique({
     where: { handle: decodeURIComponent(handle).toLowerCase() },
-    select: { id: true, name: true, handle: true },
+    select: { id: true, name: true, handle: true, avatarAt: true },
   });
 
 export async function generateMetadata({ params }: PageProps<"/messages/[handle]">): Promise<Metadata> {
@@ -70,7 +71,7 @@ export default async function ThreadPage({ params, searchParams }: PageProps<"/m
       <header className="flex items-center gap-3 border-b border-velvet-800 pb-4">
         <BackButton label="" />
         <Link href={`/u/${friend.handle}`} className="flex min-w-0 items-center gap-3 hover:text-tungsten">
-          <Avatar name={name} handle={friend.handle} />
+          <Avatar name={name} handle={friend.handle} src={avatarUrl(friend)} />
           <span className="min-w-0">
             <span className="block truncate text-lg font-semibold">{name}</span>
             <span className="meta block truncate text-[11px]">@{friend.handle}</span>

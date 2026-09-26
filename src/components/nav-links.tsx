@@ -13,7 +13,7 @@ const LINKS = [
   { href: "/import", key: "import", Icon: UploadIcon },
 ] as const;
 
-type Me = { name: string; handle: string; pendingRequests: number; unreadMessages: number };
+type Me = { name: string; handle: string; avatar: string | null; pendingRequests: number; unreadMessages: number };
 
 /** Pastille de chaque onglet : demandes d'ami en attente, messages non lus. */
 function badgeFor(href: string, me: Me) {
@@ -74,7 +74,7 @@ export function ProfileLink({ me }: { me: Me }) {
         active ? "bg-velvet-800" : "hover:bg-velvet-850"
       }`}
     >
-      <Avatar name={me.name} handle={me.handle} size="sm" className="order-last md:order-first" />
+      <Avatar name={me.name} handle={me.handle} src={me.avatar} size="sm" className="order-last md:order-first" />
       <span className="hidden max-w-36 truncate font-medium md:block">{me.name}</span>
     </Link>
   );

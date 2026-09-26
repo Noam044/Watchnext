@@ -154,7 +154,7 @@ function Feature({ r, trailerKey, onAct }: { r: RecoItem; trailerKey: string | n
             preload
             animate
             className="group/screen cursor-pointer transition-shadow duration-500 hover:shadow-[0_0_0_1px_rgb(246_236_220/0.14),0_50px_160px_-30px_rgb(242_184_75/0.45),0_10px_40px_-10px_rgb(0_0_0/0.8)]"
-            imageClassName="transition-[transform,filter] duration-[8s] ease-out group-hover/screen:scale-105 group-hover/screen:brightness-110"
+            imageClassName="[transition:scale_6s_cubic-bezier(0.2,0.7,0.2,1),filter_0.7s_ease-out] group-hover/screen:scale-105 group-hover/screen:brightness-110"
           >
             {/* Tout l'écran ouvre la fiche du film. */}
             <Link href={`/film/${r.tmdbId}`} tabIndex={-1} aria-hidden className="absolute inset-0" />

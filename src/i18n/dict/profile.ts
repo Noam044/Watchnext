@@ -4,6 +4,7 @@ export const profile = pair(
   {
     notFound: "Profil introuvable",
     emblem: "Film fétiche",
+    emblemLink: (title: string) => `Film fétiche : ${title}, voir la fiche`,
     memberSince: (date: string) => `Membre depuis ${date}`,
     editProfile: "Modifier le profil",
     write: "Écrire",
@@ -74,6 +75,7 @@ export const profile = pair(
   {
     notFound: "Profile not found",
     emblem: "Signature film",
+    emblemLink: (title: string) => `Signature film: ${title}, view the film page`,
     memberSince: (date: string) => `Member since ${date}`,
     editProfile: "Edit profile",
     write: "Message",

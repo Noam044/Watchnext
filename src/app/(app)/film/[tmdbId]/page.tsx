@@ -15,6 +15,7 @@ import { Ticket } from "@/components/ticket";
 import { dateFormat, formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { getSameDirector } from "@/lib/activity";
+import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { getLocalizer } from "@/lib/localize";
 import { getFilmPage } from "@/lib/film-page";
@@ -195,7 +196,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                       <div className="min-w-0 flex-1 space-y-2.5 py-1 pr-1">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <Link href={`/u/${f.user.handle}`} className="flex min-w-0 items-center gap-2.5 hover:text-tungsten">
-                            <Avatar name={displayName(f.user)} handle={f.user.handle} size="sm" />
+                            <Avatar name={displayName(f.user)} handle={f.user.handle} src={avatarUrl(f.user)} size="sm" />
                             <span className="truncate font-semibold">{displayName(f.user)}</span>
                           </Link>
                           <span className="flex shrink-0 items-center gap-2">

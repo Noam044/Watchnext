@@ -4,6 +4,7 @@ import { Avatar } from "@/components/avatar";
 import { ChatIcon, FilmIcon, SendIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { getSharedFilms } from "@/lib/activity";
+import { avatarUrl } from "@/lib/avatar";
 import { favoritesNotSeenBy } from "@/lib/friends";
 import { getConversations } from "@/lib/messages";
 import { requireUser } from "@/lib/session";
@@ -59,7 +60,7 @@ export default async function MessagesPage() {
                       href={`/messages/${friend.handle}`}
                       className="-mx-3 flex items-center gap-3 rounded-md px-3 py-4 transition hover:bg-velvet-900 sm:gap-4"
                     >
-                      <Avatar name={displayName(friend)} handle={friend.handle} />
+                      <Avatar name={displayName(friend)} handle={friend.handle} src={avatarUrl(friend)} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline justify-between gap-2">
                           <span className={`truncate ${unread ? "font-bold text-screen" : "font-semibold"}`}>
@@ -98,7 +99,7 @@ export default async function MessagesPage() {
                   {others.map(({ friend }) => (
                     <li key={friend.id}>
                       <Link href={`/messages/${friend.handle}`} className="chip py-1.5 pr-3 pl-1.5 text-sm">
-                        <Avatar name={displayName(friend)} handle={friend.handle} size="sm" className="size-6! text-[11px]! ring-0!" />
+                        <Avatar name={displayName(friend)} handle={friend.handle} src={avatarUrl(friend)} size="sm" className="size-6! text-[11px]! ring-0!" />
                         {displayName(friend)}
                       </Link>
                     </li>
@@ -122,7 +123,7 @@ export default async function MessagesPage() {
               return (
                 <div key={friend.id}>
                   <p className="flex items-center gap-2 text-sm font-semibold">
-                    <Avatar name={name} handle={friend.handle} size="sm" className="size-6! text-[11px]! ring-0!" />
+                    <Avatar name={name} handle={friend.handle} src={avatarUrl(friend)} size="sm" className="size-6! text-[11px]! ring-0!" />
                     {name}
                   </p>
                   <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">

@@ -110,7 +110,7 @@ export function Filmstrip({ frames, label }: { frames: FilmstripFrame[]; label: 
                         alt=""
                         fill
                         sizes="320px"
-                        className={`object-cover transition-[filter,transform] duration-700 ease-out motion-reduce:filter-none ${
+                        className={`object-cover transition-[filter,scale] duration-700 ease-out motion-reduce:filter-none ${
                           isActive ? "scale-100" : "scale-[1.03] [filter:invert(1)_sepia(0.35)_saturate(1.6)_hue-rotate(180deg)_brightness(0.9)]"
                         }`}
                       />

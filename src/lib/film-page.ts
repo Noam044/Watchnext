@@ -18,7 +18,7 @@ export async function getFilmPage(tmdbId: number, viewerId: string) {
     ids.length
       ? prisma.userFilm.findMany({
           where: { filmId: film.id, userId: { in: ids }, OR: [{ watched: true }, { inWatchlist: true }] },
-          include: { user: { select: { id: true, name: true, handle: true } } },
+          include: { user: { select: { id: true, name: true, handle: true, avatarAt: true } } },
           orderBy: [{ review: { sort: "asc", nulls: "last" } }, { rating: { sort: "desc", nulls: "last" } }],
         })
       : [],

@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ViewTransition } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { Avatar } from "@/components/avatar";
 import { CutReveal } from "@/components/cut-reveal";
 import { Filmstrip } from "@/components/filmstrip";
 import { FriendButton } from "@/components/friend-button";
 import { FullImportReminder } from "@/components/full-import-reminder";
-import { ChatIcon, ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
+import { ArrowRightIcon, ChatIcon, ExternalIcon, LockIcon, PencilIcon } from "@/components/icons";
 import { Library } from "@/components/library";
 import { ScopeScreen } from "@/components/scope-screen";
 import { dateFormat, formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
+import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { getLocalizer } from "@/lib/localize";
 import { canViewLibrary, favoritesNotSeenBy, getRelation, tasteMatch } from "@/lib/friends";
@@ -65,26 +67,39 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
     <div className="space-y-12">
       {/* En-tête : l'écran du film fétiche, puis l'identité */}
       <header>
-        <ScopeScreen
-          backdropPath={emblem?.backdropPath}
-          posterPath={emblem?.posterPath}
-          alt=""
-          preload
-          animate
-          className="-mx-4 rounded-none sm:mx-0 sm:rounded-md"
-        >
-          <div className="absolute inset-0 bg-linear-to-t from-velvet-950/80 via-transparent to-transparent" />
-          {emblem && (
-            <p className="meta absolute right-4 bottom-3 hidden text-screen/75 sm:block">
-              {p.emblem} · {emblem.title}
-              {emblem.year ? ` (${emblem.year})` : ""}
-            </p>
-          )}
-        </ScopeScreen>
+        {emblem ? (
+          // La bannière ouvre la fiche du film fétiche ; son image s'y transforme en écran de la fiche.
+          <Link
+            href={`/film/${emblem.tmdbId}`}
+            aria-label={p.emblemLink(emblem.title)}
+            className="group/screen -mx-4 block sm:mx-0"
+          >
+            <ViewTransition name={`screen-${emblem.tmdbId}`} share="morph" default="none">
+              <ScopeScreen
+                backdropPath={emblem.backdropPath}
+                posterPath={emblem.posterPath}
+                alt=""
+                preload
+                animate
+                className="rounded-none transition-shadow duration-500 group-hover/screen:shadow-[0_0_0_1px_rgb(246_236_220/0.14),0_40px_120px_-30px_rgb(242_184_75/0.3)] sm:rounded-md"
+                imageClassName="[transition:scale_6s_cubic-bezier(0.2,0.7,0.2,1),filter_0.7s_ease-out] group-hover/screen:scale-105 group-hover/screen:brightness-110"
+              >
+                <div className="absolute inset-0 bg-linear-to-t from-velvet-950/80 via-transparent to-transparent" />
+                <p className="meta absolute right-4 bottom-3 hidden items-center gap-1.5 text-screen/75 transition group-hover/screen:text-screen sm:flex">
+                  {p.emblem} · {emblem.title}
+                  {emblem.year ? ` (${emblem.year})` : ""}
+                  <ArrowRightIcon className="size-3.5 transition-transform duration-300 group-hover/screen:translate-x-0.5" />
+                </p>
+              </ScopeScreen>
+            </ViewTransition>
+          </Link>
+        ) : (
+          <ScopeScreen backdropPath={null} alt="" className="-mx-4 rounded-none sm:mx-0 sm:rounded-md" />
+        )}
 
         <div className="relative flex flex-col gap-5 px-1 sm:flex-row sm:items-end sm:justify-between sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <Avatar name={name} handle={owner.handle} size="xl" className="-mt-12 ring-4 sm:-mt-14" />
+            <Avatar name={name} handle={owner.handle} src={avatarUrl(owner)} size="xl" className="-mt-12 ring-4 sm:-mt-14" />
             <div className="min-w-0 pb-1">
               <h1 className="marquee text-5xl break-words sm:text-6xl">
                 <CutReveal text={name} delay={350} />

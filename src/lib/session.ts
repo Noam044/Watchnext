@@ -9,7 +9,7 @@ export const getCurrentUser = cache(async () => {
   const session = await auth();
   const id = session?.user?.id;
   if (!id) return null;
-  return prisma.user.findUnique({ where: { id }, select: { id: true, email: true, name: true, handle: true } });
+  return prisma.user.findUnique({ where: { id }, select: { id: true, email: true, name: true, handle: true, avatarAt: true } });
 });
 
 /** À utiliser dans les pages/actions protégées. */

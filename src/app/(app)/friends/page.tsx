@@ -9,6 +9,7 @@ import { Ticket, TicketFilm } from "@/components/ticket";
 import { formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { getFriendsActivity } from "@/lib/activity";
+import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { relationFrom, tasteMatch } from "@/lib/friends";
 import { resolveEmblem } from "@/lib/profile";
@@ -19,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getI18n()).t.friends.meta };
 }
 
-const userCard = { id: true, name: true, handle: true, bio: true, emblemFilm: true } as const;
+const userCard = { id: true, name: true, handle: true, bio: true, emblemFilm: true, avatarAt: true } as const;
 
 export default async function FriendsPage({ searchParams }: PageProps<"/friends">) {
   const me = await requireUser();
@@ -161,7 +162,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                     imageClassName="transition duration-500 group-hover:brightness-110"
                   />
                   <div className="relative flex items-end gap-3 px-3">
-                    <Avatar name={displayName(user)} handle={user.handle} size="lg" className="-mt-7 ring-4" />
+                    <Avatar name={displayName(user)} handle={user.handle} src={avatarUrl(user)} size="lg" className="-mt-7 ring-4" />
                     <div className="min-w-0 flex-1 pb-0.5">
                       <p className="flex items-baseline justify-between gap-2">
                         <span className="truncate font-semibold group-hover:text-tungsten">{displayName(user)}</span>
@@ -253,14 +254,14 @@ function PersonRow({
   user,
   children,
 }: {
-  user: { name: string | null; handle: string; bio: string | null };
+  user: { id: string; name: string | null; handle: string; bio: string | null; avatarAt: Date | null };
   children: React.ReactNode;
 }) {
   const name = displayName(user);
   return (
     <li className="flex items-center gap-3 px-4 py-3 sm:gap-4">
       <Link href={`/u/${user.handle}`} className="flex min-w-0 flex-1 items-center gap-3 hover:text-tungsten">
-        <Avatar name={name} handle={user.handle} />
+        <Avatar name={name} handle={user.handle} src={avatarUrl(user)} />
         <span className="min-w-0">
           <span className="block truncate font-semibold">{name}</span>
           <span className="meta block truncate text-[11px]">
