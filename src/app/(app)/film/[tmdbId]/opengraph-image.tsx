@@ -61,8 +61,12 @@ export default async function Image({ params }: { params: Promise<{ tmdbId: stri
       )}
       <div
         style={{
+          // next/og (Satori) ignore « inset » : position et taille explicites.
           position: "absolute",
-          inset: 0,
+          top: 0,
+          left: 0,
+          width: OG_SIZE.width,
+          height: OG_SIZE.height,
           display: "flex",
           background: "linear-gradient(90deg, rgba(18,8,9,0.96) 0%, rgba(18,8,9,0.82) 48%, rgba(18,8,9,0.25) 100%)",
         }}
