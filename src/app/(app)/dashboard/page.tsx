@@ -122,7 +122,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        {/* Sur téléphone, l'en-tête est centré au-dessus des boutons. */}
+        <div className="max-sm:text-center max-sm:[&_p]:justify-center">
           <p className="eyebrow">{d.showingFor(user.name ?? `@${user.handle}`)}</p>
           <p className="mt-1.5 text-sm text-dust-300">
             {d.basedOn(formatNumber(watchedCount, locale))}{" "}

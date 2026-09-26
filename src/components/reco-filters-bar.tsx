@@ -38,13 +38,13 @@ export function RecoFiltersBar({
   };
 
   return (
-    // Sur téléphone, une seule rangée qui défile ; sur écran large, les filtres passent à la ligne.
+    // Sur téléphone, une grille de deux colonnes : tous les filtres sont visibles sans défiler.
     <div
       role="group"
       aria-label={d.filtersLabel}
-      className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 *:shrink-0 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+      className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center max-sm:[&>*]:w-full max-sm:[&>*]:justify-center"
     >
-      <span className="mr-1 text-sm font-semibold text-dust-300">{d.tonight}</span>
+      <span className="col-span-2 text-sm font-semibold text-dust-300 max-sm:text-center sm:mr-1">{d.tonight}</span>
       {hasPlatforms ? (
         <button
           type="button"
@@ -55,7 +55,7 @@ export function RecoFiltersBar({
           <ScreenIcon className="size-3.5" /> {d.onMyPlatforms}
         </button>
       ) : (
-        <Link href="/profile/edit#plateformes" className="chip border-dashed py-1.5">
+        <Link href="/profile/edit?section=plateformes" className="chip border-dashed py-1.5">
           <ScreenIcon className="size-3.5" /> {d.choosePlatforms}
         </Link>
       )}
@@ -107,7 +107,7 @@ export function RecoFiltersBar({
         {d.inWatchlist}
       </button>
       {isFiltered(filters) && (
-        <span className="flex items-center gap-2 sm:ml-auto">
+        <span className="col-span-2 flex items-center gap-2 sm:ml-auto">
           <span className="meta" aria-live="polite">
             {d.matching(count)}
           </span>
@@ -146,12 +146,12 @@ function FilterSelect({
 }) {
   const active = value !== options[0][0];
   return (
-    <label className="relative inline-flex">
+    <label className="relative inline-flex min-w-0">
       <span className="sr-only">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${active ? "chip-active" : "chip bg-velvet-950"} cursor-pointer appearance-none py-1.5 pr-7`}
+        className={`${active ? "chip-active" : "chip bg-velvet-950"} w-full min-w-0 cursor-pointer appearance-none truncate py-1.5 pr-7 max-sm:justify-center max-sm:text-center max-sm:[text-align-last:center]`}
       >
         {options.map(([v, l]) => (
           <option key={v} value={v}>

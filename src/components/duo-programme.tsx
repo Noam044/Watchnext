@@ -102,7 +102,7 @@ export function DuoProgramme({
 
   return (
     <div className="space-y-10">
-      <div role="group" aria-label={d.filtersLabel} className="flex flex-wrap items-center gap-2">
+      <div role="group" aria-label={d.filtersLabel} className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
         {ours.length > 0 && (
           <button
             type="button"
@@ -218,7 +218,7 @@ function DuoFeature({ it, ...shared }: { it: DuoItem } & Shared) {
         <div className="drop-shadow-[0_24px_40px_rgb(0_0_0/0.65)]">
           <div className="ticket flex animate-rise [--ticket-cut:4.75rem] [--ticket-notch:9px] [animation-delay:250ms] sm:[--ticket-cut:8rem] sm:[--ticket-notch:12px]">
             <div className="ticket-stub gap-1 py-5 sm:py-6">
-              <span className="font-mono text-[10px] tracking-[0.12em] uppercase opacity-70 sm:text-[11px]">
+              <span className="font-mono text-[10px] leading-tight tracking-[0.04em] uppercase opacity-70 sm:text-[11px] sm:tracking-[0.12em]">
                 {d.stubLabel}
               </span>
               <span className="font-display text-3xl leading-none font-extrabold tabular-nums sm:text-6xl">

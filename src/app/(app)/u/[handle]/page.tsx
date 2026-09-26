@@ -102,14 +102,15 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           <ScopeScreen backdropPath={null} alt="" className="-mx-4 rounded-none sm:mx-0 sm:rounded-md" />
         )}
 
-        <div className="relative flex flex-col gap-5 px-1 sm:flex-row sm:items-end sm:justify-between sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        {/* Sur téléphone, l'identité est centrée sous la bannière. */}
+        <div className="relative flex flex-col items-center gap-5 px-1 text-center sm:flex-row sm:items-end sm:justify-between sm:px-6 sm:text-left">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end">
             <Avatar name={name} handle={owner.handle} src={avatarUrl(owner)} size="xl" className="-mt-12 ring-4 sm:-mt-14" />
             <div className="min-w-0 pb-1">
               <h1 className="marquee text-5xl break-words sm:text-6xl">
                 <CutReveal text={name} delay={350} />
               </h1>
-              <p className="meta mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="meta mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 sm:justify-start">
                 <span>@{owner.handle}</span>
                 {owner.letterboxd?.username && (
                   <a
@@ -131,7 +132,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
                 <PencilIcon /> {p.editProfile}
               </Link>
             ) : (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 {relation === "friends" && (
                   <>
                     <Link href={`/duo/${owner.handle}`} className="btn-primary">
@@ -148,10 +149,14 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           </div>
         </div>
 
-        {owner.bio && <p className="mt-5 max-w-2xl px-1 text-base leading-relaxed text-screen/90 sm:px-6">{owner.bio}</p>}
+        {owner.bio && (
+          <p className="mx-auto mt-5 max-w-2xl px-1 text-center text-base leading-relaxed text-screen/90 sm:mx-0 sm:px-6 sm:text-left">
+            {owner.bio}
+          </p>
+        )}
 
         {summary && (
-          <dl className="mt-7 flex flex-wrap gap-x-7 gap-y-2 border-y border-velvet-800 px-1 py-4 sm:px-6">
+          <dl className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-2 border-y border-velvet-800 px-1 py-4 sm:justify-start sm:gap-x-7 sm:px-6">
             <Stat value={formatNumber(summary.watchedCount, locale)} label={p.statWatched(summary.watchedCount)} />
             <Stat value={formatNumber(summary.ratedCount, locale)} label={p.statRated(summary.ratedCount)} />
             {summary.averageRating != null && (

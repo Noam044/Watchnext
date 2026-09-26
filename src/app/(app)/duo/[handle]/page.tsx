@@ -97,8 +97,9 @@ export default async function DuoPage({ params }: PageProps<"/duo/[handle]">) {
 
   return (
     <div className="space-y-10">
-      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-center gap-5">
+      {/* Sur téléphone : les deux avatars au-dessus du titre, le tout centré. */}
+      <header className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-5">
           <span className="flex shrink-0 -space-x-5">
             <Avatar name={displayName(me)} handle={me.handle} src={avatarUrl(me)} size="lg" className="ring-4" />
             <Avatar name={name} handle={friend.handle} src={avatarUrl(friend)} size="lg" className="ring-4" />

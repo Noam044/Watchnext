@@ -274,10 +274,10 @@ export function StreamingForm({
         <fieldset>
           <legend className="field-label">{s.platforms}</legend>
           {/* La clé force la remise à zéro des cases quand la liste du pays change. */}
-          <ul key={region} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ul key={region} className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
             {catalog.map((p) => (
               <li key={p.id}>
-                <label className="flex cursor-pointer items-center gap-3 rounded-md border border-velvet-700 px-3 py-2 transition hover:border-velvet-600 has-checked:border-tungsten/70 has-checked:bg-tungsten-soft has-focus-visible:outline-2 has-focus-visible:outline-tungsten">
+                <label className="flex cursor-pointer items-center gap-2 rounded-md border border-velvet-700 px-2 py-2 transition sm:gap-3 sm:px-3 hover:border-velvet-600 has-checked:border-tungsten/70 has-checked:bg-tungsten-soft has-focus-visible:outline-2 has-focus-visible:outline-tungsten">
                   <input
                     type="checkbox"
                     name="provider"
@@ -286,7 +286,7 @@ export function StreamingForm({
                     className="peer sr-only"
                   />
                   <ProviderLogos providers={[p]} size={28} max={1} />
-                  <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-xs sm:text-sm">{p.name}</span>
                   <CheckIcon className="hidden size-4 shrink-0 text-tungsten peer-checked:block" />
                 </label>
               </li>

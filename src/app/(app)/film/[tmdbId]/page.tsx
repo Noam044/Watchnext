@@ -157,13 +157,14 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-2 px-1 sm:px-6">
-          <ShareFilmButton tmdbId={film.tmdbId} title={film.title} />
+        {/* Sur téléphone, deux boutons de même largeur. */}
+        <div className="mt-6 grid grid-cols-2 gap-2 px-1 sm:flex sm:flex-wrap sm:px-6">
+          <ShareFilmButton tmdbId={film.tmdbId} title={film.title} className="btn-primary max-sm:px-2 max-sm:text-xs" />
           <a
             href={`https://letterboxd.com/tmdb/${film.tmdbId}/`}
             target="_blank"
             rel="noreferrer"
-            className="btn-ghost"
+            className="btn-ghost max-sm:px-2 max-sm:text-xs"
           >
             {t.common.seeOnLetterboxd} <ExternalIcon className="size-3.5" />
           </a>
@@ -341,7 +342,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
               )}
               {prefs.providers.length === 0 && (
                 <Link
-                  href="/profile/edit#plateformes"
+                  href="/profile/edit?section=plateformes"
                   className="mt-4 block text-xs text-dust-300 underline-offset-4 hover:text-screen hover:underline"
                 >
                   {fp.choosePlatforms}

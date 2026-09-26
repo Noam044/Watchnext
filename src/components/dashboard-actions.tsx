@@ -39,8 +39,9 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
     });
 
   return (
-    <div className="flex flex-col gap-2 sm:items-end">
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&>*]:shrink-0 max-sm:[&>*]:px-3.5 max-sm:[&>*]:py-2 max-sm:[&>*]:text-xs">
+    <div className="flex flex-col gap-2 max-sm:items-stretch sm:items-end">
+      {/* Sur téléphone : boutons de même largeur, icône au-dessus du libellé, dernière action sur toute la ligne. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(0,1fr))] gap-2 sm:flex sm:flex-wrap max-sm:[&>*]:flex-col max-sm:[&>*]:gap-1 max-sm:[&>*]:px-2 max-sm:[&>*]:py-2.5 max-sm:[&>*]:text-xs">
         {username && (
           <button onClick={resync} disabled={pending} className="btn-ghost" title={d.syncTitle(username)}>
             <RefreshIcon className={`size-4 ${pending && step === "sync" ? "animate-spin" : ""}`} />
@@ -51,7 +52,7 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
           <SparkIcon className={`size-4 ${pending && step === "calc" ? "animate-pulse" : ""}`} />
           {d.recalc}
         </button>
-        <Link href="/import" className="btn-quiet">
+        <Link href="/import" className="btn-ghost sm:border-transparent sm:text-dust-300 sm:hover:text-screen">
           <UploadIcon /> {d.reimport}
         </Link>
         {hiddenCount > 0 && (
@@ -63,14 +64,14 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
               })
             }
             disabled={pending}
-            className="btn-quiet"
+            className="btn-quiet max-sm:col-span-full"
           >
             {d.unhide(hiddenCount)}
           </button>
         )}
       </div>
       {step && (
-        <p aria-live="polite" className="meta flex items-center gap-2">
+        <p aria-live="polite" className="meta flex items-center gap-2 max-sm:justify-center">
           <span className="size-2.5 animate-spin rounded-full border-2 border-tungsten border-t-transparent" />
           {step === "sync" ? d.stepSync : d.stepCalc}
         </p>

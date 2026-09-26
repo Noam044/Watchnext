@@ -40,7 +40,7 @@ export async function sendTestPushAction(): Promise<ActionResult> {
   await sendPush(user.id, (locale) => ({
     title: "Watchnext",
     body: dictionaries[locale].settings.pushTestBody,
-    url: "/profile/edit#notifications",
+    url: "/profile/edit?section=notifications",
     tag: "test",
   }));
   return { ok: true };
