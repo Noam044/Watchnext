@@ -6,7 +6,7 @@ Stack : Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · PostgreSQL + 
 
 ## Installation
 
-Prérequis : Node.js ≥ 20, Docker (ou un PostgreSQL existant), une clé API TMDB.
+Prérequis : Node.js ≥ 22, Docker (ou un PostgreSQL existant), une clé API TMDB.
 
 ```bash
 npm install                      # lance aussi `prisma generate`
@@ -18,12 +18,23 @@ npm run dev                      # http://localhost:3000
 
 Production : `npm run build && npm start`.
 
+### Tests
+
+```bash
+npm test             # tests unitaires (Vitest) : parseurs Letterboxd, moteur, traductions, filtres, notifications, limites d'essais
+npm run test:e2e     # parcours complet (Playwright) : inscription → import d'un export → recommandations, en français puis en anglais
+```
+
+Le test de bout en bout lance l'app de production sur le port 3100 avec un **TMDB factice** (`e2e/mock-tmdb.mjs`) et une **base dédiée** `<base>_e2e` (créée et migrée automatiquement, jamais vidée : chaque lancement crée un compte à l'adresse unique). Premier lancement : `npx playwright install chromium`.
+
 ### Déploiement (Vercel + Neon)
 
 1. Sur vercel.com, importe le dépôt GitHub (framework détecté : Next.js).
 2. Onglet **Storage** du projet : ajoute une base **Neon** (PostgreSQL). Elle renseigne `DATABASE_URL` (via le pooler) et `DATABASE_URL_UNPOOLED` (connexion directe, utilisée par les migrations).
 3. Ajoute `AUTH_SECRET` (un secret propre à la production : `openssl rand -base64 32`), `TMDB_API_KEY` et `TMDB_LANGUAGE`.
 4. Ajoute `CRON_SECRET` (`openssl rand -hex 32`) : Vercel l'envoie à la tâche planifiée de synchronisation, qui refuse tout appel sans lui.
+   - Notifications push : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` et `VAPID_SUBJECT` (`npx web-push generate-vapid-keys`).
+   - Mot de passe oublié : `SMTP_URL` et `EMAIL_FROM` (voir ci-dessous). Sans eux, le lien « Mot de passe oublié ? » n'apparaît pas.
 5. Déploie. Le script `vercel-build` lance `prisma migrate deploy` puis `next build` : la base est migrée à chaque déploiement.
 6. Dans les réglages du projet (Functions), place les fonctions dans la même région que la base (ex. `fra1` pour une base Neon à Francfort).
 
@@ -40,6 +51,9 @@ Les images sont servies directement par le CDN de TMDB, dans la taille la plus p
 | `TMDB_LANGUAGE` | non | Langue des titres et synopsis (`fr-FR` par défaut). |
 | `CRON_SECRET` | en production | Secret de la tâche planifiée `/api/cron/sync` (envoyé par Vercel dans `Authorization: Bearer …`). |
 | `TMDB_API_BASE` | non | Autre URL pour l'API TMDB (proxy ou serveur factice pour les tests). |
+| `NEXT_PUBLIC_SITE_URL` | non | Adresse publique du site (liens des emails, aperçus de liens). Sur Vercel, l'URL de production est détectée. |
+| `SMTP_URL`, `EMAIL_FROM` | non | Envoi des emails « mot de passe oublié » par n'importe quel service SMTP, ex. `smtps://login:clé@smtp-relay.brevo.com:465` et `Watchnext <toi@exemple.fr>`. Brevo accepte une adresse d'expéditeur vérifiée sans nom de domaine. En développement, sans SMTP, l'email s'affiche dans la console. |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | non | Clés des notifications push (`npx web-push generate-vapid-keys`) et contact (`mailto:…`). Sans elles, les notifications sont désactivées. |
 
 ## Parcours
 
@@ -144,6 +158,16 @@ Règles de fusion : `watched` et `liked` se cumulent. La note la plus récente l
    - « Parce que tu as aimé X et Y » : les films aimés qui ont mené au candidat. À défaut, ceux qui partagent le plus de caractéristiques avec lui.
    - S'y ajoutent des étiquettes : réalisateur apprécié, acteur récurrent, watchlist.
 7. **Séance à deux** (`src/lib/duo.ts`) : candidats = recommandations et watchlists des deux amis, moins les films vus ou masqués par l'un d'eux. Chaque film est noté avec le profil de chacun (`0,65 × proximité + 0,35 × qualité`, +0,06 s'il est dans sa watchlist) ; le score commun vaut `0,6 × le plus faible + 0,4 × la moyenne`, pour qu'aucun des deux ne s'ennuie. Au plus 2 films par réalisateur.
+
+## Sécurité et robustesse
+
+- **Limite d'essais** (`src/lib/rate-limit.ts`, table `RateLimitHit`) : 5 mots de passe erronés par compte et 30 par adresse IP en 15 min ; 5 inscriptions par IP et par heure ; 3 liens de réinitialisation par compte et 10 par IP et par heure. La limite de connexion est vérifiée dans `authorize()` d'Auth.js, donc aussi pour l'URL `/api/auth/callback/credentials`. Les tentatives sont purgées chaque jour par la tâche planifiée.
+- **Mot de passe oublié** (`/forgot-password`, `/reset-password`) : lien valable 1 h, à usage unique ; la base ne garde que l'empreinte SHA-256 du jeton. La réponse est la même que l'adresse ait un compte ou non, et l'email part après la réponse.
+- **Liens partagés** : une fiche de film ouverte sans compte affiche une version publique (films déjà connus seulement, sans appel à TMDB) avec son aperçu (`opengraph-image.tsx` : image de fond, affiche, titre). Les autres pages restent réservées aux membres et leurs titres ne nomment aucun membre.
+- **App installable** : manifeste (`src/app/manifest.ts`), icônes générées (`/pwa-icon/*`) et service worker (`public/sw.js`, sans mise en cache).
+- **Notifications push** (Web Push) : nouveau message, demande d'ami, demande acceptée ; activées appareil par appareil dans Modifier le profil → Notifications, dans la langue choisie à l'activation. Sur iPhone, il faut d'abord installer l'app sur l'écran d'accueil.
+- **Performances** : affinités entre amis, bannières et derniers messages calculés en une requête SQL chacun, quel que soit le nombre d'amis.
+- **Titres en anglais** : titre et synopsis anglais (`titleEn`, `overviewEn`) récupérés avec les détails de chaque film (`append_to_response=translations`) et affichés quand l'interface est en anglais, y compris dans les raisons (« Because you liked … », via `details.becauseIds`). La tâche planifiée complète chaque jour les films des bibliothèques récupérés avant.
 
 ## Gestion des erreurs
 

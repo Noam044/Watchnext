@@ -43,6 +43,8 @@ export type RecoDetails = {
   parts: Record<FeatureType, number>;
   tags: string[];
   because: string[];
+  /** Identifiants TMDB des films de `because`, pour afficher leur titre dans la langue de l'interface. */
+  becauseIds: number[];
 };
 
 /** Note pondérée "à la IMDb" : tire les films peu votés vers la moyenne. */
@@ -241,19 +243,19 @@ function diversify<T extends { film: Film }>(list: T[]) {
 }
 
 /** Films aimés les plus proches d'un film (même réalisateur, acteurs, thèmes…), du plus proche au moins proche. */
-export function closestLiked(film: Film, rated: { film: Film; weight: number }[], take = 2) {
+export function closestLiked(film: Film, rated: { film: Film; weight: number }[], take = 2): Film[] {
   const weights: Record<FeatureType, number> = { director: 3, cast: 1.2, keyword: 1, genre: 0.3, decade: 0.1 };
   const candKeys = new Map(filmFeatures(film).map((f) => [featureKey(f), weights[f.type]]));
   return rated
     .filter((r) => r.weight >= 0.45 && r.film.id !== film.id)
     .map((r) => ({
-      title: r.film.title,
+      film: r.film,
       overlap: filmFeatures(r.film).reduce((s, f) => s + (candKeys.get(featureKey(f)) ?? 0), 0) * r.weight,
     }))
     .filter((r) => r.overlap >= 1.5)
     .sort((a, b) => b.overlap - a.overlap)
     .slice(0, take)
-    .map((r) => r.title);
+    .map((r) => r.film);
 }
 
 /** Construit l'explication : « Parce que tu as aimé X et Y » + étiquettes. */
@@ -264,14 +266,15 @@ function explain(
   rated: { film: Film; weight: number }[],
   seedFilms: Map<number, { film: Film; weight: number }>,
 ) {
-  const because =
+  const becauseFilms =
     c.seeds.size > 0
       ? [...c.seeds.entries()]
           .sort((a, b) => b[1] - a[1])
           .slice(0, 2)
-          .map(([id]) => seedFilms.get(id)!.film.title)
+          .map(([id]) => seedFilms.get(id)!.film)
       : // Pas de graine directe : on cherche les films aimés les plus proches.
         closestLiked(film, rated);
+  const because = becauseFilms.map((f) => f.title);
 
   const tags: string[] = [];
   const director = refs(film.directors).find((d) => (profile.affinity.get(`director:${d.id}`) ?? 0) > 0.25);
@@ -294,5 +297,5 @@ function explain(
   else if (genres.length) reason = `Correspond à ton goût pour ${formatList(genres.map((g) => g.toLowerCase()))}`;
   else reason = "Très bien noté et proche de tes goûts";
 
-  return { reason, details: { tags, because } };
+  return { reason, details: { tags, because, becauseIds: becauseFilms.map((f) => f.tmdbId) } };
 }

@@ -13,6 +13,7 @@ import { formatNumber } from "@/i18n/format";
 import { prisma } from "@/lib/db";
 import { describeStoredError } from "@/lib/errors";
 import { getLocalizer } from "@/lib/localize";
+import { becauseTitles, localizeFilms } from "@/lib/film-locale";
 import { refs } from "@/lib/films";
 import { offersFor } from "@/lib/providers";
 import { FILTERS_COOKIE, matchesFilters, parseFilters } from "@/lib/reco-filters";
@@ -65,6 +66,14 @@ export default async function DashboardPage() {
   // Où voir chaque film : les offres inconnues sont chargées maintenant, les anciennes après la réponse.
   const { refreshed, refreshLater } = await withFreshOffers(recos.map((r) => r.film));
   after(refreshLater);
+  // Titres et synopsis dans la langue de l'interface, y compris ceux cités dans les raisons.
+  localizeFilms(recos, locale);
+  localizeFilms(refreshed, locale);
+  type Details = { tags?: string[]; pct?: number; because?: string[]; becauseIds?: number[] };
+  const because = await becauseTitles(
+    recos.map((r) => (r.details ?? {}) as Details),
+    locale,
+  );
   const watchlist = new Set(
     (
       await prisma.userFilm.findMany({
@@ -76,8 +85,8 @@ export default async function DashboardPage() {
 
   const items: RecoItem[] = recos.map((r) => {
     const film = refreshed.get(r.film.tmdbId) ?? r.film;
-    const details = (r.details ?? {}) as { tags?: string[]; pct?: number; because?: string[] };
-    const text = loc.reco(r.reason, details.tags ?? [], details.because ?? []);
+    const details = (r.details ?? {}) as Details;
+    const text = loc.reco(r.reason, details.tags ?? [], because(details));
     return {
       id: r.id,
       tmdbId: film.tmdbId,

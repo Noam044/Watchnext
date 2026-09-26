@@ -9,7 +9,8 @@ import { backdropUrl } from "@/lib/tmdb-images";
 
 export default async function AuthLayout({ children }: LayoutProps<"/">) {
   if (await getCurrentUser()) redirect("/dashboard");
-  const [films, { t }] = await Promise.all([getShowcaseFilms(), getI18n()]);
+  const { t, locale } = await getI18n();
+  const films = await getShowcaseFilms(locale);
   const film = filmOfTheDay(films);
   const src = backdropUrl(film?.backdropPath, "w1280");
 
@@ -23,7 +24,11 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,var(--color-velvet-950))]" />
         </div>
       )}
-      <main id="contenu" tabIndex={-1} className="flex flex-1 outline-none flex-col items-center justify-center px-4 py-12">
+      <main
+        id="contenu"
+        tabIndex={-1}
+        className="flex flex-1 outline-none flex-col items-center justify-center px-4 py-12"
+      >
         <div className="mb-8">
           <Logo />
         </div>

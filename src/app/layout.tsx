@@ -3,6 +3,7 @@ import { Big_Shoulders, Courier_Prime, Hanken_Grotesk } from "next/font/google";
 import { Toaster } from "@/components/toaster";
 import { I18nProvider } from "@/i18n/client";
 import { getI18n } from "@/i18n/server";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const hanken = Hanken_Grotesk({ variable: "--font-hanken", subsets: ["latin"] });
@@ -13,7 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
   const description = t.common.appDescription;
   return {
+    metadataBase: new URL(SITE_URL),
     title: { default: "Watchnext", template: "%s · Watchnext" },
+    appleWebApp: { capable: true, title: "Watchnext", statusBarStyle: "black-translucent" },
+    icons: { apple: "/pwa-icon/180" },
     description,
     applicationName: "Watchnext",
     openGraph: {
@@ -23,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Watchnext",
       description,
     },
-    twitter: { card: "summary", title: "Watchnext", description },
+    twitter: { card: "summary_large_image", title: "Watchnext", description },
   };
 }
 

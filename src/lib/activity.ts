@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { friendIds } from "@/lib/friends";
 
-const filmCard = { id: true, tmdbId: true, title: true, year: true, posterPath: true } as const;
+const filmCard = { id: true, tmdbId: true, title: true, titleEn: true, year: true, posterPath: true } as const;
 
 /** Dernières séances des amis : les visionnages datés de leur journal, du plus récent au plus ancien. */
 export async function getFriendsActivity(userId: string, take = 12) {

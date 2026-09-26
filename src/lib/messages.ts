@@ -6,7 +6,15 @@ export const MESSAGE_MAX_LENGTH = 2000;
 /** Limite anti-abus : messages envoyés par minute et par utilisateur. */
 export const MESSAGES_PER_MINUTE = 20;
 
-const filmCard = { id: true, tmdbId: true, title: true, year: true, posterPath: true, backdropPath: true } as const;
+const filmCard = {
+  id: true,
+  tmdbId: true,
+  title: true,
+  titleEn: true,
+  year: true,
+  posterPath: true,
+  backdropPath: true,
+} as const;
 
 export const messageSelect = {
   id: true,
@@ -31,7 +39,10 @@ export async function getConversations(userId: string) {
   const ids = await friendIds(userId);
   if (ids.length === 0) return [];
   const [friends, unread] = await Promise.all([
-    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, handle: true, avatarAt: true } }),
+    prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, handle: true, avatarAt: true },
+    }),
     prisma.message.groupBy({
       by: ["senderId"],
       where: { recipientId: userId, readAt: null, senderId: { in: ids } },
@@ -39,21 +50,27 @@ export async function getConversations(userId: string) {
     }),
   ]);
   const unreadBy = new Map(unread.map((u) => [u.senderId, u._count._all]));
-  const rows = await Promise.all(
-    friends.map(async (friend) => {
-      const last = await prisma.message.findFirst({
-        where: {
-          OR: [
-            { senderId: userId, recipientId: friend.id },
-            { senderId: friend.id, recipientId: userId },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-        select: messageSelect,
-      });
-      return { friend, last, unread: unreadBy.get(friend.id) ?? 0 };
-    }),
-  );
+  // Dernier message de chaque conversation, en une requête (DISTINCT ON sur l'interlocuteur).
+  const lastIds = await prisma.$queryRaw<{ id: string; other: string }[]>`
+    SELECT DISTINCT ON ("other") "id", "other" FROM (
+      SELECT m."id", m."createdAt",
+        CASE WHEN m."senderId" = ${userId} THEN m."recipientId" ELSE m."senderId" END AS "other"
+      FROM "Message" m
+      WHERE (m."senderId" = ${userId} AND m."recipientId" = ANY(${ids}))
+         OR (m."recipientId" = ${userId} AND m."senderId" = ANY(${ids}))
+    ) t
+    ORDER BY "other", "createdAt" DESC`;
+  const lasts = await prisma.message.findMany({
+    where: { id: { in: lastIds.map((l) => l.id) } },
+    select: messageSelect,
+  });
+  const lastById = new Map(lasts.map((m) => [m.id, m]));
+  const lastByFriend = new Map(lastIds.map((l) => [l.other, lastById.get(l.id) ?? null]));
+  const rows = friends.map((friend) => ({
+    friend,
+    last: lastByFriend.get(friend.id) ?? null,
+    unread: unreadBy.get(friend.id) ?? 0,
+  }));
   return rows.sort(
     (a, b) =>
       (b.last?.createdAt.getTime() ?? 0) - (a.last?.createdAt.getTime() ?? 0) ||
@@ -70,7 +87,12 @@ export async function getThread(userId: string, otherId: string, after?: Date) {
     ],
     ...(after ? { createdAt: { gt: after } } : {}),
   };
-  const rows = await prisma.message.findMany({ where, orderBy: { createdAt: "desc" }, take: 200, select: messageSelect });
+  const rows = await prisma.message.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: messageSelect,
+  });
   return rows.reverse();
 }
 

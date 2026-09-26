@@ -5,6 +5,7 @@ import { dateFormat, formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { getImportHistory, getRecentDiary } from "@/lib/activity";
 import { prisma } from "@/lib/db";
+import { localizeFilms } from "@/lib/film-locale";
 import { getUnmatched } from "@/lib/import";
 import { requireUser } from "@/lib/session";
 
@@ -31,6 +32,7 @@ export default async function ImportPage({ searchParams }: PageProps<"/import">)
     getRecentDiary(user.id, 4),
     getI18n(),
   ]);
+  localizeFilms(diary, locale);
   const i = t.importPage;
   const dateFmt = dateFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const isOnboarding = filmCount === 0;

@@ -12,7 +12,8 @@ import { getShowcaseFilms, type ShowcaseFilm } from "@/lib/showcase";
 
 export default async function Home() {
   if (await getCurrentUser()) redirect("/dashboard");
-  const [films, { t }] = await Promise.all([getShowcaseFilms(), getI18n()]);
+  const { t, locale } = await getI18n();
+  const films = await getShowcaseFilms(locale);
   const l = t.landing;
   const half = Math.ceil(films.length / 2);
   // Exemple de recommandation construit avec les films à l'affiche (clairement présenté comme un exemple).

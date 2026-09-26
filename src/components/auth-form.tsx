@@ -6,7 +6,16 @@ import { loginAction, registerAction, type AuthFormState } from "@/actions/auth"
 import { PasswordInput } from "@/components/password-input";
 import { useI18n } from "@/i18n/client";
 
-export function AuthForm({ mode }: { mode: "login" | "register" }) {
+export function AuthForm({
+  mode,
+  notice,
+  canResetPassword = false,
+}: {
+  mode: "login" | "register";
+  /** Message de confirmation affiché au-dessus du formulaire (ex. mot de passe modifié). */
+  notice?: string;
+  canResetPassword?: boolean;
+}) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
     mode === "login" ? loginAction : registerAction,
     undefined,
@@ -18,10 +27,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     <form action={action} className="space-y-4">
       <div className="mb-6 space-y-1">
         <h1 className="marquee text-4xl">{isRegister ? a.registerTitle : a.loginTitle}</h1>
-        <p className="text-sm text-dust-300">
-          {isRegister ? a.registerSubtitle : a.loginSubtitle}
-        </p>
+        <p className="text-sm text-dust-300">{isRegister ? a.registerSubtitle : a.loginSubtitle}</p>
       </div>
+
+      {notice && !state?.error && (
+        <p role="status" className="rounded-md border border-exit/30 bg-exit/10 px-3 py-2 text-sm text-screen">
+          {notice}
+        </p>
+      )}
 
       {isRegister && (
         <label className="block space-y-1.5">
@@ -41,7 +54,17 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         />
       </label>
       <label className="block space-y-1.5">
-        <span className="field-label">{a.password}</span>
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="field-label">{a.password}</span>
+          {!isRegister && canResetPassword && (
+            <Link
+              href="/forgot-password"
+              className="text-xs text-dust-300 underline-offset-4 hover:text-screen hover:underline"
+            >
+              {a.forgotLink}
+            </Link>
+          )}
+        </span>
         <PasswordInput
           name="password"
           required
@@ -63,7 +86,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
       <p className="pt-2 text-center text-sm text-dust-300">
         {isRegister ? a.haveAccount : a.noAccount}
-        <Link href={isRegister ? "/login" : "/register"} className="font-medium text-tungsten underline-offset-4 hover:underline">
+        <Link
+          href={isRegister ? "/login" : "/register"}
+          className="font-medium text-tungsten underline-offset-4 hover:underline"
+        >
           {isRegister ? a.toLogin : a.toRegister}
         </Link>
       </p>

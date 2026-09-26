@@ -8,6 +8,7 @@ import { CutReveal } from "@/components/cut-reveal";
 import { ExternalIcon, HeartIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { ProviderLogos } from "@/components/provider-logos";
+import { PublicFilm } from "@/components/public-film";
 import { ReviewText } from "@/components/review-text";
 import { FilmScreen } from "@/components/film-screen";
 import { ShareFilmButton } from "@/components/share-film-button";
@@ -15,15 +16,16 @@ import { Stars } from "@/components/stars";
 import { Ticket } from "@/components/ticket";
 import { INTL } from "@/i18n/config";
 import { dateFormat, formatNumber } from "@/i18n/format";
-import { getI18n } from "@/i18n/server";
+import { getI18n, getLocale } from "@/i18n/server";
 import { getSameDirector } from "@/lib/activity";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { getLocalizer } from "@/lib/localize";
 import { getFilmPage } from "@/lib/film-page";
+import { becauseTitles, localizeFilms } from "@/lib/film-locale";
 import { refs } from "@/lib/films";
 import { offersFor, type ProviderInfo } from "@/lib/providers";
-import { requireUser } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 import { getStreamingPrefs, providerCatalog } from "@/lib/streaming";
 import { getTrailerKey } from "@/lib/tmdb";
 import { displayName } from "@/lib/users";
@@ -37,20 +39,36 @@ function parseId(raw: string) {
 
 export async function generateMetadata({ params }: PageProps<"/film/[tmdbId]">): Promise<Metadata> {
   const id = parseId((await params).tmdbId);
-  const film = id ? await prisma.film.findUnique({ where: { tmdbId: id }, select: { title: true, year: true } }) : null;
+  const film = id
+    ? await prisma.film.findUnique({
+        where: { tmdbId: id },
+        select: { title: true, titleEn: true, year: true, overview: true, overviewEn: true },
+      })
+    : null;
+  localizeFilms(film, await getLocale());
+  if (!film) return { title: (await getI18n()).t.filmPage.metaFallback };
+  // Aperçu du lien partagé (l'image vient de opengraph-image.tsx).
+  const title = `${film.title}${film.year ? ` (${film.year})` : ""}`;
+  const description =
+    film.overview && film.overview.length > 180 ? `${film.overview.slice(0, 177).trimEnd()}…` : film.overview;
   return {
-    title: film ? `${film.title}${film.year ? ` (${film.year})` : ""}` : (await getI18n()).t.filmPage.metaFallback,
+    title,
+    description,
+    openGraph: { type: "video.movie", title, description: description ?? undefined, siteName: "Watchnext" },
+    twitter: { card: "summary_large_image", title, description: description ?? undefined },
   };
 }
 
 export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) {
-  const me = await requireUser();
+  const me = await getCurrentUser();
   const id = parseId((await params).tmdbId);
   if (!id) notFound();
+  // Lien partagé ouvert sans compte : fiche publique et invitation à s'inscrire.
+  if (!me) return <PublicFilm tmdbId={id} />;
   const [data, trailerKey] = await Promise.all([getFilmPage(id, me.id), getTrailerKey(id).catch(() => null)]);
   if (!data) notFound();
-  const { film, mine, reco, friends } = data;
   const [{ t, locale }, prefs] = await Promise.all([getI18n(), getStreamingPrefs(me.id)]);
+  const { film, mine, reco, friends } = localizeFilms(data, locale);
   const fp = t.filmPage;
   const offers = offersFor(film.providers, prefs.region);
   const catalog = offers
@@ -68,7 +86,14 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
   const genres = refs(film.genres).map(loc.genre);
   const directorRefs = refs(film.directors);
   const directors = directorRefs.map((d) => d.name);
-  const sameDirector = directorRefs[0] ? await getSameDirector(film.id, directorRefs[0].id, me.id, 10) : [];
+  const sameDirector = localizeFilms(
+    directorRefs[0] ? await getSameDirector(film.id, directorRefs[0].id, me.id, 10) : [],
+    locale,
+  );
+  const recoBecause = await becauseTitles(
+    reco ? [reco.details as { because?: string[]; becauseIds?: number[] }] : [],
+    locale,
+  );
   const cast = refs(film.cast).map((c) => c.name);
   const recoPct = (reco?.details as { pct?: number } | null)?.pct;
   const friendsWatched = friends.filter((f) => f.watched);
@@ -151,7 +176,13 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
             <section aria-label={fp.whyLabel} className="rounded-lg border border-tungsten/30 bg-tungsten-soft p-5">
               <p className="eyebrow text-tungsten">{fp.recommended}</p>
               <p className="mt-2 text-base text-screen">
-                {loc.reco(reco.reason, [], (reco.details as { because?: string[] } | null)?.because ?? []).reason}
+                {
+                  loc.reco(
+                    reco.reason,
+                    [],
+                    recoBecause((reco.details ?? {}) as { because?: string[]; becauseIds?: number[] }),
+                  ).reason
+                }
               </p>
             </section>
           )}

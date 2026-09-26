@@ -23,7 +23,8 @@ export const messages = pair(
     friendsOnlyText: (name: string) => `Ajoute ${name} en ami pour pouvoir lui écrire.`,
     seeProfile: "Voir son profil",
     conversationWith: (name: string) => `Conversation avec ${name}`,
-    emptyThread: (name: string) => `Aucun message pour l'instant. Écris à ${name}, ou envoie-lui un film que tu as aimé.`,
+    emptyThread: (name: string) =>
+      `Aucun message pour l'instant. Écris à ${name}, ou envoie-lui un film que tu as aimé.`,
     read: " · Vu",
     removeFilm: "Retirer le film",
     attachFilm: "Joindre un film",
@@ -40,6 +41,8 @@ export const messages = pair(
     noFavorites: "Aucun coup de cœur pour l'instant : cherche un titre.",
     newMessageFrom: (name: string) => `Nouveau message de ${name}`,
     newFriendRequest: "Nouvelle demande d'ami",
+    pushFilm: (title: string, note: string | null) =>
+      note ? `Film partagé : ${title} · ${note}` : `Film partagé : ${title}`,
     // Envoyer à un ami
     shareButton: "Envoyer à un ami",
     shareLabel: (title: string) => `Envoyer « ${title} » à un ami`,
@@ -96,6 +99,8 @@ export const messages = pair(
     noFavorites: "No favourites yet: search for a title.",
     newMessageFrom: (name: string) => `New message from ${name}`,
     newFriendRequest: "New friend request",
+    pushFilm: (title: string, note: string | null) =>
+      note ? `Shared film: ${title} · ${note}` : `Shared film: ${title}`,
     shareButton: "Send to a friend",
     shareLabel: (title: string) => `Send “${title}” to a friend`,
     noFriendsYet: "You don't have any friends on Watchnext yet.",

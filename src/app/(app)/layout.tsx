@@ -5,15 +5,20 @@ import { Logo } from "@/components/logo";
 import { DesktopNav, MobileTabBar, ProfileLink } from "@/components/nav-links";
 import { NotificationPoller } from "@/components/notification-poller";
 import { PageTransition } from "@/components/page-transition";
+import { ServiceWorker } from "@/components/service-worker";
 import { pendingRequestCount } from "@/lib/friends";
 import { unreadMessageCount } from "@/lib/messages";
 import { getI18n } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
-import { requireUser } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
+import Link from "next/link";
 import { displayName } from "@/lib/users";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  // Visiteur sans compte : chaque page vérifie elle-même la connexion (requireUser) et le renvoie
+  // vers /login ; seule la fiche d'un film a une version publique, pour les liens partagés.
+  if (!user) return <PublicShell>{children}</PublicShell>;
   const [pendingRequests, unreadMessages, { t }] = await Promise.all([
     pendingRequestCount(user.id),
     unreadMessageCount(user.id),
@@ -37,11 +42,45 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
       </header>
-      <main id="contenu" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 outline-none px-4 pt-6 pb-28 sm:px-6 sm:pt-10 md:pb-16">
+      <main
+        id="contenu"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-6xl flex-1 outline-none px-4 pt-6 pb-28 sm:px-6 sm:pt-10 md:pb-16"
+      >
         <PageTransition>{children}</PageTransition>
       </main>
       <MobileTabBar me={me} />
       <NotificationPoller initial={{ pendingRequests, unreadMessages }} />
+      <ServiceWorker />
+    </div>
+  );
+}
+
+async function PublicShell({ children }: { children: React.ReactNode }) {
+  const l = (await getI18n()).t.landing;
+  return (
+    <div className="relative z-10 flex flex-1 flex-col">
+      <header className="border-b border-velvet-800/80">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
+          <Logo href="/" />
+          <div className="ml-auto flex items-center gap-2">
+            <LocaleSwitch className="mr-1 hidden sm:flex" />
+            <Link href="/login" className="btn-quiet">
+              {l.signIn}
+            </Link>
+            <Link href="/register" className="btn-primary hidden sm:inline-flex">
+              {l.createAccount}
+            </Link>
+          </div>
+        </div>
+      </header>
+      <main
+        id="contenu"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 outline-none sm:px-6 sm:pt-10"
+      >
+        {children}
+      </main>
     </div>
   );
 }

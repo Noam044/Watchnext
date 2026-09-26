@@ -5,11 +5,12 @@ import { Avatar } from "@/components/avatar";
 import { BackButton } from "@/components/back-button";
 import { LockIcon, UsersIcon } from "@/components/icons";
 import { Thread, type FilmChoice } from "@/components/thread";
-import { getI18n } from "@/i18n/server";
+import { getI18n, getLocale } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
+import { localizeFilms } from "@/lib/film-locale";
 import { canMessage, getThread, markThreadRead } from "@/lib/messages";
-import { requireUser } from "@/lib/session";
+import { getCurrentUser, requireUser } from "@/lib/session";
 import { displayName } from "@/lib/users";
 
 const getUser = (handle: string) =>
@@ -19,7 +20,8 @@ const getUser = (handle: string) =>
   });
 
 export async function generateMetadata({ params }: PageProps<"/messages/[handle]">): Promise<Metadata> {
-  const user = await getUser((await params).handle);
+  // Le nom d'un membre n'apparaît pas dans le titre pour un visiteur sans compte.
+  const user = (await getCurrentUser()) ? await getUser((await params).handle) : null;
   const m = (await getI18n()).t.messages;
   return { title: user ? m.metaThread(displayName(user)) : m.meta };
 }
@@ -30,9 +32,17 @@ async function filmToAttach(raw: string | string[] | undefined, userId: string):
   if (!Number.isInteger(tmdbId) || tmdbId <= 0) return null;
   const film = await prisma.film.findUnique({
     where: { tmdbId },
-    select: { tmdbId: true, title: true, year: true, posterPath: true, userFilms: { where: { userId }, select: { rating: true } } },
+    select: {
+      tmdbId: true,
+      title: true,
+      titleEn: true,
+      year: true,
+      posterPath: true,
+      userFilms: { where: { userId }, select: { rating: true } },
+    },
   });
   if (!film) return null;
+  localizeFilms(film, await getLocale());
   const { userFilms, ...rest } = film;
   return { ...rest, rating: userFilms[0]?.rating ?? null };
 }
@@ -66,6 +76,7 @@ export default async function ThreadPage({ params, searchParams }: PageProps<"/m
     filmToAttach((await searchParams).film, me.id),
   ]);
   await markThreadRead(me.id, friend.id);
+  localizeFilms(messages, await getLocale());
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col">

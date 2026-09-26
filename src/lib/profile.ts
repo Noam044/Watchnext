@@ -17,7 +17,7 @@ export const publicUserSelect = {
 
 export type PublicUser = Prisma.UserGetPayload<{ select: typeof publicUserSelect }>;
 
-export type Emblem = Pick<Film, "tmdbId" | "title" | "year" | "backdropPath" | "posterPath">;
+export type Emblem = Pick<Film, "tmdbId" | "title" | "titleEn" | "year" | "backdropPath" | "posterPath">;
 
 /**
  * Film dont l'image sert de bannière : le film fétiche choisi, sinon le film
@@ -37,6 +37,26 @@ export async function resolveEmblem(user: { id: string; emblemFilm: Film | null 
   return top?.film ?? user.emblemFilm ?? null;
 }
 
+/** Version groupée de resolveEmblem : une seule requête pour tous les utilisateurs sans film fétiche illustré. */
+export async function resolveEmblems(
+  users: { id: string; emblemFilm: Film | null }[],
+): Promise<Map<string, Emblem | null>> {
+  const out = new Map<string, Emblem | null>();
+  const missing = users.filter((u) => !u.emblemFilm?.backdropPath).map((u) => u.id);
+  const tops = missing.length
+    ? await prisma.$queryRaw<(Emblem & { userId: string })[]>`
+        SELECT DISTINCT ON (uf."userId") uf."userId", f."tmdbId", f."title", f."titleEn", f."year", f."backdropPath", f."posterPath"
+        FROM "UserFilm" uf JOIN "Film" f ON f."id" = uf."filmId"
+        WHERE uf."userId" = ANY(${missing}) AND uf."watched" AND f."backdropPath" IS NOT NULL
+        ORDER BY uf."userId", uf."rating" DESC NULLS LAST, uf."liked" DESC, uf."watchedAt" DESC NULLS LAST`
+    : [];
+  const byUser = new Map(tops.map(({ userId, ...emblem }) => [userId, emblem]));
+  for (const u of users) {
+    out.set(u.id, u.emblemFilm?.backdropPath ? u.emblemFilm : (byUser.get(u.id) ?? u.emblemFilm ?? null));
+  }
+  return out;
+}
+
 /** Films proposés comme film fétiche : les mieux notés ou likés, avec une image de fond. */
 export function emblemCandidates(userId: string, take = 18) {
   return prisma.userFilm.findMany({
@@ -46,7 +66,11 @@ export function emblemCandidates(userId: string, take = 18) {
       OR: [{ rating: { gte: 4 } }, { liked: true }],
       film: { backdropPath: { not: null } },
     },
-    orderBy: [{ rating: { sort: "desc", nulls: "last" } }, { liked: "desc" }, { watchedAt: { sort: "desc", nulls: "last" } }],
+    orderBy: [
+      { rating: { sort: "desc", nulls: "last" } },
+      { liked: "desc" },
+      { watchedAt: { sort: "desc", nulls: "last" } },
+    ],
     include: { film: true },
     take,
   });

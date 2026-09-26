@@ -32,6 +32,8 @@ model User {
 
   emblemFilm       Film?              @relation("UserEmblem", fields: [emblemFilmId], references: [id], onDelete: SetNull)
   avatar           UserAvatar?
+  resetTokens      PasswordResetToken[]
+  pushSubscriptions PushSubscription[]
   letterboxd       LetterboxdProfile?
   films            UserFilm[]
   recommendations  Recommendation[]
@@ -90,7 +92,11 @@ model LetterboxdProfile {
 model Film {
   id               String    @id @default(cuid())
   tmdbId           Int       @unique
+  /// Titre et synopsis dans la langue TMDB principale (TMDB_LANGUAGE, fr-FR par défaut)
   title            String
+  /// Titre et synopsis en anglais, pour l'interface anglaise (null tant que les détails ne sont pas connus)
+  titleEn          String?
+  overviewEn       String?
   originalTitle    String?
   year             Int?
   releaseDate      String?
@@ -146,6 +152,8 @@ model UserFilm {
 
   @@unique([userId, filmId])
   @@index([userId, watched])
+  /// Jointures par film : affinité entre amis, avis des amis sur une fiche
+  @@index([filmId])
 }
 
 model Recommendation {
@@ -246,4 +254,43 @@ model Message {
 
   @@index([recipientId, readAt])
   @@index([senderId, recipientId, createdAt])
+}
+
+/// Tentatives comptées pour limiter les abus (connexion, inscription, mot de passe oublié). Purgées chaque jour.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+/// Lien de réinitialisation du mot de passe : seul le hash du jeton est gardé, valable 1 h, utilisable une fois.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Abonnement aux notifications push d'un appareil (Web Push).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  /// Langue des notifications (celle de l'interface au moment de l'abonnement)
+  locale    String   @default("fr")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

@@ -4,6 +4,7 @@ import { Avatar } from "@/components/avatar";
 import { ChatIcon, FilmIcon, SendIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { getSharedFilms } from "@/lib/activity";
+import { localizeFilms } from "@/lib/film-locale";
 import { avatarUrl } from "@/lib/avatar";
 import { favoritesNotSeenBy } from "@/lib/friends";
 import { getConversations } from "@/lib/messages";
@@ -32,6 +33,7 @@ export default async function MessagesPage() {
       conversations.slice(0, 2).map(async ({ friend }) => ({ friend, films: await favoritesNotSeenBy(me.id, friend.id, 6) })),
     )
   ).filter((i) => i.films.length > 0);
+  localizeFilms([conversations, shared, ideas], locale);
 
   return (
     <div className={`grid gap-12 lg:gap-16 ${shared.length ? "lg:grid-cols-[minmax(0,1fr)_17rem]" : "max-w-3xl"}`}>

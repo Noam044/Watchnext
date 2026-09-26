@@ -1,0 +1,23 @@
+import { describe, expect, it } from "vitest";
+import { isWatchRegion, offersFor, onMyPlatforms } from "@/lib/providers";
+
+describe("offres de streaming", () => {
+  const stored = { FR: { link: "https://tmdb/fr", stream: [8], rent: [2], buy: [2, 3] } };
+
+  it("distingue offres inconnues (null) et absence d'offre dans le pays", () => {
+    expect(offersFor(null, "FR")).toBeNull();
+    expect(offersFor(stored, "FR")).toEqual(stored.FR);
+    expect(offersFor(stored, "BE")).toEqual({ stream: [], rent: [], buy: [] });
+  });
+
+  it("repère un film inclus dans un abonnement", () => {
+    expect(onMyPlatforms(stored.FR, [8, 337])).toBe(true);
+    expect(onMyPlatforms(stored.FR, [2])).toBe(false);
+    expect(onMyPlatforms(null, [8])).toBe(false);
+  });
+
+  it("n'accepte que les pays proposés", () => {
+    expect(isWatchRegion("FR")).toBe(true);
+    expect(isWatchRegion("XX")).toBe(false);
+  });
+});

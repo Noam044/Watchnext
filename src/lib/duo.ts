@@ -12,8 +12,8 @@ export type DuoPick = {
   mePct: number;
   friendPct: number;
   /** Film aimé par chacun qui explique la proposition, s'il y en a un. */
-  meBecause: string | null;
-  friendBecause: string | null;
+  meBecause: Film | null;
+  friendBecause: Film | null;
   inMyWatchlist: boolean;
   inFriendWatchlist: boolean;
 };

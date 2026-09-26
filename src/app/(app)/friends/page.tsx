@@ -11,8 +11,9 @@ import { getI18n } from "@/i18n/server";
 import { getFriendsActivity } from "@/lib/activity";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
-import { relationFrom, tasteMatch } from "@/lib/friends";
-import { resolveEmblem } from "@/lib/profile";
+import { localizeFilms } from "@/lib/film-locale";
+import { relationFrom, tasteMatches } from "@/lib/friends";
+import { resolveEmblems } from "@/lib/profile";
 import { requireUser } from "@/lib/session";
 import { displayName } from "@/lib/users";
 
@@ -39,7 +40,8 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
   const incoming = links.filter((f) => f.status === "PENDING" && f.addresseeId === me.id).map((f) => f.requester);
   const outgoing = links.filter((f) => f.status === "PENDING" && f.requesterId === me.id).map((f) => f.addressee);
 
-  const [results, friendCards, activity] = await Promise.all([
+  const friendIdsList = friends.map((u) => u.id);
+  const [results, matches, emblems, watchedCounts, activity] = await Promise.all([
     q.length >= 2
       ? prisma.user.findMany({
           where: {
@@ -51,26 +53,30 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
           take: 20,
         })
       : null,
-    Promise.all(
-      friends.map(async (u) => {
-        const [emblem, match, watched] = await Promise.all([
-          resolveEmblem(u),
-          tasteMatch(me.id, u.id),
-          prisma.userFilm.count({ where: { userId: u.id, watched: true } }),
-        ]);
-        return { user: u, emblem, match, watched };
-      }),
-    ),
+    // Affinités, bannières et nombres de films : une requête chacun, quel que soit le nombre d'amis.
+    tasteMatches(me.id, friendIdsList),
+    resolveEmblems(friends),
+    friends.length
+      ? prisma.userFilm.groupBy({
+          by: ["userId"],
+          where: { userId: { in: friendIdsList }, watched: true },
+          _count: true,
+        })
+      : [],
     friends.length ? getFriendsActivity(me.id, 12) : [],
   ]);
+  localizeFilms(activity, locale);
+  const watchedBy = new Map(watchedCounts.map((w) => [w.userId, w._count]));
+  const friendCards = friends.map((u) => ({
+    user: u,
+    emblem: emblems.get(u.id) ?? null,
+    match: matches.get(u.id) ?? { common: 0, bothLiked: 0, ratedTogether: 0, pct: null },
+    watched: watchedBy.get(u.id) ?? 0,
+  }));
   friendCards.sort((a, b) => (b.match.pct ?? -1) - (a.match.pct ?? -1));
 
   const relationOf = (userId: string) =>
-    relationFrom(
-      me.id,
-      userId,
-      links.find((f) => f.requesterId === userId || f.addresseeId === userId) ?? null,
-    );
+    relationFrom(me.id, userId, links.find((f) => f.requesterId === userId || f.addresseeId === userId) ?? null);
 
   return (
     <div className="space-y-12">
@@ -120,9 +126,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
               ))}
             </ul>
           ) : (
-            <p className="card px-6 py-8 text-center text-sm text-dust-300">
-              {f.noResults}
-            </p>
+            <p className="card px-6 py-8 text-center text-sm text-dust-300">{f.noResults}</p>
           )}
         </section>
       )}
@@ -162,7 +166,13 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                     imageClassName="transition duration-500 group-hover:brightness-110"
                   />
                   <div className="relative flex items-end gap-3 px-3">
-                    <Avatar name={displayName(user)} handle={user.handle} src={avatarUrl(user)} size="lg" className="-mt-7 ring-4" />
+                    <Avatar
+                      name={displayName(user)}
+                      handle={user.handle}
+                      src={avatarUrl(user)}
+                      size="lg"
+                      className="-mt-7 ring-4"
+                    />
                     <div className="min-w-0 flex-1 pb-0.5">
                       <p className="flex items-baseline justify-between gap-2">
                         <span className="truncate font-semibold group-hover:text-tungsten">{displayName(user)}</span>
@@ -224,7 +234,11 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                     >
                       {a.review && (
                         <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-dust-300">
-                          {a.reviewSpoilers ? <span className="italic">{f.spoilerReview}</span> : t.common.quote(a.review)}
+                          {a.reviewSpoilers ? (
+                            <span className="italic">{f.spoilerReview}</span>
+                          ) : (
+                            t.common.quote(a.review)
+                          )}
                         </p>
                       )}
                     </TicketFilm>

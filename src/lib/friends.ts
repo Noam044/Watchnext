@@ -45,32 +45,44 @@ export function canViewLibrary(relation: Relation, publicProfile: boolean) {
   return relation === "self" || relation === "friends" || publicProfile;
 }
 
+export type TasteMatch = { common: number; bothLiked: number; ratedTogether: number; pct: number | null };
+
+const NO_MATCH: TasteMatch = { common: 0, bothLiked: 0, ratedTogether: 0, pct: null };
+
 /**
- * Affinité entre deux spectateurs, calculée sur les films notés par les deux :
- * 100 % quand les notes sont identiques, 0 % quand elles s'écartent de 3 étoiles en moyenne.
+ * Affinité entre un spectateur et plusieurs autres, calculée en une requête sur les films vus par les deux :
+ * 100 % quand les notes sont identiques, 0 % quand elles s'écartent de 3 étoiles en moyenne
+ * (à partir de 5 films notés par les deux).
  */
-export async function tasteMatch(aId: string, bId: string) {
-  const [a, b] = await Promise.all(
-    [aId, bId].map((userId) =>
-      prisma.userFilm.findMany({ where: { userId, watched: true }, select: { filmId: true, rating: true, liked: true } }),
-    ),
-  );
-  const byFilm = new Map(a.map((f) => [f.filmId, f]));
-  let common = 0;
-  let bothLiked = 0;
-  const diffs: number[] = [];
-  for (const fb of b) {
-    const fa = byFilm.get(fb.filmId);
-    if (!fa) continue;
-    common++;
-    if (fa.liked && fb.liked) bothLiked++;
-    if (fa.rating != null && fb.rating != null) diffs.push(Math.abs(fa.rating - fb.rating));
+export async function tasteMatches(meId: string, otherIds: string[]): Promise<Map<string, TasteMatch>> {
+  const out = new Map<string, TasteMatch>();
+  if (otherIds.length === 0) return out;
+  const rows = await prisma.$queryRaw<
+    { otherId: string; common: number; bothLiked: number; ratedTogether: number; meanDiff: number | null }[]
+  >`
+    SELECT b."userId" AS "otherId",
+      COUNT(*)::int AS "common",
+      (COUNT(*) FILTER (WHERE a."liked" AND b."liked"))::int AS "bothLiked",
+      (COUNT(*) FILTER (WHERE a."rating" IS NOT NULL AND b."rating" IS NOT NULL))::int AS "ratedTogether",
+      AVG(ABS(a."rating" - b."rating")) FILTER (WHERE a."rating" IS NOT NULL AND b."rating" IS NOT NULL) AS "meanDiff"
+    FROM "UserFilm" a
+    JOIN "UserFilm" b ON b."filmId" = a."filmId"
+    WHERE a."userId" = ${meId} AND a."watched" AND b."watched" AND b."userId" = ANY(${otherIds})
+    GROUP BY b."userId"`;
+  for (const r of rows) {
+    out.set(r.otherId, {
+      common: r.common,
+      bothLiked: r.bothLiked,
+      ratedTogether: r.ratedTogether,
+      pct:
+        r.ratedTogether >= 5 && r.meanDiff != null ? Math.round(100 * Math.max(0, 1 - Number(r.meanDiff) / 3)) : null,
+    });
   }
-  const pct =
-    diffs.length >= 5
-      ? Math.round(100 * Math.max(0, 1 - diffs.reduce((s, d) => s + d, 0) / diffs.length / 3))
-      : null;
-  return { common, bothLiked, ratedTogether: diffs.length, pct };
+  return out;
+}
+
+export async function tasteMatch(aId: string, bId: string): Promise<TasteMatch> {
+  return (await tasteMatches(aId, [bId])).get(bId) ?? NO_MATCH;
 }
 
 /** Films adorés par `ownerId` (4,5★ et plus, ou likés) que `viewerId` n'a pas vus. */

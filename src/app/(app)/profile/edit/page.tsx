@@ -13,9 +13,12 @@ import { INTL } from "@/i18n/config";
 import { getI18n } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
+import { localizeFilms } from "@/lib/film-locale";
 import { emblemCandidates } from "@/lib/profile";
 import { WATCH_REGIONS, isWatchRegion } from "@/lib/providers";
 import { providerCatalog } from "@/lib/streaming";
+import { vapidPublicKey } from "@/lib/push";
+import { PushToggle } from "@/components/push-toggle";
 import { requireUser } from "@/lib/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -26,6 +29,7 @@ const SECTIONS = [
   { id: "profil", key: "sectionProfile" },
   { id: "film-fetiche", key: "sectionEmblem" },
   { id: "plateformes", key: "sectionPlatforms" },
+  { id: "notifications", key: "sectionNotifications" },
   { id: "email", key: "sectionEmail" },
   { id: "mot-de-passe", key: "sectionPassword" },
 ] as const;
@@ -66,6 +70,7 @@ export default async function EditProfilePage() {
     a[1].localeCompare(b[1], INTL[locale]),
   );
 
+  localizeFilms(candidates, locale);
   // Le film fétiche actuel reste proposé même s'il ne fait plus partie des mieux notés.
   const options = candidates.map((c) => ({
     filmId: c.filmId,
@@ -75,7 +80,7 @@ export default async function EditProfilePage() {
     rating: c.rating,
   }));
   if (user.emblemFilmId && !options.some((o) => o.filmId === user.emblemFilmId)) {
-    const film = await prisma.film.findUnique({ where: { id: user.emblemFilmId } });
+    const film = localizeFilms(await prisma.film.findUnique({ where: { id: user.emblemFilmId } }), locale);
     if (film)
       options.unshift({
         filmId: film.id,
@@ -124,6 +129,9 @@ export default async function EditProfilePage() {
         </Section>
         <Section id="plateformes" title={s.sectionPlatforms} hint={s.sectionPlatformsHint}>
           <StreamingForm region={region} regions={regions} catalog={platforms} selected={user.streamingProviders} />
+        </Section>
+        <Section id="notifications" title={s.sectionNotifications} hint={s.sectionNotificationsHint}>
+          <PushToggle publicKey={vapidPublicKey()} />
         </Section>
         <Section id="email" title={s.sectionEmail} hint={s.sectionEmailHint}>
           <EmailForm email={user.email} />

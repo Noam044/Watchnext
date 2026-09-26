@@ -30,6 +30,9 @@ export const filmPage = pair(
     yourSubscription: "ton abonnement",
     choosePlatforms: "Indique tes abonnements pour les repérer d'un coup d'œil.",
     justwatch: "Données JustWatch",
+    publicTitle: "Est-ce un film pour toi ?",
+    publicText:
+      "Watchnext lit tes notes Letterboxd et te dit à quel point ce film te correspond, avec la raison. Tes amis y partagent aussi leurs avis.",
     moreBy: (name: string) => `Autres films de ${name}`,
     moreByText: "Ceux que Watchnext connaît déjà, et ce que tu en as pensé.",
     seen: "Vu",
@@ -64,6 +67,9 @@ export const filmPage = pair(
     yourSubscription: "your subscription",
     choosePlatforms: "Tell us your subscriptions to spot them at a glance.",
     justwatch: "Data by JustWatch",
+    publicTitle: "Is this film for you?",
+    publicText:
+      "Watchnext reads your Letterboxd ratings and tells you how well this film matches your taste, with the reason. Your friends share their takes there too.",
     moreBy: (name: string) => `More from ${name}`,
     moreByText: "The ones Watchnext already knows, and what you thought of them.",
     seen: "Seen",

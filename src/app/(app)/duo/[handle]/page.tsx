@@ -10,11 +10,12 @@ import { getI18n } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
 import { getDuoPicks } from "@/lib/duo";
+import { localizeFilms } from "@/lib/film-locale";
 import { refs } from "@/lib/films";
 import { getRelation, tasteMatch } from "@/lib/friends";
 import { getLocalizer } from "@/lib/localize";
 import { offersFor } from "@/lib/providers";
-import { requireUser } from "@/lib/session";
+import { getCurrentUser, requireUser } from "@/lib/session";
 import { getStreamingPrefs, providerCatalog, withFreshOffers } from "@/lib/streaming";
 import { displayName } from "@/lib/users";
 
@@ -27,7 +28,8 @@ const getUser = (handle: string) =>
   });
 
 export async function generateMetadata({ params }: PageProps<"/duo/[handle]">): Promise<Metadata> {
-  const user = await getUser((await params).handle);
+  // Le nom d'un membre n'apparaît pas dans le titre pour un visiteur sans compte.
+  const user = (await getCurrentUser()) ? await getUser((await params).handle) : null;
   const d = (await getI18n()).t.duo;
   return { title: user ? d.meta(displayName(user)) : d.title };
 }
@@ -66,6 +68,8 @@ export default async function DuoPage({ params }: PageProps<"/duo/[handle]">) {
   // Les offres affichées sont celles du pays de l'utilisateur ; les abonnements des deux sont réunis.
   const { refreshed, refreshLater } = await withFreshOffers(picks.map((p) => p.film));
   after(refreshLater);
+  // Titres (films proposés et films aimés cités) dans la langue de l'interface.
+  localizeFilms([picks, refreshed], locale);
   const ours = [...new Set([...myPrefs.providers, ...friendPrefs.providers])];
 
   const items: DuoItem[] = picks.map((p) => {
@@ -82,8 +86,8 @@ export default async function DuoPage({ params }: PageProps<"/duo/[handle]">) {
       pct: p.pct,
       mePct: p.mePct,
       friendPct: p.friendPct,
-      meBecause: p.meBecause,
-      friendBecause: p.friendBecause,
+      meBecause: p.meBecause?.title ?? null,
+      friendBecause: p.friendBecause?.title ?? null,
       inMyWatchlist: p.inMyWatchlist,
       inFriendWatchlist: p.inFriendWatchlist,
       offers: offersFor(film.providers, myPrefs.region),

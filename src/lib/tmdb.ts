@@ -44,6 +44,9 @@ export type TmdbMovieDetails = Omit<TmdbMovieListItem, "genre_ids"> & {
   };
   keywords?: { keywords: { id: number; name: string }[] };
   "watch/providers"?: { results?: Record<string, TmdbRegionProviders> };
+  translations?: {
+    translations: { iso_639_1: string; iso_3166_1: string; data?: { title?: string; overview?: string } }[];
+  };
 };
 
 type TmdbProvider = { provider_id: number; provider_name: string; logo_path: string | null; display_priority?: number };
@@ -185,13 +188,20 @@ export async function getGenreMap(lang = language()): Promise<Map<number, string
   return new Map((res?.genres ?? []).map((g) => [g.id, g.name]));
 }
 
-/** Films populaires de la semaine (page d'accueil). */
-export async function trending() {
-  const page = await cached<TmdbPage>("/trending/movie/week", { language: language() }, DAY);
+/** Films populaires de la semaine (page d'accueil), dans la langue demandée. */
+export async function trending(lang = language()) {
+  const page = await cached<TmdbPage>("/trending/movie/week", { language: lang }, DAY);
   return page?.results ?? [];
 }
 
-type TmdbVideo = { key: string; site: string; type: string; official: boolean; iso_639_1: string | null; size?: number };
+type TmdbVideo = {
+  key: string;
+  site: string;
+  type: string;
+  official: boolean;
+  iso_639_1: string | null;
+  size?: number;
+};
 
 /**
  * Clé YouTube de la bande-annonce à montrer : en français si possible, sinon en anglais,
@@ -204,7 +214,9 @@ export async function getTrailerKey(tmdbId: number): Promise<string | null> {
     { language: lang, include_video_language: `${lang.slice(0, 2)},en,null` },
     7 * DAY,
   );
-  const videos = (res?.results ?? []).filter((v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser"));
+  const videos = (res?.results ?? []).filter(
+    (v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser"),
+  );
   const score = (v: TmdbVideo) =>
     (v.iso_639_1 === lang.slice(0, 2) ? 8 : v.iso_639_1 === "en" ? 4 : 0) +
     (v.type === "Trailer" ? 2 : 0) +
@@ -213,13 +225,13 @@ export async function getTrailerKey(tmdbId: number): Promise<string | null> {
 }
 
 /**
- * Détails complets, avec les offres de streaming de chaque pays
+ * Détails complets, avec les offres de streaming de chaque pays et les traductions (titre et synopsis anglais)
  * (non mis en cache ici : stockés dans la table Film).
  */
 export function getMovieDetails(tmdbId: number) {
   return request<TmdbMovieDetails>(`/movie/${tmdbId}`, {
     language: language(),
-    append_to_response: "credits,keywords,watch/providers",
+    append_to_response: "credits,keywords,watch/providers,translations",
   });
 }
 
@@ -232,6 +244,11 @@ export async function getProviderCatalog(region: string) {
     results: (TmdbProvider & { display_priorities?: Record<string, number> })[];
   }>("/watch/providers/movie", { language: language(), watch_region: region }, 7 * DAY);
   return (res?.results ?? [])
-    .map((p) => ({ id: p.provider_id, name: p.provider_name, logo: p.logo_path, rank: p.display_priorities?.[region] ?? p.display_priority ?? 999 }))
+    .map((p) => ({
+      id: p.provider_id,
+      name: p.provider_name,
+      logo: p.logo_path,
+      rank: p.display_priorities?.[region] ?? p.display_priority ?? 999,
+    }))
     .sort((a, b) => a.rank - b.rank);
 }

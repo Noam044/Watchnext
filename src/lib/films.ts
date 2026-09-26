@@ -88,6 +88,24 @@ export async function upsertListItems(items: TmdbMovieListItem[]): Promise<Map<n
   return out;
 }
 
+/**
+ * Titre et synopsis anglais : traduction américaine, puis britannique, puis n'importe quelle anglaise ;
+ * à défaut, le titre original s'il est anglais, sinon le titre principal. Toujours renseigné après
+ * une récupération des détails.
+ */
+function englishData(d: TmdbMovieDetails) {
+  const all = (d.translations?.translations ?? []).filter((t) => t.iso_639_1 === "en");
+  const pick = (field: "title" | "overview") =>
+    [all.find((t) => t.iso_3166_1 === "US"), all.find((t) => t.iso_3166_1 === "GB"), ...all]
+      .map((t) => t?.data?.[field]?.trim())
+      .find(Boolean);
+  const originalIsEnglish = d.original_language === "en";
+  return {
+    titleEn: pick("title") || (originalIsEnglish && d.original_title) || d.title,
+    overviewEn: pick("overview") || null,
+  };
+}
+
 function detailsData(d: TmdbMovieDetails) {
   const crew = d.credits?.crew ?? [];
   const cast = [...(d.credits?.cast ?? [])].sort((a, b) => a.order - b.order);
@@ -108,6 +126,7 @@ function detailsData(d: TmdbMovieDetails) {
     cast: cast.slice(0, MAX_CAST).map((c) => ({ id: c.id, name: c.name })),
     keywords: (d.keywords?.keywords ?? []).slice(0, MAX_KEYWORDS).map((k) => ({ id: k.id, name: k.name })),
     originalLanguage: d.original_language ?? null,
+    ...englishData(d),
     providers: providersData(d["watch/providers"]?.results) as Prisma.InputJsonValue,
     providersAt: new Date(),
     detailsFetchedAt: new Date(),
@@ -116,11 +135,12 @@ function detailsData(d: TmdbMovieDetails) {
 
 function isFresh(f: Film | null | undefined, withProviders = false) {
   if (!f?.detailsFetchedAt || Date.now() - f.detailsFetchedAt.getTime() >= DETAILS_TTL) return false;
-  return !withProviders || (!!f.providersAt && Date.now() - f.providersAt.getTime() < PROVIDERS_TTL);
+  // Les films affichés ont aussi besoin de leurs offres récentes et de leur titre anglais.
+  return !withProviders || (!providersStale(f) && f.titleEn != null);
 }
 
 /** Les offres de streaming du film sont-elles à rafraîchir (inconnues ou vieilles d'une semaine) ? */
-export function providersStale(f: Pick<Film, "providersAt">) {
+export function providersStale(f: Pick<Film, "providersAt">): boolean {
   return !f.providersAt || Date.now() - f.providersAt.getTime() >= PROVIDERS_TTL;
 }
 
@@ -192,4 +212,21 @@ export async function matchFilm(title: string, year: number | null): Promise<Tmd
 
 export function refs(json: unknown): NamedRef[] {
   return Array.isArray(json) ? (json as NamedRef[]) : [];
+}
+
+/**
+ * Complète le titre anglais des films des bibliothèques récupérés avant son ajout (tâche quotidienne) :
+ * au plus `limit` films, en commençant par les plus présents dans les bibliothèques.
+ */
+export async function backfillEnglishTitles(limit = 150, deadline = Date.now() + 60_000) {
+  const rows = await prisma.$queryRaw<{ tmdbId: number }[]>`
+    SELECT f."tmdbId" FROM "Film" f JOIN "UserFilm" uf ON uf."filmId" = f."id"
+    WHERE f."titleEn" IS NULL
+    GROUP BY f."tmdbId" ORDER BY COUNT(*) DESC LIMIT ${limit}`;
+  let done = 0;
+  await mapLimit(rows, 4, async ({ tmdbId }) => {
+    if (Date.now() > deadline) return;
+    if (await ensureFilmDetails(tmdbId, true).catch(() => null)) done++;
+  });
+  return done;
 }

@@ -25,9 +25,10 @@ export async function providerCatalog(region: string, onlyIds?: Iterable<number>
  * Offres de streaming à jour pour des films affichés : les inconnues sont récupérées tout de suite,
  * les vieilles d'une semaine sont renvoyées pour être rafraîchies après la réponse (voir after()).
  */
-export async function withFreshOffers<F extends Pick<Film, "tmdbId" | "providersAt">>(films: F[]) {
-  const missing = films.filter((f) => !f.providersAt).map((f) => f.tmdbId);
+export async function withFreshOffers<F extends Pick<Film, "tmdbId" | "providersAt" | "titleEn">>(films: F[]) {
+  // Offres inconnues ou titre anglais manquant (films récupérés avant son ajout) : chargés tout de suite.
+  const missing = films.filter((f) => !f.providersAt || f.titleEn == null).map((f) => f.tmdbId);
   const refreshed = missing.length ? await ensureManyDetails(missing, 8, true) : new Map<number, Film>();
-  const stale = films.filter((f) => f.providersAt && providersStale(f)).map((f) => f.tmdbId);
+  const stale = films.filter((f) => f.providersAt && f.titleEn != null && providersStale(f)).map((f) => f.tmdbId);
   return { refreshed, refreshLater: () => (stale.length ? ensureManyDetails(stale, 4, true) : undefined) };
 }

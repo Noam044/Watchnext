@@ -15,6 +15,7 @@ import { dateFormat, formatNumber } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
+import { localizeFilms } from "@/lib/film-locale";
 import { getLocalizer } from "@/lib/localize";
 import { canViewLibrary, favoritesNotSeenBy, getRelation, tasteMatch } from "@/lib/friends";
 import {
@@ -25,7 +26,7 @@ import {
   publicUserSelect,
   resolveEmblem,
 } from "@/lib/profile";
-import { requireUser } from "@/lib/session";
+import { getCurrentUser, requireUser } from "@/lib/session";
 import { getProfileSummary } from "@/lib/stats";
 import { displayName } from "@/lib/users";
 
@@ -33,6 +34,8 @@ const getUser = (handle: string) =>
   prisma.user.findUnique({ where: { handle: decodeURIComponent(handle).toLowerCase() }, select: publicUserSelect });
 
 export async function generateMetadata({ params }: PageProps<"/u/[handle]">): Promise<Metadata> {
+  // Le nom d'un membre n'apparaît pas dans le titre pour un visiteur sans compte.
+  if (!(await getCurrentUser())) return { title: "Watchnext" };
   const user = await getUser((await params).handle);
   return { title: user ? `${displayName(user)} (@${user.handle})` : (await getI18n()).t.profile.notFound };
 }
@@ -59,6 +62,8 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
     isSelf ? needsFullImport(owner.id) : false,
     getI18n(),
   ]);
+  // Titres des films (bannière, pellicule, bibliothèque) dans la langue de l'interface.
+  localizeFilms([emblem, page, favorites], locale);
   const p = t.profile;
   const loc = await getLocalizer(locale);
   const monthFmt = dateFormat(locale, { month: "long", year: "numeric" });

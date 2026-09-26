@@ -1,6 +1,8 @@
 import "server-only";
+import type { Locale } from "@/i18n/config";
 import { prisma } from "@/lib/db";
-import { trending } from "@/lib/tmdb";
+import { localizeFilms } from "@/lib/film-locale";
+import { language, trending } from "@/lib/tmdb";
 
 export type ShowcaseFilm = {
   tmdbId: number;
@@ -11,9 +13,9 @@ export type ShowcaseFilm = {
 };
 
 /** Films à l'affiche cette semaine (TMDB), avec repli sur les films déjà en base. */
-export async function getShowcaseFilms(): Promise<ShowcaseFilm[]> {
+export async function getShowcaseFilms(locale: Locale): Promise<ShowcaseFilm[]> {
   try {
-    const items = await trending();
+    const items = await trending(language().startsWith(locale) ? language() : "en-US");
     const films = items
       .filter((i) => i.poster_path && !i.adult)
       .map((i) => ({
@@ -27,12 +29,19 @@ export async function getShowcaseFilms(): Promise<ShowcaseFilm[]> {
   } catch {
     // TMDB indisponible : on se rabat sur le cache local.
   }
-  return prisma.film.findMany({
+  const films = await prisma.film.findMany({
     where: { posterPath: { not: null } },
     orderBy: { popularity: "desc" },
     take: 20,
-    select: { tmdbId: true, title: true, year: true, posterPath: true, backdropPath: true },
+    select: { tmdbId: true, title: true, titleEn: true, year: true, posterPath: true, backdropPath: true },
   });
+  return localizeFilms(films, locale).map((f) => ({
+    tmdbId: f.tmdbId,
+    title: f.title,
+    year: f.year,
+    posterPath: f.posterPath,
+    backdropPath: f.backdropPath,
+  }));
 }
 
 /** Un film différent chaque jour : l'écran change sans clignoter à chaque visite. */
