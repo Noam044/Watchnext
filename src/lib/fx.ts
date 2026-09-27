@@ -97,37 +97,46 @@ export function burst(
         { transform: at(dx, dy, 1, rot * 0.6), opacity: 1, offset: 0.5 },
         { transform: at(dx * 1.15, dy + spread * 0.55, 0.5, rot), opacity: 0 },
       ],
-      { duration: 650 + Math.random() * 350, easing: "cubic-bezier(0.15, 0.8, 0.3, 1)", fill: "forwards" },
+      { duration: 950 + Math.random() * 450, easing: "cubic-bezier(0.15, 0.8, 0.3, 1)", fill: "forwards" },
     ).finished.then(() => el.remove(), () => el.remove());
   }
 }
 
-/** Pluie de confettis (tickets et étoiles) sur tout l'écran, pour les grands moments. */
-export function confetti({ count = 90 }: { count?: number } = {}) {
+/**
+ * Pluie de confettis (tickets et étoiles) sur tout l'écran, pour les grands moments.
+ * Lâchés en plusieurs fois pendant la première seconde et demie, ils tombent lentement (4 à 6 s)
+ * en se balançant et en virevoltant comme du papier.
+ */
+export function confetti({ count = 110 }: { count?: number } = {}) {
   if (typeof window === "undefined" || reducedMotion()) return;
   const host = layer();
   const w = window.innerWidth;
   const h = window.innerHeight;
+  const steps = 12;
   for (let i = 0; i < count; i++) {
     const el = particle(pick<Shape>(["ticket", "ticket", "star", "spark"]), pick(PALETTE), 8 + Math.random() * 6);
     host.appendChild(el);
     const x0 = Math.random() * w;
-    const sway = (Math.random() - 0.5) * 160;
-    const rot = (Math.random() - 0.5) * 900;
-    const at = (x: number, y: number, deg: number) => `translate(${x}px, ${y}px) rotate(${deg}deg)`;
-    el.animate(
-      [
-        { transform: at(x0, -30, 0), opacity: 1 },
-        { transform: at(x0 + sway, h * 0.5, rot * 0.5), opacity: 1, offset: 0.55 },
-        { transform: at(x0 - sway * 0.4, h + 40, rot), opacity: 0.9 },
-      ],
-      {
-        duration: 1800 + Math.random() * 1400,
-        delay: Math.random() * 450,
-        easing: "cubic-bezier(0.25, 0.6, 0.45, 1)",
-        fill: "both",
-      },
-    ).finished.then(() => el.remove(), () => el.remove());
+    const sway = (20 + Math.random() * 45) * (Math.random() < 0.5 ? 1 : -1);
+    const swings = 2 + Math.random() * 2;
+    const spin = (Math.random() - 0.5) * 720;
+    const flutter = 360 + Math.random() * 720;
+    // Chute régulière (vitesse limite du papier) ; le balancement suit une sinusoïde.
+    const frames = Array.from({ length: steps + 1 }, (_, k) => {
+      const p = k / steps;
+      const x = x0 + Math.sin(p * Math.PI * swings) * sway;
+      const y = -40 + (h + 80) * p;
+      return {
+        transform: `translate(${x}px, ${y}px) rotate(${spin * p}deg) rotateX(${flutter * p}deg)`,
+        opacity: p > 0.85 ? 0.7 : 1,
+      };
+    });
+    el.animate(frames, {
+      duration: 4000 + Math.random() * 2200,
+      delay: Math.random() * 1500,
+      easing: "linear",
+      fill: "both",
+    }).finished.then(() => el.remove(), () => el.remove());
   }
 }
 

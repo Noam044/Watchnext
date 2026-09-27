@@ -453,10 +453,10 @@ function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; on
       kind === "seen"
         ? [{ opacity: 1 }, { opacity: 0, scale: "0.85", translate: "0 -24px" }]
         : [{ opacity: 1 }, { opacity: 0, scale: "0.92", translate: "0 16px", filter: "grayscale(1)" }],
-      { duration: 320, easing: "cubic-bezier(0.5, 0, 0.75, 0)", fill: "forwards" },
+      { duration: 450, easing: "cubic-bezier(0.4, 0, 0.6, 1)", fill: "forwards" },
     );
     // Minuteur plutôt que la fin de l'animation : un onglet ralenti ne retarde pas le retrait.
-    setTimeout(() => onAct(r, kind), 320);
+    setTimeout(() => onAct(r, kind), 450);
   };
   return (
     <li ref={ref} data-flip={r.id} className="group reveal flex flex-col">
