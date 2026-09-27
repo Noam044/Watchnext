@@ -48,8 +48,12 @@ export async function Library({
   const filtered = query.rating != null || !!query.q;
 
   return (
-    <section id="films" aria-labelledby="films-title" className="scroll-mt-20 space-y-6">
-      <h2 id="films-title" className="marquee text-4xl">
+    <section
+      id="films"
+      aria-labelledby="films-title"
+      className="scroll-mt-[calc(5rem+env(safe-area-inset-top))] space-y-6"
+    >
+      <h2 id="films-title" className="marquee text-4xl max-sm:text-center">
         {isSelf ? p.filmsSelf : p.filmsOther}
       </h2>
 
@@ -131,9 +135,10 @@ export async function Library({
             className="input rounded-full py-2 pl-10"
           />
         </form>
+        {/* Sur téléphone, le sélecteur de tri occupe toute la ligne, en segments égaux. */}
         <div className="flex items-center gap-2">
           <span className="eyebrow">{p.sort}</span>
-          <div className="flex rounded-full border border-velvet-700 p-0.5">
+          <div className="flex rounded-full border border-velvet-700 p-0.5 max-sm:flex-1 max-sm:[&>*]:flex-1 max-sm:[&>*]:text-center">
             {SORTS.filter((s) => showRatings || s !== "rating").map((s) => (
               <Link
                 key={s}

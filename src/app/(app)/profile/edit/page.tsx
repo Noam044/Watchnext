@@ -217,11 +217,16 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="card scroll-mt-24 p-5 sm:p-7">
-      <h2 id={`${id}-title`} className="marquee text-3xl">
+    // Sur téléphone, le réglage s'affiche seul : son titre est centré comme celui d'une page.
+    <section
+      id={id}
+      aria-labelledby={`${id}-title`}
+      className="card scroll-mt-[calc(6rem+env(safe-area-inset-top))] p-5 sm:p-7"
+    >
+      <h2 id={`${id}-title`} className="marquee text-3xl max-sm:text-center">
         {title}
       </h2>
-      {hint && <p className="mt-1 mb-5 text-sm text-dust-300">{hint}</p>}
+      {hint && <p className="mt-1 mb-5 text-sm text-dust-300 max-sm:text-center">{hint}</p>}
       {!hint && <div className="mb-5" />}
       {children}
     </section>

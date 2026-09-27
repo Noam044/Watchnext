@@ -68,7 +68,7 @@ export function ExpandingScreen({
   return (
     <section
       ref={sectionRef}
-      className="group/screen relative h-[220vh] [--b:24px] [--p:0] [--t:72px] [--x:max(1rem,calc((100vw-69rem)/2))] motion-reduce:h-svh sm:[--x:max(1.5rem,calc((100vw-69rem)/2))]"
+      className="group/screen relative h-[220vh] [--b:24px] [--p:0] [--t:calc(72px+env(safe-area-inset-top))] [--x:max(1rem,calc((100vw-69rem)/2))] motion-reduce:h-svh sm:[--x:max(1.5rem,calc((100vw-69rem)/2))]"
     >
       <div
         className="sticky top-0 h-svh overflow-hidden"

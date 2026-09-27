@@ -96,7 +96,8 @@ export function PushToggle({ publicKey }: { publicKey: string | null }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-dust-300">{state === "on" ? s.pushOn : s.pushOff}</p>
-      <div className="flex flex-wrap gap-2">
+      {/* Téléphone : boutons de même largeur sur toute la ligne. */}
+      <div className="grid auto-cols-fr grid-flow-col gap-2 sm:flex sm:flex-wrap">
         {state === "on" ? (
           <>
             <button type="button" onClick={test} disabled={pending} className="btn-ghost">

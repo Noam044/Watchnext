@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Poster } from "@/components/poster";
 import { ScopeScreen } from "@/components/scope-screen";
+import { joinMeta } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { prisma } from "@/lib/db";
 import { localizeFilms } from "@/lib/film-locale";
@@ -21,13 +22,11 @@ export async function PublicFilm({ tmdbId }: { tmdbId: number }) {
   const loc = await getLocalizer(locale);
   const directors = refs(film.directors).map((d) => d.name);
   const genres = refs(film.genres).map(loc.genre);
-  const meta = [
+  const meta = joinMeta([
     film.year,
     directors[0] && t.film.directedBy(directors.join(", ")),
     film.runtime ? t.film.minutes(film.runtime) : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ]);
 
   return (
     <article className="space-y-10">
@@ -65,7 +64,7 @@ export async function PublicFilm({ tmdbId }: { tmdbId: number }) {
         <div className="min-w-0">
           {film.overview && (
             <section aria-labelledby="synopsis" className="space-y-3">
-              <h2 id="synopsis" className="marquee text-3xl">
+              <h2 id="synopsis" className="marquee text-3xl max-sm:text-center">
                 {fp.synopsis}
               </h2>
               <p className="max-w-prose text-base leading-relaxed text-screen/90">{film.overview}</p>

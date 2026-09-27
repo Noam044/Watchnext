@@ -41,7 +41,8 @@ export default async function ImportPage({ searchParams }: PageProps<"/import">)
   return (
     <div className={`grid gap-12 ${hasData ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-14" : "mx-auto max-w-3xl"}`}>
       <div className="min-w-0 space-y-8">
-        <header>
+        {/* Sur téléphone, les titres de la page et des sections sont centrés. */}
+        <header className="max-sm:text-center">
           <h1 className="marquee text-5xl sm:text-7xl">
             {isOnboarding ? (
               <>
@@ -51,14 +52,14 @@ export default async function ImportPage({ searchParams }: PageProps<"/import">)
               i.title
             )}
           </h1>
-          <p className="mt-3 max-w-xl text-dust-300">{isOnboarding ? i.introOnboarding : i.intro}</p>
+          <p className="mt-3 max-w-xl text-dust-300 max-sm:mx-auto">{isOnboarding ? i.introOnboarding : i.intro}</p>
         </header>
 
         <ImportPanel defaultUsername={profile?.username} defaultTab={onglet === "complet" ? "full" : "quick"} />
 
         {diary.length > 0 && (
           <section aria-labelledby="journal" className="space-y-4">
-            <div>
+            <div className="max-sm:text-center">
               <h2 id="journal" className="marquee text-3xl">
                 {i.recentTitle}
               </h2>
@@ -85,9 +86,9 @@ export default async function ImportPage({ searchParams }: PageProps<"/import">)
         )}
 
         {unmatched && unmatched.entries.length > 0 && (
-          <section id="introuvables" className="scroll-mt-24 space-y-3">
-            <h2 className="marquee text-3xl">{i.unmatchedTitle(unmatched.entries.length)}</h2>
-            <p className="text-sm text-dust-400">{i.unmatchedText(dateFmt.format(unmatched.job.createdAt))}</p>
+          <section id="introuvables" className="scroll-mt-[calc(6rem+env(safe-area-inset-top))] space-y-3">
+            <h2 className="marquee text-3xl max-sm:text-center">{i.unmatchedTitle(unmatched.entries.length)}</h2>
+            <p className="text-sm text-dust-400 max-sm:text-center">{i.unmatchedText(dateFmt.format(unmatched.job.createdAt))}</p>
             <ul className="max-h-80 divide-y divide-velvet-800 overflow-y-auto rounded-lg border border-velvet-800">
               {unmatched.entries.map((e) => (
                 <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
@@ -114,7 +115,7 @@ export default async function ImportPage({ searchParams }: PageProps<"/import">)
       {hasData && (
         <aside className="space-y-10 lg:pt-3">
           <section aria-labelledby="bibliotheque">
-            <h2 id="bibliotheque" className="marquee text-3xl">
+            <h2 id="bibliotheque" className="marquee text-3xl max-sm:text-center">
               {i.libraryTitle}
             </h2>
             <dl className="mt-4 divide-y divide-velvet-800 border-y border-velvet-800 text-sm">
@@ -125,7 +126,7 @@ export default async function ImportPage({ searchParams }: PageProps<"/import">)
           </section>
 
           <section aria-labelledby="historique">
-            <h2 id="historique" className="marquee text-3xl">
+            <h2 id="historique" className="marquee text-3xl max-sm:text-center">
               {i.historyTitle}
             </h2>
             {history.length ? (
@@ -142,7 +143,7 @@ export default async function ImportPage({ searchParams }: PageProps<"/import">)
                 ))}
               </ol>
             ) : (
-              <p className="mt-3 text-sm text-dust-400">{i.historyEmpty}</p>
+              <p className="mt-3 text-sm text-dust-400 max-sm:text-center">{i.historyEmpty}</p>
             )}
           </section>
         </aside>

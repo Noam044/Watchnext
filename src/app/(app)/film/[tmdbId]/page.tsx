@@ -15,7 +15,7 @@ import { ShareFilmButton } from "@/components/share-film-button";
 import { Stars } from "@/components/stars";
 import { Ticket } from "@/components/ticket";
 import { INTL } from "@/i18n/config";
-import { dateFormat, formatNumber } from "@/i18n/format";
+import { dateFormat, formatNumber, joinMeta } from "@/i18n/format";
 import { getI18n, getLocale } from "@/i18n/server";
 import { getSameDirector } from "@/lib/activity";
 import { avatarUrl } from "@/lib/avatar";
@@ -136,14 +136,12 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
               <p className="mt-1 text-sm text-dust-300 italic">{film.originalTitle}</p>
             )}
             <p className="meta mt-2">
-              {[
+              {joinMeta([
                 film.year,
                 directors[0] && t.film.directedBy(directors.join(", ")),
                 film.runtime ? t.film.minutes(film.runtime) : null,
-                film.voteAverage > 0 ? `TMDB ${score(film.voteAverage)}` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+                film.voteAverage > 0 ? `TMDB\u00a0${score(film.voteAverage)}` : null,
+              ])}
             </p>
             {genres.length > 0 && (
               <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={fp.genres}>
@@ -189,7 +187,8 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
           )}
 
           <section aria-labelledby="ton-avis" className="reveal space-y-3">
-            <h2 id="ton-avis" className="marquee text-3xl">
+            {/* Sur téléphone, les titres de section et les états vides sont centrés. */}
+            <h2 id="ton-avis" className="marquee text-3xl max-sm:text-center">
               {fp.yourTake}
             </h2>
             {mine?.watched ? (
@@ -215,13 +214,13 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                 </div>
               </Ticket>
             ) : (
-              <p className="text-sm text-dust-300">{mine?.inWatchlist ? fp.inWatchlist : fp.notSeen}</p>
+              <p className="text-sm text-dust-300 max-sm:text-center">{mine?.inWatchlist ? fp.inWatchlist : fp.notSeen}</p>
             )}
           </section>
 
           {film.overview && (
             <section aria-labelledby="synopsis" className="reveal space-y-3">
-              <h2 id="synopsis" className="marquee text-3xl">
+              <h2 id="synopsis" className="marquee text-3xl max-sm:text-center">
                 {fp.synopsis}
               </h2>
               <p className="max-w-prose text-base leading-relaxed text-screen/90">{film.overview}</p>
@@ -229,12 +228,12 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
           )}
 
           <section aria-labelledby="amis" className="reveal space-y-3">
-            <h2 id="amis" className="marquee text-3xl">
+            <h2 id="amis" className="marquee text-3xl max-sm:text-center">
               {fp.yourFriends}
-              {friendsWatched.length > 0 && <span className="text-dust-400"> · {friendsWatched.length}</span>}
+              {friendsWatched.length > 0 && <span className="text-dust-400">{"\u00a0·\u00a0"}{friendsWatched.length}</span>}
             </h2>
             {friendsWatched.length === 0 ? (
-              <p className="text-sm text-dust-300">
+              <p className="text-sm text-dust-300 max-sm:text-center">
                 {fp.noFriendSaw}
                 {friendsWatchlist.length > 0 &&
                   fp.inFriendsWatchlist(friendsWatchlist.map((f) => displayName(f.user)).join(", "))}
@@ -274,7 +273,7 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
 
           {sameDirector.length > 0 && (
             <section aria-labelledby="realisateur" className="reveal space-y-4">
-              <div>
+              <div className="max-sm:text-center">
                 <h2 id="realisateur" className="marquee text-3xl">
                   {fp.moreBy(directors[0])}
                 </h2>

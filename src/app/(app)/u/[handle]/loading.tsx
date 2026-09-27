@@ -7,9 +7,10 @@ export default async function Loading() {
     <div className="space-y-12" aria-busy="true" aria-label={t.profile.loading}>
       <div>
         <div className="skeleton -mx-4 aspect-[2.39/1] rounded-none sm:mx-0 sm:rounded-md" />
-        <div className="flex items-end gap-4 px-1 sm:px-6">
+        {/* Comme la page : l'identité est centrée sous la bannière sur téléphone. */}
+        <div className="flex flex-col items-center gap-4 px-1 sm:flex-row sm:items-end sm:px-6">
           <div className="skeleton -mt-12 size-24 shrink-0 rounded-full ring-4 ring-velvet-950 sm:-mt-14 sm:size-28" />
-          <div className="flex-1 space-y-2 pb-1">
+          <div className="flex w-full min-w-0 flex-col items-center gap-2 pb-1 sm:flex-1 sm:items-start">
             <div className="skeleton h-10 w-64 max-w-full" />
             <div className="skeleton h-3 w-48" />
           </div>

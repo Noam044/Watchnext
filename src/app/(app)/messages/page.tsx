@@ -38,7 +38,8 @@ export default async function MessagesPage() {
   return (
     <div className={`grid gap-12 lg:gap-16 ${shared.length ? "lg:grid-cols-[minmax(0,1fr)_17rem]" : "max-w-3xl"}`}>
       <div className="min-w-0 space-y-8">
-        <header>
+        {/* Sur téléphone, les titres de la page et des sections sont centrés. */}
+        <header className="max-sm:text-center">
           <h1 className="marquee text-6xl sm:text-7xl">{m.title}</h1>
           <p className="mt-3 text-sm text-dust-300">{m.subtitle}</p>
         </header>
@@ -94,10 +95,10 @@ export default async function MessagesPage() {
             )}
             {others.length > 0 && (
               <section aria-labelledby="demarrer" className="space-y-3">
-                <h2 id="demarrer" className="text-sm font-semibold text-dust-300">
+                <h2 id="demarrer" className="text-sm font-semibold text-dust-300 max-sm:text-center">
                   {m.startConversation}
                 </h2>
-                <ul className="flex flex-wrap gap-2">
+                <ul className="flex flex-wrap gap-2 max-sm:justify-center">
                   {others.map(({ friend }) => (
                     <li key={friend.id}>
                       <Link href={`/messages/${friend.handle}`} className="chip py-1.5 pr-3 pl-1.5 text-sm">
@@ -114,11 +115,11 @@ export default async function MessagesPage() {
 
         {ideas.length > 0 && (
           <section aria-labelledby="idees" className="space-y-6 pt-4">
-            <div>
+            <div className="max-sm:text-center">
               <h2 id="idees" className="marquee text-3xl">
                 {m.ideasTitle}
               </h2>
-              <p className="mt-1 max-w-lg text-sm text-dust-300">{m.ideasText}</p>
+              <p className="mt-1 max-w-lg text-sm text-dust-300 max-sm:mx-auto">{m.ideasText}</p>
             </div>
             {ideas.map(({ friend, films }) => {
               const name = displayName(friend);
@@ -159,7 +160,7 @@ export default async function MessagesPage() {
 
       {shared.length > 0 && (
         <aside aria-labelledby="echanges" className="space-y-4 lg:pt-3">
-          <div>
+          <div className="max-sm:text-center">
             <h2 id="echanges" className="marquee text-3xl">
               {m.sharedTitle}
             </h2>

@@ -108,7 +108,8 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
             />
           </label>
         </div>
-        <div className="flex justify-end gap-2 border-t border-velvet-800 px-5 py-4">
+        {/* Téléphone : deux boutons de même largeur, au-dessus de la barre d'accueil de l'iPhone. */}
+        <div className="grid grid-cols-2 gap-2 border-t border-velvet-800 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex sm:justify-end sm:pb-4">
           <button onClick={close} className="btn-quiet">
             {t.common.cancel}
           </button>

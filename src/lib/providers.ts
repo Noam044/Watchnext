@@ -25,6 +25,23 @@ export function offersFor(json: unknown, region: string): RegionOffers | null {
   return r ?? { stream: [], rent: [], buy: [] };
 }
 
+/** Suffixe des formules avec publicité (« Amazon Prime Video with Ads », « Netflix Standard with Ads »). */
+const AD_TIER = /\s+(?:standard\s+)?with\s+ads$/i;
+
+/**
+ * Une seule entrée par plateforme : la formule avec publicité rejoint la formule de base.
+ * La première rencontrée est gardée (ex. celle de l'abonnement de l'utilisateur, triée en tête).
+ */
+export function distinctProviders<P extends { name: string }>(providers: P[]): P[] {
+  const seen = new Set<string>();
+  return providers.filter((p) => {
+    const key = p.name.replace(AD_TIER, "").toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /** Le film est-il inclus dans l'un de ces abonnements ? */
 export function onMyPlatforms(offers: RegionOffers | null, mine: number[]) {
   return !!offers && offers.stream.some((id) => mine.includes(id));

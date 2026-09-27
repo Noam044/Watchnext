@@ -35,7 +35,7 @@ export function LocaleSwitch({ className = "" }: { className?: string }) {
               router.refresh();
             })
           }
-          className={`rounded-full px-2.5 py-1 uppercase transition ${
+          className={`rounded-full px-2.5 py-1 uppercase transition max-[360px]:px-2 ${
             locale === l ? "bg-tungsten text-velvet-950" : "text-dust-300 hover:text-screen"
           }`}
         >

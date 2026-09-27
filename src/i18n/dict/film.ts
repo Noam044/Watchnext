@@ -3,8 +3,9 @@ import { pair } from "@/i18n/config";
 /** Textes communs à tout ce qui montre un film (cartes, fiche rapide, fiche complète, bande-annonce). */
 export const film = pair(
   {
-    directedBy: (name: string) => `Réal. ${name}`,
-    minutes: (n: number) => `${n} min`,
+    // Espaces insécables : « 118 min » ou « Réal. Jonathan » ne se coupent pas en fin de ligne.
+    directedBy: (name: string) => `Réal.\u00a0${name}`,
+    minutes: (n: number) => `${n}\u00a0min`,
     pctForYou: "pour toi",
     session: "Ta séance",
     sessionLabel: (title: string) => `Ta séance : ${title}`,
@@ -15,7 +16,7 @@ export const film = pair(
     closeTrailer: "Fermer la bande-annonce",
     trailerFallback: "La vidéo ne se lance pas ? Ouvrir sur YouTube",
     noTrailer: "Pas de bande-annonce disponible pour ce film.",
-    hours: (min: number) => `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, "0")}` : ""}`,
+    hours: (min: number) => `${Math.floor(min / 60)}\u00a0h${min % 60 ? `\u00a0${String(min % 60).padStart(2, "0")}` : ""}`,
     onYourPlatform: (names: string) => `Inclus dans ton abonnement ${names}`,
     streamingOn: (names: string) => `En streaming sur ${names}`,
     rentOrBuy: "À louer ou à acheter en ligne",
@@ -39,8 +40,8 @@ export const film = pair(
     hideSpoiler: "masquer",
   },
   {
-    directedBy: (name: string) => `Dir. ${name}`,
-    minutes: (n: number) => `${n} min`,
+    directedBy: (name: string) => `Dir.\u00a0${name}`,
+    minutes: (n: number) => `${n}\u00a0min`,
     pctForYou: "match",
     session: "Tonight's screening",
     sessionLabel: (title: string) => `Tonight's screening: ${title}`,

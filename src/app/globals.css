@@ -98,6 +98,8 @@ body {
   background: var(--color-velvet-950);
   color: var(--color-screen);
   font-optical-sizing: auto;
+  /* Téléphone en paysage : le contenu ne passe pas sous l'encoche (viewport-fit=cover). */
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
 }
 
 /* Grain de pellicule, très léger */
@@ -143,8 +145,9 @@ body::before {
   @apply font-mono text-xs text-dust-300 tabular-nums;
 }
 
+/* Un libellé trop long pour la largeur du bouton passe à la ligne, centré. */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md px-4.5 py-2.5 text-sm font-semibold transition
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4.5 py-2.5 text-center text-sm font-semibold transition
     disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
 }
 @utility btn-primary {

@@ -6,9 +6,10 @@ export default async function Loading() {
   return (
     <div className="space-y-12" aria-busy="true" aria-label={t.friends.loading}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-3">
+        {/* Comme la page : titre centré sur téléphone. */}
+        <div className="flex flex-col gap-3 max-sm:items-center">
           <div className="skeleton h-16 w-48" />
-          <div className="skeleton h-4 w-72" />
+          <div className="skeleton h-4 w-72 max-w-full" />
         </div>
         <div className="skeleton h-13 w-full lg:max-w-sm" />
       </div>

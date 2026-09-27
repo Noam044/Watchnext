@@ -31,7 +31,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = { themeColor: "#120809" };
+// « cover » : la page s'étend sous l'encoche et la barre d'accueil de l'iPhone (surtout en app installée,
+// où la barre d'état est translucide) ; les en-têtes et barres fixes s'en écartent avec env(safe-area-inset-*).
+export const viewport: Viewport = { themeColor: "#120809", viewportFit: "cover" };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const { locale, t } = await getI18n();

@@ -1,9 +1,9 @@
 import Image from "next/image";
-import type { ProviderInfo } from "@/lib/providers";
+import { distinctProviders, type ProviderInfo } from "@/lib/providers";
 
 /**
  * Logos des plateformes où voir un film. Celles auxquelles l'utilisateur est abonné
- * passent en premier, cerclées d'ambre.
+ * passent en premier, cerclées d'ambre ; la formule avec publicité d'une plateforme n'a pas son propre logo.
  */
 export function ProviderLogos({
   providers,
@@ -19,7 +19,9 @@ export function ProviderLogos({
   className?: string;
 }) {
   if (providers.length === 0) return null;
-  const sorted = [...providers].sort((a, b) => Number(mine.includes(b.id)) - Number(mine.includes(a.id)));
+  const sorted = distinctProviders(
+    [...providers].sort((a, b) => Number(mine.includes(b.id)) - Number(mine.includes(a.id))),
+  );
   const shown = sorted.slice(0, max);
   const more = sorted.length - shown.length;
   return (

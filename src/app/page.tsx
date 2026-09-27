@@ -22,7 +22,7 @@ export default async function Home() {
 
   return (
     <div className="relative z-10 flex flex-1 flex-col">
-      <header className="absolute inset-x-0 top-0 z-20 mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+      <header className="absolute inset-x-0 top-[env(safe-area-inset-top)] z-20 mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
         <div className="flex items-center gap-2">
           <LocaleSwitch />
@@ -44,7 +44,8 @@ export default async function Home() {
               <p className="mt-4 max-w-xl animate-rise text-base leading-relaxed text-screen/85 [animation-delay:900ms] sm:text-lg">
                 {l.intro}
               </p>
-              <div className="mt-6 flex animate-rise flex-wrap gap-3 [animation-delay:1050ms]">
+              {/* Téléphone : les deux boutons empilés, sur toute la largeur. */}
+              <div className="mt-6 grid animate-rise gap-3 [animation-delay:1050ms] sm:flex sm:flex-wrap">
                 <Link href="/register" className="btn-primary px-7 py-3.5 text-base">
                   {l.createAccount}
                 </Link>

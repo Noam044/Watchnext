@@ -16,7 +16,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="relative z-10 flex flex-1 flex-col">
-      <LocaleSwitch className="absolute top-4 right-4 z-20 bg-velvet-950/60 backdrop-blur" />
+      <LocaleSwitch className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 z-20 bg-velvet-950/60 backdrop-blur" />
       {src && (
         <div className="fixed inset-0 -z-10" aria-hidden>
           <Image src={src} alt="" fill sizes="100vw" className="animate-projector object-cover opacity-55" preload />
@@ -27,7 +27,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
       <main
         id="contenu"
         tabIndex={-1}
-        className="flex flex-1 outline-none flex-col items-center justify-center px-4 py-12"
+        className="flex flex-1 flex-col items-center justify-center px-4 pt-[calc(3rem+env(safe-area-inset-top))] pb-12 outline-none"
       >
         <div className="mb-8">
           <Logo />
@@ -37,7 +37,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
         </div>
       </main>
       {film && (
-        <p className="meta px-4 pb-5 text-center text-[11px] text-dust-400">
+        <p className="meta px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-center text-[11px] text-dust-400">
           {t.auth.onScreen} {film.title}
           {film.year ? ` (${film.year})` : ""}
         </p>

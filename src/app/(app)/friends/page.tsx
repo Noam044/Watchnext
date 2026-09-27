@@ -80,10 +80,11 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
 
   return (
     <div className="space-y-12">
+      {/* Sur téléphone, les titres de la page et des sections sont centrés. */}
       <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+        <div className="max-sm:text-center">
           <h1 className="marquee text-6xl sm:text-7xl">{f.title}</h1>
-          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-dust-300">
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-dust-300 max-sm:justify-center">
             <span className="text-screen">
               {f.count(friends.length)}
               {incoming.length > 0 && f.pending(incoming.length)}.
@@ -109,11 +110,11 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
 
       {results && (
         <section aria-labelledby="resultats" className="space-y-4">
-          <div className="flex items-baseline justify-between">
-            <h2 id="resultats" className="marquee text-3xl">
+          <div className="flex items-baseline justify-between gap-3 max-sm:flex-col max-sm:items-center max-sm:gap-1 max-sm:text-center">
+            <h2 id="resultats" className="marquee min-w-0 text-3xl break-words">
               {f.resultsFor(q)}
             </h2>
-            <Link href="/friends" className="meta hover:text-screen">
+            <Link href="/friends" className="meta shrink-0 hover:text-screen">
               {f.clear}
             </Link>
           </div>
@@ -133,7 +134,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
 
       {incoming.length > 0 && (
         <section aria-labelledby="demandes" className="space-y-4">
-          <h2 id="demandes" className="marquee text-3xl">
+          <h2 id="demandes" className="marquee text-3xl max-sm:text-center">
             {f.incoming}
           </h2>
           <ul className="divide-y divide-velvet-800 rounded-lg border border-tungsten/25 bg-velvet-900/60">
@@ -147,7 +148,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
       )}
 
       <section aria-labelledby="mes-amis" className="space-y-5">
-        <h2 id="mes-amis" className="marquee text-3xl">
+        <h2 id="mes-amis" className="marquee text-3xl max-sm:text-center">
           {f.myFriends}
         </h2>
         {friendCards.length ? (
@@ -188,9 +189,10 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
                     </div>
                   </div>
                 </Link>
+                {/* Aligné sur le nom : marge de la carte (0,75rem) + avatar (4rem) + écart (0,75rem). */}
                 <Link
                   href={`/duo/${user.handle}`}
-                  className="mt-2 ml-[4.75rem] inline-flex items-center gap-1.5 text-xs text-dust-300 hover:text-tungsten"
+                  className="mt-2 ml-[5.5rem] inline-flex items-center gap-1.5 text-xs text-dust-300 hover:text-tungsten"
                 >
                   <UsersIcon className="size-3.5" /> {t.duo.open} <ArrowRightIcon className="size-3" />
                 </Link>
@@ -207,7 +209,7 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
 
       {friendCards.length > 0 && (
         <section aria-labelledby="seances" className="space-y-5">
-          <div>
+          <div className="max-sm:text-center">
             <h2 id="seances" className="marquee text-3xl sm:text-4xl">
               {f.activityTitle}
             </h2>
@@ -247,14 +249,14 @@ export default async function FriendsPage({ searchParams }: PageProps<"/friends"
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-dust-400">{f.activityEmpty}</p>
+            <p className="text-sm text-dust-400 max-sm:text-center">{f.activityEmpty}</p>
           )}
         </section>
       )}
 
       {outgoing.length > 0 && (
         <section aria-labelledby="envoyees" className="space-y-4">
-          <h2 id="envoyees" className="text-sm font-semibold text-dust-300">
+          <h2 id="envoyees" className="text-sm font-semibold text-dust-300 max-sm:text-center">
             {f.outgoing}
           </h2>
           <ul className="divide-y divide-velvet-800 rounded-lg border border-velvet-800">
@@ -279,8 +281,9 @@ function PersonRow({
 }) {
   const name = displayName(user);
   return (
-    <li className="flex items-center gap-3 px-4 py-3 sm:gap-4">
-      <Link href={`/u/${user.handle}`} className="flex min-w-0 flex-1 items-center gap-3 hover:text-tungsten">
+    // Écran étroit : si les boutons ne tiennent pas à côté du nom, ils passent dessous, alignés à droite.
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3 sm:gap-4">
+      <Link href={`/u/${user.handle}`} className="flex min-w-36 flex-1 items-center gap-3 hover:text-tungsten">
         <Avatar name={name} handle={user.handle} src={avatarUrl(user)} />
         <span className="min-w-0">
           <span className="block truncate font-semibold">{name}</span>
@@ -290,7 +293,7 @@ function PersonRow({
           </span>
         </span>
       </Link>
-      <div className="shrink-0">{children}</div>
+      <div className="ml-auto shrink-0">{children}</div>
     </li>
   );
 }

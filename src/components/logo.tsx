@@ -12,7 +12,8 @@ export function Logo({ href = "/" }: { href?: string }) {
         <rect x="1" y="1" width="28" height="11.7" rx="1.5" className="fill-tungsten transition group-hover:fill-tungsten-strong" />
         <path d="M6 17 15 12.7 24 17" className="fill-none stroke-tungsten/40" strokeWidth="1.2" />
       </svg>
-      <span className="marquee text-[1.45rem] tracking-[0.04em]">
+      {/* Plus petit sous 360 px, pour que l'en-tête tienne sur les téléphones les plus étroits. */}
+      <span className="marquee text-[1.45rem] tracking-[0.04em] max-[360px]:text-[1.15rem]">
         Watch<span className="text-tungsten">next</span>
       </span>
     </Link>

@@ -121,9 +121,10 @@ export function ImportPanel({
               setTab(id);
               setStatus({ kind: "idle" });
             }}
-            className={`relative px-4 py-4 text-left transition sm:px-6 ${tab === id ? "bg-velvet-850" : "hover:bg-velvet-850/50"}`}
+            // Téléphone : libellé centré, le badge passe sous le titre plutôt que de le couper.
+            className={`relative flex flex-col items-center justify-center px-3 py-4 text-center transition sm:items-start sm:px-6 sm:text-left ${tab === id ? "bg-velvet-850" : "hover:bg-velvet-850/50"}`}
           >
-            <span className={`flex items-center gap-2 text-sm font-medium ${tab === id ? "text-screen" : "text-dust-300"}`}>
+            <span className={`flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm font-medium sm:justify-start ${tab === id ? "text-screen" : "text-dust-300"}`}>
               {title}
               {id === "full" && (
                 <span className="rounded-sm border border-tungsten/50 px-1.5 py-px font-mono text-[10px] font-bold tracking-wide text-tungsten uppercase">
@@ -316,7 +317,7 @@ function StatusBox({
       <div role="alert" className="mt-6 rounded-md border border-bad/30 bg-bad/10 p-4 text-sm text-bad">
         <p>{status.message}</p>
         {status.resumeJobId && (
-          <button onClick={() => onResume(status.resumeJobId!)} className="btn-ghost mt-3 text-screen">
+          <button onClick={() => onResume(status.resumeJobId!)} className="btn-ghost mt-3 text-screen max-sm:w-full">
             {i.resume}
           </button>
         )}
@@ -326,7 +327,8 @@ function StatusBox({
   return (
     <div className="mt-6 flex flex-col gap-3 rounded-md border border-exit/25 bg-exit/10 p-4 text-sm sm:flex-row sm:items-center">
       <p className="flex-1 text-screen">{status.message}</p>
-      <div className="flex gap-2">
+      {/* Téléphone : boutons de même largeur sur toute la ligne. */}
+      <div className="grid auto-cols-fr grid-flow-col gap-2 sm:flex">
         {!!status.notFound && (
           <a href="#introuvables" className="btn-ghost">
             {i.seeUnmatched}

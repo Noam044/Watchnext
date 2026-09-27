@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const me = { name: displayName(user), handle: user.handle, avatar: avatarUrl(user), pendingRequests, unreadMessages };
   return (
     <div className="relative z-10 flex flex-1 flex-col">
-      <header className="sticky top-0 z-30 border-b border-velvet-800/80 bg-velvet-950/85 backdrop-blur-lg">
+      <header className="sticky top-0 z-30 border-b border-velvet-800/80 bg-velvet-950/85 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
           <Logo href="/dashboard" />
           <DesktopNav me={me} />
@@ -45,7 +45,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <main
         id="contenu"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 outline-none px-4 pt-6 pb-28 sm:px-6 sm:pt-10 md:pb-16"
+        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] outline-none sm:px-6 sm:pt-10 md:pb-16"
       >
         <PageTransition>{children}</PageTransition>
       </main>
@@ -60,7 +60,7 @@ async function PublicShell({ children }: { children: React.ReactNode }) {
   const l = (await getI18n()).t.landing;
   return (
     <div className="relative z-10 flex flex-1 flex-col">
-      <header className="border-b border-velvet-800/80">
+      <header className="border-b border-velvet-800/80 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
           <Logo href="/" />
           <div className="ml-auto flex items-center gap-2">
@@ -77,7 +77,7 @@ async function PublicShell({ children }: { children: React.ReactNode }) {
       <main
         id="contenu"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 outline-none sm:px-6 sm:pt-10"
+        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-[calc(4rem+env(safe-area-inset-bottom))] outline-none sm:px-6 sm:pt-10"
       >
         {children}
       </main>

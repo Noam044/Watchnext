@@ -101,11 +101,12 @@ export function AvatarForm({ name, handle, src }: { name: string; handle: string
 
   const shown = preview ?? src;
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-5 border-b border-velvet-800 pb-6">
+    // Sur téléphone, la photo est centrée avec ses boutons dessous.
+    <div className="mb-6 flex flex-col items-center gap-4 border-b border-velvet-800 pb-6 text-center sm:flex-row sm:flex-wrap sm:gap-5 sm:text-left">
       <Avatar name={name} handle={handle} src={shown} size="xl" className={pending ? "opacity-60" : ""} />
       <div className="space-y-3">
         <p className="field-label">{s.avatar}</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
           <button type="button" onClick={() => input.current?.click()} disabled={pending} className="btn-ghost">
             <UploadIcon className="size-4" />
             {pending ? s.avatarSending : shown ? s.avatarChange : s.avatarChoose}
@@ -220,7 +221,7 @@ export function ProfileForm({ defaults }: { defaults: ProfileDefaults }) {
       </label>
 
       <ErrorLine state={state} />
-      <button className="btn-primary" disabled={pending}>
+      <button className="btn-primary max-sm:w-full" disabled={pending}>
         {pending ? s.saving : s.saveProfile}
       </button>
     </form>
@@ -294,7 +295,7 @@ export function StreamingForm({
           </ul>
         </fieldset>
         <ErrorLine state={state} />
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 max-sm:flex-col max-sm:items-stretch max-sm:text-center">
           <button className="btn-primary" disabled={pending || switching}>
             {pending ? "…" : s.savePlatforms}
           </button>
@@ -420,7 +421,7 @@ export function EmailForm({ email }: { email: string }) {
         </label>
       </div>
       <ErrorLine state={state} />
-      <button className="btn-ghost" disabled={pending}>
+      <button className="btn-ghost max-sm:w-full" disabled={pending}>
         {pending ? s.updating : s.changeEmail}
       </button>
     </form>
@@ -450,7 +451,7 @@ export function PasswordForm() {
         </label>
       </div>
       <ErrorLine state={state} />
-      <button className="btn-ghost" disabled={pending}>
+      <button className="btn-ghost max-sm:w-full" disabled={pending}>
         {pending ? s.updating : s.changePassword}
       </button>
     </form>

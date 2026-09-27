@@ -11,8 +11,8 @@ import { ScopeScreen } from "@/components/scope-screen";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { formatList } from "@/i18n/format";
-import { onMyPlatforms, type ProviderInfo, type RegionOffers } from "@/lib/providers";
+import { formatList, joinMeta } from "@/i18n/format";
+import { distinctProviders, onMyPlatforms, type ProviderInfo, type RegionOffers } from "@/lib/providers";
 
 export type DuoItem = {
   tmdbId: number;
@@ -45,13 +45,11 @@ function because(it: DuoItem, d: Dictionary["duo"], name: string) {
 }
 
 function metaLine(it: DuoItem, t: Dictionary) {
-  return [
+  return joinMeta([
     it.year,
     it.directors[0] && t.film.directedBy(it.directors[0]),
     it.runtime ? t.film.minutes(it.runtime) : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ]);
 }
 
 /**
@@ -130,9 +128,9 @@ export function DuoProgramme({
           <DuoFeature key={feature.tmdbId} it={feature} {...shared} />
           {rest.length > 0 && (
             <section aria-labelledby="autres-idees" className="space-y-6">
-              <h2 id="autres-idees" className="marquee text-3xl sm:text-4xl">
+              <h2 id="autres-idees" className="marquee text-3xl max-sm:text-center sm:text-4xl">
                 {d.others}
-                <span className="text-dust-400"> · {rest.length}</span>
+                <span className="text-dust-400">{"\u00a0·\u00a0"}{rest.length}</span>
               </h2>
               <ul className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
                 {rest.map((it) => (
@@ -160,7 +158,9 @@ function StreamLine({ it, streams, ours }: { it: DuoItem } & Pick<Shared, "strea
   const list = streams(it);
   if (list.length === 0) return null;
   const onOurs = onMyPlatforms(it.offers, ours);
-  const names = (onOurs ? list.filter((p) => ours.includes(p.id)) : list).slice(0, 2).map((p) => p.name);
+  const names = distinctProviders(onOurs ? list.filter((p) => ours.includes(p.id)) : list)
+    .slice(0, 2)
+    .map((p) => p.name);
   return (
     <p
       className={`mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm ${onOurs ? "text-screen" : "text-dust-300"}`}
@@ -259,7 +259,8 @@ function DuoFeature({ it, ...shared }: { it: DuoItem } & Shared) {
             </div>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2 sm:hidden">
+        {/* Sur téléphone, les actions passent sous le ticket, en deux colonnes égales. */}
+        <div className="mt-4 grid grid-cols-2 gap-2 max-sm:[&>*]:px-3 sm:hidden">
           <ProposeButton it={it} {...shared} />
           <Link href={`/film/${it.tmdbId}`} className="btn-ghost">
             <InfoIcon /> {t.film.filmPage}

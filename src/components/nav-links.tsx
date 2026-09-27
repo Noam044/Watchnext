@@ -70,7 +70,7 @@ export function ProfileLink({ me }: { me: Me }) {
     <Link
       href="/profile"
       aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-2.5 rounded-full py-1 pr-1 pl-3 text-sm transition md:pr-3 md:pl-1 ${
+      className={`flex items-center gap-2.5 rounded-full p-1 text-sm transition md:pr-3 ${
         active ? "bg-velvet-800" : "hover:bg-velvet-850"
       }`}
     >

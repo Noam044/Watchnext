@@ -126,19 +126,20 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
               </p>
             </div>
           </div>
-          <div className="shrink-0 pb-1">
+          <div className="shrink-0 pb-1 max-sm:w-full">
             {isSelf ? (
               <Link href="/profile/edit" className="btn-ghost">
                 <PencilIcon /> {p.editProfile}
               </Link>
             ) : (
+              // Téléphone : « Séance à deux » et « Écrire » se partagent la première ligne à parts égales.
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 {relation === "friends" && (
                   <>
-                    <Link href={`/duo/${owner.handle}`} className="btn-primary">
+                    <Link href={`/duo/${owner.handle}`} className="btn-primary max-sm:grow max-sm:basis-[calc(50%-0.25rem)]">
                       <UsersIcon /> {t.duo.open}
                     </Link>
-                    <Link href={`/messages/${owner.handle}`} className="btn-ghost">
+                    <Link href={`/messages/${owner.handle}`} className="btn-ghost max-sm:grow max-sm:basis-[calc(50%-0.25rem)]">
                       <ChatIcon /> {p.write}
                     </Link>
                   </>
@@ -189,7 +190,8 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
 
       {match && (
         <section aria-labelledby="affinite" className="reveal grid gap-6 lg:grid-cols-[18rem_1fr] lg:items-start">
-          <div>
+          {/* Sur téléphone, les titres de section et le score d'affinité sont centrés. */}
+          <div className="max-sm:text-center">
             <h2 id="affinite" className="marquee text-3xl">
               {p.affinity}
             </h2>
@@ -208,7 +210,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           </div>
           {favorites && favorites.length > 0 && (
             <div className="min-w-0">
-              <h2 className="marquee mb-4 text-3xl">{p.theirFavorites}</h2>
+              <h2 className="marquee mb-4 text-3xl max-sm:text-center">{p.theirFavorites}</h2>
               <Filmstrip
                 label={p.theirFavoritesLabel(name)}
                 frames={favorites.map((f) => ({
@@ -229,7 +231,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
 
       {summary && summary.watchedCount > 0 && (
         <section aria-labelledby="gouts" className="reveal space-y-4">
-          <h2 id="gouts" className="marquee text-4xl">
+          <h2 id="gouts" className="marquee text-4xl max-sm:text-center">
             {isSelf ? p.tasteSelf : p.tasteOther}
           </h2>
           <div className="card grid divide-y divide-velvet-800 md:grid-cols-[1.2fr_1fr_1fr] md:divide-x md:divide-y-0">
@@ -246,7 +248,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
             />
           </div>
           {summary.topDecades[0] && (
-            <p className="meta">
+            <p className="meta max-sm:text-center">
               {p.favoriteDecade} <span className="text-screen">{loc.decade(summary.topDecades[0].id)}</span>
             </p>
           )}

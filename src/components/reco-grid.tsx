@@ -27,8 +27,8 @@ import { toast } from "@/components/toaster";
 import { TrailerFrame } from "@/components/trailer";
 import { useI18n } from "@/i18n/client";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { formatList, formatNumber } from "@/i18n/format";
-import { onMyPlatforms, type ProviderInfo, type RegionOffers } from "@/lib/providers";
+import { formatList, formatNumber, joinMeta } from "@/i18n/format";
+import { distinctProviders, onMyPlatforms, type ProviderInfo, type RegionOffers } from "@/lib/providers";
 import { FILTERS_COOKIE, matchesFilters, serializeFilters, type RecoFilters } from "@/lib/reco-filters";
 
 export type RecoItem = {
@@ -54,9 +54,11 @@ export type RecoItem = {
 };
 
 function metaLine(r: RecoItem, t: Dictionary) {
-  return [r.year, r.directors[0] && t.film.directedBy(r.directors[0]), r.runtime ? t.film.minutes(r.runtime) : null]
-    .filter(Boolean)
-    .join(" · ");
+  return joinMeta([
+    r.year,
+    r.directors[0] && t.film.directedBy(r.directors[0]),
+    r.runtime ? t.film.minutes(r.runtime) : null,
+  ]);
 }
 
 /** Plateformes connues (nom, logo) et abonnements de l'utilisateur, partagés par toutes les cartes. */
@@ -175,10 +177,11 @@ export function RecoProgramme({
 
             {rest.length > 0 && (
               <section aria-labelledby="programme" className="space-y-6">
-                <div>
+                <div className="max-sm:text-center">
                   <h2 id="programme" className="marquee text-4xl sm:text-5xl">
                     {t.dashboard.programme}
-                    <span className="text-dust-400"> · {rest.length}</span>
+                    {/* Espaces insécables : le compteur ne passe pas seul à la ligne. */}
+                    <span className="text-dust-400">{"\u00a0·\u00a0"}{rest.length}</span>
                   </h2>
                   <p className="mt-1.5 text-sm text-dust-300">{t.dashboard.programmeText}</p>
                 </div>
@@ -213,7 +216,9 @@ function StreamLine({ r, className = "" }: { r: RecoItem; className?: string }) 
     if (!r.offers || (r.offers.rent.length === 0 && r.offers.buy.length === 0)) return null;
     return <p className={`text-sm text-dust-400 ${className}`}>{t.film.rentOrBuy}</p>;
   }
-  const names = (onMine ? providers.filter((p) => mine.includes(p.id)) : providers).slice(0, 2).map((p) => p.name);
+  const names = distinctProviders(onMine ? providers.filter((p) => mine.includes(p.id)) : providers)
+    .slice(0, 2)
+    .map((p) => p.name);
   return (
     <p className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm ${onMine ? "text-screen" : "text-dust-300"} ${className}`}>
       <ProviderLogos providers={providers} mine={mine} size={22} max={3} />
@@ -334,12 +339,12 @@ function FeatureTicket({
               {r.reason}
             </p>
             <StreamLine r={r} className="mt-3 animate-rise [animation-delay:950ms]" />
-            <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-5 hidden sm:flex" />
+            <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-5 hidden flex-wrap sm:flex" />
           </div>
         </div>
       </div>
-      {/* Sur téléphone, le ticket est trop étroit : les actions passent dessous. */}
-      <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-4 flex sm:hidden" />
+      {/* Sur téléphone, le ticket est trop étroit : les actions passent dessous, en deux colonnes égales. */}
+      <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-4 grid grid-cols-2 sm:hidden" />
     </div>
   );
 }
@@ -357,13 +362,14 @@ function FeatureActions({
 }) {
   const { t } = useI18n();
   return (
-    <div className={`animate-rise flex-wrap gap-2 [animation-delay:1000ms] ${className}`}>
+    // Sans bande-annonce, la fiche du film occupe seule la première rangée de la grille (téléphone).
+    <div className={`animate-rise gap-2 [animation-delay:1000ms] max-sm:[&>*]:px-3 ${className}`}>
       {onPlay && (
         <button onClick={onPlay} className="btn-primary">
           <PlayIcon className="size-3.5" /> {t.film.trailer}
         </button>
       )}
-      <Link href={`/film/${r.tmdbId}`} className={onPlay ? "btn-ghost" : "btn-primary"}>
+      <Link href={`/film/${r.tmdbId}`} className={onPlay ? "btn-ghost" : "btn-primary col-span-2"}>
         <InfoIcon /> {t.film.filmPage}
       </Link>
       <button onClick={() => onAct(r, "seen")} className="btn-quiet">
@@ -570,7 +576,8 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
           <p className="text-sm text-dust-400">{t.film.noSynopsis}</p>
         )}
       </div>
-      <div className="sticky bottom-0 flex flex-wrap gap-2 border-t border-velvet-800 bg-velvet-900/95 px-5 py-4 backdrop-blur sm:px-7">
+      {/* Téléphone : deux colonnes égales, au-dessus de la barre d'accueil de l'iPhone. */}
+      <div className="sticky bottom-0 grid grid-cols-2 gap-2 border-t border-velvet-800 bg-velvet-900/95 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur max-sm:[&>*]:px-3 sm:flex sm:flex-wrap sm:px-7 sm:pb-4">
         <button onClick={play} disabled={loading || trailer === null} className="btn-primary">
           <PlayIcon className="size-3.5" /> {loading ? t.common.loading : t.film.trailer}
         </button>

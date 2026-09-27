@@ -1,5 +1,13 @@
 import { INTL, type Locale } from "@/i18n/config";
 
+/**
+ * Fiche technique : « 1991 · Réal. Jonathan Demme · 118 min ». Quand la ligne se coupe,
+ * le point reste en fin de ligne au lieu d'ouvrir la suivante.
+ */
+export function joinMeta(parts: (string | number | null | false | undefined)[]) {
+  return parts.filter(Boolean).join("\u00a0· ");
+}
+
 /** « A, B et C » / « A, B and C » */
 export function formatList(items: string[], locale: Locale) {
   return new Intl.ListFormat(INTL[locale], { style: "long", type: "conjunction" }).format(items);
