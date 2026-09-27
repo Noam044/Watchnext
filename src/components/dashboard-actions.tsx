@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { regenerateAction, syncRssAction, unhideAllAction } from "@/actions/library";
 import { RefreshIcon, SparkIcon, UploadIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
+import { burst, haptic } from "@/lib/fx";
 
 export function DashboardActions({ username, hiddenCount }: { username: string | null; hiddenCount: number }) {
   const router = useRouter();
@@ -14,6 +15,9 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
   const [step, setStep] = useState<"sync" | "calc" | null>(null);
   const { t } = useI18n();
   const d = t.dashboard;
+  // Position du bouton cliqué : les étincelles en jaillissent quand le calcul est terminé.
+  const from = useRef<DOMRect | null>(null);
+  const aim = (e: React.MouseEvent<HTMLElement>) => (from.current = e.currentTarget.getBoundingClientRect());
 
   const run = (fn: () => Promise<void>) =>
     startTransition(async () => {
@@ -25,7 +29,11 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
   const regenerate = async (prefix = "") => {
     setStep("calc");
     const res = await regenerateAction();
-    if (res.ok) toast(`${prefix}${d.recalcDone(res.data.count)}`);
+    if (res.ok) {
+      burst(from.current, { shapes: ["spark", "star"] });
+      haptic([10, 30, 10]);
+      toast(`${prefix}${d.recalcDone(res.data.count)}`);
+    }
     else toast(res.error, "error");
   };
 
@@ -43,12 +51,27 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
       {/* Sur téléphone : boutons de même largeur, icône au-dessus du libellé, dernière action sur toute la ligne. */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(0,1fr))] gap-2 sm:flex sm:flex-wrap max-sm:[&>*]:flex-col max-sm:[&>*]:gap-1 max-sm:[&>*]:px-2 max-sm:[&>*]:py-2.5 max-sm:[&>*]:text-xs">
         {username && (
-          <button onClick={resync} disabled={pending} className="btn-ghost" title={d.syncTitle(username)}>
+          <button
+            onClick={(e) => {
+              aim(e);
+              resync();
+            }}
+            disabled={pending}
+            className="btn-ghost"
+            title={d.syncTitle(username)}
+          >
             <RefreshIcon className={`size-4 ${pending && step === "sync" ? "animate-spin" : ""}`} />
             {d.sync}
           </button>
         )}
-        <button onClick={() => run(() => regenerate())} disabled={pending} className="btn-ghost">
+        <button
+          onClick={(e) => {
+            aim(e);
+            run(() => regenerate());
+          }}
+          disabled={pending}
+          className="btn-ghost"
+        >
           <SparkIcon className={`size-4 ${pending && step === "calc" ? "animate-pulse" : ""}`} />
           {d.recalc}
         </button>

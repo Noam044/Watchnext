@@ -26,7 +26,15 @@
   --font-display: var(--font-shoulders), "Arial Narrow", ui-sans-serif, sans-serif;
   --font-mono: var(--font-courier), ui-monospace, "Courier New", monospace;
 
+  /* Ressort : léger dépassement puis retour, pour les récompenses (même courbe que SPRING dans lib/fx.ts) */
+  --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
+
   --animate-projector: projector 1.6s ease-out both;
+  --animate-pop: pop 0.55s var(--ease-spring) both;
+  --animate-stamp: stamp 0.42s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  --animate-jolt: jolt 0.4s ease-out 0.18s both;
+  --animate-tear: tear 0.45s cubic-bezier(0.5, 0, 0.75, 0) both;
+  --animate-bubble: bubble 0.5s var(--ease-spring) both;
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-cut-in: cut-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-masking-open: masking-open 0.7s cubic-bezier(0.6, 0, 0.2, 1) both;
@@ -69,6 +77,50 @@
     }
     to {
       clip-path: inset(0 0 0 0 round 6px);
+    }
+  }
+  /* Apparition en rebond (toasts, pastilles, boutons validés) */
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+  /* Tampon « Vu » appliqué sur le ticket : il tombe de haut, tourné, et s'écrase */
+  @keyframes stamp {
+    from {
+      opacity: 0;
+      transform: scale(2.6) rotate(-24deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(-12deg);
+    }
+  }
+  /* Le ticket encaisse le coup de tampon */
+  @keyframes jolt {
+    25% {
+      transform: translate(-3px, 2px) rotate(-0.5deg);
+    }
+    50% {
+      transform: translate(3px, -1px) rotate(0.4deg);
+    }
+    75% {
+      transform: translate(-1px, 1px);
+    }
+  }
+  /* « Pas pour moi » : le ticket glisse hors de l'écran en s'inclinant */
+  @keyframes tear {
+    to {
+      opacity: 0;
+      transform: translateY(40px) rotate(-4deg) scale(0.96);
+    }
+  }
+  /* Nouveau message : la bulle naît du bas, avec un rebond */
+  @keyframes bubble {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.85);
     }
   }
   @keyframes rise {
@@ -147,8 +199,16 @@ body::before {
 
 /* Un libellé trop long pour la largeur du bouton passe à la ligne, centré. */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md px-4.5 py-2.5 text-center text-sm font-semibold transition
-    disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4.5 py-2.5 text-center text-sm font-semibold
+    disabled:cursor-not-allowed disabled:opacity-50 active:scale-95 active:duration-75;
+  /* Couleurs rapides ; l'échelle revient en ressort quand on relâche le bouton. */
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s,
+    scale 0.5s var(--ease-spring);
 }
 @utility btn-primary {
   @apply btn bg-tungsten text-velvet-950 hover:bg-tungsten-strong;
@@ -173,8 +233,13 @@ body::before {
   @apply text-sm font-medium text-dust-300;
 }
 @utility chip {
-  @apply inline-flex items-center gap-1.5 rounded-md border border-velvet-700 px-2.5 py-1 text-xs font-medium text-dust-300 transition
-    hover:border-velvet-600 hover:text-screen;
+  @apply inline-flex items-center gap-1.5 rounded-md border border-velvet-700 px-2.5 py-1 text-xs font-medium text-dust-300
+    hover:border-velvet-600 hover:text-screen active:scale-95 active:duration-75;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s,
+    scale 0.5s var(--ease-spring);
 }
 @utility chip-active {
   @apply chip border-tungsten/60 bg-tungsten-soft text-tungsten hover:border-tungsten hover:text-tungsten;

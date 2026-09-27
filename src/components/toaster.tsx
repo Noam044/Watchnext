@@ -35,11 +35,17 @@ export function Toaster() {
         <p
           key={t.id}
           role={t.tone === "error" ? "alert" : "status"}
-          className={`pointer-events-auto flex max-w-md animate-rise items-center gap-2.5 rounded-md border px-4 py-2.5 text-sm shadow-xl shadow-black/50 backdrop-blur ${
+          className={`pointer-events-auto flex max-w-md origin-bottom animate-pop items-center gap-2.5 rounded-md border px-4 py-2.5 text-sm shadow-xl shadow-black/50 backdrop-blur ${
             t.tone === "error" ? "border-bad/40 bg-velvet-900/95 text-bad" : "border-velvet-700 bg-velvet-900/95 text-screen"
           }`}
         >
-          <span className={`size-1.5 shrink-0 rounded-full ${t.tone === "error" ? "bg-bad" : "bg-exit"}`} />
+          {/* Pastille qui pulse deux fois à l'arrivée du message. */}
+          <span className="relative grid size-1.5 shrink-0">
+            <span
+              className={`absolute inset-0 animate-ping rounded-full [animation-iteration-count:2] ${t.tone === "error" ? "bg-bad" : "bg-exit"}`}
+            />
+            <span className={`rounded-full ${t.tone === "error" ? "bg-bad" : "bg-exit"}`} />
+          </span>
           {t.text}
         </p>
       ))}

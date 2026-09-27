@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { friendAction, type FriendOp } from "@/actions/friends";
 import { CheckIcon, PlusIcon, XIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
+import { burst, confetti, haptic } from "@/lib/fx";
 import type { Relation } from "@/lib/friends";
 import { useI18n } from "@/i18n/client";
 
@@ -31,15 +32,26 @@ export function FriendButton({
     setRelation(initial);
   }
 
-  const run = (op: FriendOp) =>
+  // `e` : clic d'origine ; sa position est relevée tout de suite, le bouton change une fois la réponse reçue.
+  const run = (op: FriendOp, e?: React.MouseEvent<HTMLElement>) => {
+    const from = e?.currentTarget.getBoundingClientRect();
     startTransition(async () => {
       if (op === "remove" && !confirm(p.confirmRemove(name))) return;
       const res = await friendAction(userId, op);
       if (!res.ok) return toast(res.error, "error");
       setRelation(res.data.relation);
+      // Nouvelle amitié : confettis ; demande envoyée : gerbe d'étincelles.
+      if (res.data.relation === "friends" && (op === "accept" || op === "add")) {
+        confetti({ count: 70 });
+        haptic([15, 50, 15, 50, 25]);
+      } else if (op === "add") {
+        burst(from, { shapes: ["spark", "star"] });
+        haptic(10);
+      }
       toast(res.data.relation === "friends" && op === "add" ? p.done.accept : p.done[op]);
       router.refresh();
     });
+  };
 
   const size = compact ? "px-3.5 py-1.5 text-xs" : "";
 
@@ -48,7 +60,7 @@ export function FriendButton({
       return null;
     case "none":
       return (
-        <button onClick={() => run("add")} disabled={pending} className={`btn-primary ${size}`}>
+        <button onClick={(e) => run("add", e)} disabled={pending} className={`btn-primary ${size}`}>
           <PlusIcon /> {p.addFriend}
         </button>
       );
@@ -67,7 +79,7 @@ export function FriendButton({
     case "incoming":
       return (
         <div className="flex gap-2">
-          <button onClick={() => run("accept")} disabled={pending} className={`btn-primary ${size}`}>
+          <button onClick={(e) => run("accept", e)} disabled={pending} className={`btn-primary ${size}`}>
             <CheckIcon /> {p.accept}
           </button>
           <button onClick={() => run("decline")} disabled={pending} className={`btn-quiet ${size}`}>
@@ -79,7 +91,7 @@ export function FriendButton({
       return (
         <div className="flex items-center gap-1">
           <span className={`btn cursor-default border border-exit/30 text-exit ${size}`}>
-            <CheckIcon /> {p.friends}
+            <CheckIcon className="size-4 animate-pop" /> {p.friends}
           </span>
           {!compact && (
             <button onClick={() => run("remove")} disabled={pending} className="btn-quiet text-xs">

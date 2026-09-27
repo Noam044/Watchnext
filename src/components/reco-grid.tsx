@@ -22,14 +22,17 @@ import { Poster } from "@/components/poster";
 import { ProviderLogos } from "@/components/provider-logos";
 import { RecoFiltersBar, type FilterOptions } from "@/components/reco-filters-bar";
 import { ScopeScreen } from "@/components/scope-screen";
+import { countSeen } from "@/components/seen-count";
 import { Tilt } from "@/components/tilt";
 import { toast } from "@/components/toaster";
 import { TrailerFrame } from "@/components/trailer";
 import { useI18n } from "@/i18n/client";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { formatList, formatNumber, joinMeta } from "@/i18n/format";
+import { burst, haptic, reducedMotion } from "@/lib/fx";
 import { distinctProviders, onMyPlatforms, type ProviderInfo, type RegionOffers } from "@/lib/providers";
 import { FILTERS_COOKIE, matchesFilters, serializeFilters, type RecoFilters } from "@/lib/reco-filters";
+import { useFlip } from "@/lib/use-flip";
 
 export type RecoItem = {
   id: string;
@@ -107,14 +110,22 @@ export function RecoProgramme({
     [catalog, myProviders],
   );
 
-  const act = (r: RecoItem, kind: "seen" | "hide") =>
+  // Programme : les cartes restantes glissent à leur nouvelle place quand l'une d'elles part.
+  const grid = useFlip<HTMLUListElement>();
+
+  const act: Act = (r, kind, origin) => {
+    if (origin) feedback(kind, origin);
+    if (kind === "seen") countSeen(1);
     startTransition(async () => {
       setSheet(null);
       removeItem(r.id);
       const res = kind === "seen" ? await markSeenAction(r.id) : await hideRecommendationAction(r.id);
-      if (!res.ok) toast(res.error ?? t.film.actionFailed, "error");
-      else toast(kind === "seen" ? t.film.addedToWatched(r.title) : t.film.wontSuggest(r.title));
+      if (!res.ok) {
+        if (kind === "seen") countSeen(-1);
+        toast(res.error ?? t.film.actionFailed, "error");
+      } else toast(kind === "seen" ? t.film.addedToWatched(r.title) : t.film.wontSuggest(r.title));
     });
+  };
 
   // Les filtres sont retenus pour la prochaine visite (cookie lu par le serveur au rendu de la page).
   const updateFilters = (next: RecoFilters) => {
@@ -185,7 +196,7 @@ export function RecoProgramme({
                   </h2>
                   <p className="mt-1.5 text-sm text-dust-300">{t.dashboard.programmeText}</p>
                 </div>
-                <ul className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
+                <ul ref={grid} className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
                   {page.map((r, i) => (
                     <Card key={r.id} r={r} preload={i < 4} onAct={act} onOpen={setSheet} />
                   ))}
@@ -229,8 +240,18 @@ function StreamLine({ r, className = "" }: { r: RecoItem; className?: string }) 
   );
 }
 
-type Act = (r: RecoItem, kind: "seen" | "hide") => void;
+type Kind = "seen" | "hide";
+/** Retire un film du programme ; `origin` : bouton d'où jaillit la récompense, si elle n'a pas déjà été jouée. */
+type Act = (r: RecoItem, kind: Kind, origin?: Element | null) => void;
 type Open = (r: RecoItem) => void;
+
+/** Retour immédiat au clic : gerbe de tickets et vibration pour « Déjà vu », simple tic pour « Pas pour moi ». */
+function feedback(kind: Kind, from: Element | null) {
+  if (kind === "seen") {
+    burst(from, { count: 20, spread: 100 });
+    haptic([12, 40, 18]);
+  } else haptic(8);
+}
 
 /**
  * Le film n°1 : projeté sur l'écran Cinémascope, avec son ticket de séance posé à cheval
@@ -259,6 +280,16 @@ function Feature({
       else toast(t.film.noTrailer, "error");
     });
   const onPlay = trailerKey !== null && !playing && !loading ? play : undefined;
+
+  // « Déjà vu » : un tampon s'écrase sur le ticket ; « Pas pour moi » : le ticket glisse hors de l'écran.
+  // Le film suivant prend l'affiche une fois l'effet joué.
+  const [leaving, setLeaving] = useState<Kind | null>(null);
+  const leave = (kind: Kind, from: Element) => {
+    if (leaving) return;
+    feedback(kind, from);
+    setLeaving(kind);
+    setTimeout(() => onAct(r, kind), reducedMotion() ? 0 : kind === "seen" ? 950 : 450);
+  };
 
   return (
     <section aria-label={t.film.sessionLabel(r.title)} className="group/feature relative">
@@ -292,28 +323,34 @@ function Feature({
           </ScopeScreen>
         </ViewTransition>
       )}
-      <FeatureTicket r={r} onAct={onAct} onPlay={onPlay} overlap={!playing} />
+      <FeatureTicket r={r} onLeave={leave} leaving={leaving} onPlay={onPlay} overlap={!playing} />
     </section>
   );
 }
 
 /** Ticket de la séance du jour. */
+type Leave = (kind: Kind, from: Element) => void;
+
 function FeatureTicket({
   r,
-  onAct,
+  onLeave,
+  leaving,
   onPlay,
   overlap,
 }: {
   r: RecoItem;
-  onAct: Act;
+  onLeave: Leave;
+  leaving: Kind | null;
   onPlay?: () => void;
   overlap: boolean;
 }) {
   const { t } = useI18n();
   return (
     // L'ombre est portée par le parent : le masque du ticket la découperait.
-    <div className={`relative z-10 ${overlap ? "-mt-6 sm:mx-4 md:-mt-20 md:mx-8 lg:mx-12" : "mt-6"}`}>
-      <div className="drop-shadow-[0_24px_40px_rgb(0_0_0/0.65)]">
+    <div
+      className={`relative z-10 ${overlap ? "-mt-6 sm:mx-4 md:-mt-20 md:mx-8 lg:mx-12" : "mt-6"} ${leaving === "hide" ? "animate-tear" : ""}`}
+    >
+      <div className={`drop-shadow-[0_24px_40px_rgb(0_0_0/0.65)] ${leaving === "seen" ? "animate-jolt" : ""}`}>
         <div className="ticket flex animate-rise [--ticket-cut:4.75rem] [--ticket-notch:9px] [animation-delay:250ms] sm:[--ticket-cut:8rem] sm:[--ticket-notch:12px]">
           <div className="ticket-stub gap-1 py-5 sm:py-6">
             <span className="font-mono text-[10px] leading-tight tracking-[0.04em] uppercase opacity-70 sm:text-[11px] sm:tracking-[0.12em]">
@@ -339,24 +376,34 @@ function FeatureTicket({
               {r.reason}
             </p>
             <StreamLine r={r} className="mt-3 animate-rise [animation-delay:950ms]" />
-            <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-5 hidden flex-wrap sm:flex" />
+            <FeatureActions r={r} onLeave={onLeave} leaving={leaving} onPlay={onPlay} className="mt-5 hidden flex-wrap sm:flex" />
           </div>
+          {/* Tampon « Vu ! » centré sur le corps du ticket (à droite du talon). */}
+          {leaving === "seen" && (
+            <div aria-hidden className="pointer-events-none absolute inset-0 z-10 grid place-items-center pl-(--cut)">
+              <span className="animate-stamp rounded-lg border-[6px] border-double border-current bg-velvet-850/60 px-5 py-1.5 font-display text-5xl leading-none font-extrabold tracking-wider text-exit uppercase shadow-[0_0_48px_rgb(63_207_142/0.35)] sm:text-8xl">
+                {t.film.stampSeen}
+              </span>
+            </div>
+          )}
         </div>
       </div>
       {/* Sur téléphone, le ticket est trop étroit : les actions passent dessous, en deux colonnes égales. */}
-      <FeatureActions r={r} onAct={onAct} onPlay={onPlay} className="mt-4 grid grid-cols-2 sm:hidden" />
+      <FeatureActions r={r} onLeave={onLeave} leaving={leaving} onPlay={onPlay} className="mt-4 grid grid-cols-2 sm:hidden" />
     </div>
   );
 }
 
 function FeatureActions({
   r,
-  onAct,
+  onLeave,
+  leaving,
   onPlay,
   className,
 }: {
   r: RecoItem;
-  onAct: Act;
+  onLeave: Leave;
+  leaving: Kind | null;
   onPlay?: () => void;
   className: string;
 }) {
@@ -374,10 +421,10 @@ function FeatureActions({
       </Link>
       {/* Sur écran moyen, « Déjà vu » et « Pas pour moi » passent à la ligne ensemble ; sur téléphone, cellules de la grille. */}
       <div className="contents sm:flex sm:gap-2">
-        <button onClick={() => onAct(r, "seen")} className="btn-quiet">
+        <button onClick={(e) => onLeave("seen", e.currentTarget)} disabled={!!leaving} className="btn-quiet">
           <EyeIcon /> {t.film.seen}
         </button>
-        <button onClick={() => onAct(r, "hide")} className="btn-quiet">
+        <button onClick={(e) => onLeave("hide", e.currentTarget)} disabled={!!leaving} className="btn-quiet">
           <EyeOffIcon /> {t.film.notForMe}
         </button>
       </div>
@@ -395,8 +442,24 @@ function CardStreams({ r }: { r: RecoItem }) {
 
 function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; onAct: Act; onOpen: Open }) {
   const { t } = useI18n();
+  const ref = useRef<HTMLLIElement>(null);
+  // La carte s'envole (« Déjà vu ») ou s'éteint (« Masquer ») avant de quitter la grille.
+  const leave = (kind: Kind, from: Element) => {
+    feedback(kind, from);
+    const el = ref.current;
+    if (!el || reducedMotion()) return onAct(r, kind);
+    el.style.pointerEvents = "none";
+    el.animate(
+      kind === "seen"
+        ? [{ opacity: 1 }, { opacity: 0, scale: "0.85", translate: "0 -24px" }]
+        : [{ opacity: 1 }, { opacity: 0, scale: "0.92", translate: "0 16px", filter: "grayscale(1)" }],
+      { duration: 320, easing: "cubic-bezier(0.5, 0, 0.75, 0)", fill: "forwards" },
+    );
+    // Minuteur plutôt que la fin de l'animation : un onglet ralenti ne retarde pas le retrait.
+    setTimeout(() => onAct(r, kind), 320);
+  };
   return (
-    <li className="group reveal flex flex-col">
+    <li ref={ref} data-flip={r.id} className="group reveal flex flex-col">
       <button
         type="button"
         onClick={() => onOpen(r)}
@@ -432,14 +495,14 @@ function Card({ r, preload, onAct, onOpen }: { r: RecoItem; preload: boolean; on
         <p className="mt-2 line-clamp-3 text-sm leading-snug text-dust-300">{r.reason}</p>
         <div className="mt-auto -ml-2 flex gap-0.5 pt-2">
           <button
-            onClick={() => onAct(r, "seen")}
+            onClick={(e) => leave("seen", e.currentTarget)}
             className="btn-quiet gap-1.5 px-2 py-1.5 text-xs"
             title={t.film.seenTitle}
           >
             <EyeIcon className="size-3.5" /> {t.film.seen}
           </button>
           <button
-            onClick={() => onAct(r, "hide")}
+            onClick={(e) => leave("hide", e.currentTarget)}
             className="btn-quiet gap-1.5 px-2 py-1.5 text-xs"
             title={t.film.hideTitle}
           >
@@ -587,10 +650,10 @@ function SheetBody({ r, onAct }: { r: RecoItem; onAct: Act }) {
         <Link href={`/film/${r.tmdbId}`} className="btn-ghost">
           {t.film.fullPage} <ArrowRightIcon className="size-3.5" />
         </Link>
-        <button onClick={() => onAct(r, "seen")} className="btn-ghost">
+        <button onClick={(e) => onAct(r, "seen", e.currentTarget)} className="btn-ghost">
           <EyeIcon /> {t.film.seen}
         </button>
-        <button onClick={() => onAct(r, "hide")} className="btn-quiet">
+        <button onClick={(e) => onAct(r, "hide", e.currentTarget)} className="btn-quiet">
           <EyeOffIcon /> {t.film.notForMe}
         </button>
       </div>

@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { regenerateAction, syncRssAction } from "@/actions/library";
 import { CheckIcon, ExternalIcon } from "@/components/icons";
 import { useI18n } from "@/i18n/client";
+import { confetti, haptic } from "@/lib/fx";
 
 type Tab = "quick" | "full";
 
@@ -45,6 +46,9 @@ export function ImportPanel({
       return;
     }
     setStatus({ kind: "done", message: i.ready(summary, res.data.count), notFound });
+    // Les recommandations sont prêtes : c'est la fête dans la salle.
+    confetti();
+    haptic([15, 50, 15, 50, 25]);
     router.refresh();
   }
 
@@ -304,9 +308,12 @@ function StatusBox({
         {status.progress !== undefined && (
           <div className="h-1.5 overflow-hidden rounded-full bg-velvet-800">
             <div
-              className="h-full rounded-full bg-tungsten transition-all duration-500"
+              className="relative h-full overflow-hidden rounded-full bg-tungsten transition-all duration-500"
               style={{ width: `${Math.round(status.progress * 100)}%` }}
-            />
+            >
+              {/* Reflet qui parcourt la barre tant que l'import avance */}
+              <span className="absolute inset-0 -translate-x-full animate-[beam_1.4s_ease-in-out_infinite] bg-linear-to-r from-transparent via-white/45 to-transparent" />
+            </div>
           </div>
         )}
       </div>
@@ -325,7 +332,7 @@ function StatusBox({
     );
   }
   return (
-    <div className="mt-6 flex flex-col gap-3 rounded-md border border-exit/25 bg-exit/10 p-4 text-sm sm:flex-row sm:items-center">
+    <div className="mt-6 flex animate-bubble flex-col gap-3 rounded-md border border-exit/25 bg-exit/10 p-4 text-sm sm:flex-row sm:items-center">
       <p className="flex-1 text-screen">{status.message}</p>
       {/* Téléphone : boutons de même largeur sur toute la ligne. */}
       <div className="grid auto-cols-fr grid-flow-col gap-2 sm:flex">

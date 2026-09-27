@@ -10,6 +10,7 @@ import { Stars } from "@/components/stars";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
 import { dateFormat } from "@/i18n/format";
+import { haptic } from "@/lib/fx";
 
 const POLL_MS = 4000;
 
@@ -32,6 +33,8 @@ export function Thread({
   const dayFmt = dateFormat(locale, { weekday: "long", day: "numeric", month: "long" });
   const timeFmt = dateFormat(locale, { hour: "2-digit", minute: "2-digit" });
   const [messages, setMessages] = useState(initial);
+  // Messages déjà là à l'ouverture : seuls les suivants (envoyés ou reçus) apparaissent en rebond.
+  const [initialIds] = useState(() => new Set(initial.map((m) => m.id)));
   const [body, setBody] = useState("");
   const [film, setFilm] = useState<FilmChoice | null>(initialFilm);
   const [picking, setPicking] = useState(false);
@@ -75,6 +78,7 @@ export function Thread({
       if (!body.trim() && !film) return;
       const res = await sendMessageAction({ toUserId: friend.id, body, tmdbId: film?.tmdbId });
       if (!res.ok) return toast(res.error, "error");
+      haptic(8);
       setMessages((prev) => [...prev, res.data.message]);
       setBody("");
       setFilm(null);
@@ -100,7 +104,9 @@ export function Thread({
                   {day}
                 </p>
               )}
-              <div className={`flex max-w-[85%] flex-col gap-1 ${msg.mine ? "items-end self-end" : "items-start self-start"}`}>
+              <div
+                className={`flex max-w-[85%] flex-col gap-1 ${msg.mine ? "origin-bottom-right items-end self-end" : "origin-bottom-left items-start self-start"} ${initialIds.has(msg.id) ? "" : "animate-bubble"}`}
+              >
                 {msg.film && <SharedFilm film={msg.film} mine={msg.mine} />}
                 {msg.body && (
                   <p

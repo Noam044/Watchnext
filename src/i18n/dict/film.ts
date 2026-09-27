@@ -24,6 +24,8 @@ export const film = pair(
     fullPage: "Fiche complète",
     seeFilm: "Voir la fiche",
     seen: "Déjà vu",
+    /** Tampon posé sur le ticket quand le film est marqué vu. */
+    stampSeen: "Vu\u00a0!",
     seenTitle: "Je l'ai déjà vu : l'ajouter à mes films vus",
     notForMe: "Pas pour moi",
     hide: "Masquer",
@@ -60,6 +62,7 @@ export const film = pair(
     fullPage: "Full details",
     seeFilm: "View film",
     seen: "Seen it",
+    stampSeen: "Seen!",
     seenTitle: "I've already seen it: add it to my watched films",
     notForMe: "Not for me",
     hide: "Hide",

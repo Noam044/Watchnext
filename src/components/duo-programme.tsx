@@ -12,6 +12,7 @@ import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { formatList, joinMeta } from "@/i18n/format";
+import { burst, haptic } from "@/lib/fx";
 import { distinctProviders, onMyPlatforms, type ProviderInfo, type RegionOffers } from "@/lib/providers";
 
 export type DuoItem = {
@@ -76,7 +77,8 @@ export function DuoProgramme({
   const [, startTransition] = useTransition();
   const providers = new Map(catalog.map((p) => [p.id, p]));
 
-  const propose = (it: DuoItem) =>
+  // `from` : position du bouton au clic, d'où jaillissent les tickets une fois la proposition envoyée.
+  const propose = (it: DuoItem, from?: DOMRect) =>
     startTransition(async () => {
       const res = await sendMessageAction({ toUserId: friend.id, tmdbId: it.tmdbId, body: d.proposeBody });
       if (!res.ok) {
@@ -84,6 +86,8 @@ export function DuoProgramme({
         return;
       }
       setProposed((s) => new Set(s).add(it.tmdbId));
+      burst(from, { shapes: ["ticket", "star"] });
+      haptic([10, 30, 10]);
       toast(d.proposedToast(it.title, friend.name));
     });
 
@@ -148,7 +152,7 @@ export function DuoProgramme({
 type Shared = {
   friend: Friend;
   proposed: Set<number>;
-  propose: (it: DuoItem) => void;
+  propose: (it: DuoItem, from?: DOMRect) => void;
   streams: (it: DuoItem) => ProviderInfo[];
   ours: number[];
 };
@@ -185,11 +189,11 @@ function ProposeButton({
   return (
     <button
       type="button"
-      onClick={() => propose(it)}
+      onClick={(e) => propose(it, e.currentTarget.getBoundingClientRect())}
       disabled={done}
       className={compact ? "btn-quiet gap-1.5 px-2 py-1.5 text-xs" : done ? "btn-ghost" : "btn-primary"}
     >
-      {done ? <CheckIcon className="size-3.5" /> : <SendIcon className="size-3.5" />}
+      {done ? <CheckIcon className="size-3.5 animate-pop" /> : <SendIcon className="size-3.5" />}
       {done ? d.proposed : compact ? d.proposeShort : d.propose(friend.name)}
     </button>
   );

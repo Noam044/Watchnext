@@ -7,9 +7,9 @@ import { DashboardActions } from "@/components/dashboard-actions";
 import { FullImportReminder } from "@/components/full-import-reminder";
 import { ArrowRightIcon } from "@/components/icons";
 import { RecoProgramme, type RecoItem } from "@/components/reco-grid";
+import { SeenCount } from "@/components/seen-count";
 import { SyncStatus } from "@/components/sync-status";
 import { getI18n } from "@/i18n/server";
-import { formatNumber } from "@/i18n/format";
 import { prisma } from "@/lib/db";
 import { describeStoredError } from "@/lib/errors";
 import { getLocalizer } from "@/lib/localize";
@@ -60,6 +60,8 @@ export default async function DashboardPage() {
   const d = t.dashboard;
   const rssOnly = !!sync.lastRssSync && !sync.lastImportAt;
   const exportStale = isFullImportStale(sync.lastImportAt) && !cookieStore.has(EXPORT_REMINDER_COOKIE);
+  // Phrase « … tes N films vus » coupée autour du nombre, qui devient un compteur animé.
+  const [basedOnBefore, basedOnAfter] = d.basedOn("\u0000").split("\u0000");
 
   if (libraryCount === 0) redirect("/import?welcome=1");
 
@@ -126,7 +128,9 @@ export default async function DashboardPage() {
         <div className="max-sm:text-center max-sm:[&_p]:justify-center">
           <p className="eyebrow">{d.showingFor(user.name ?? `@${user.handle}`)}</p>
           <p className="mt-1.5 text-sm text-dust-300">
-            {d.basedOn(formatNumber(watchedCount, locale))}{" "}
+            {basedOnBefore}
+            <SeenCount initial={watchedCount} />
+            {basedOnAfter}{" "}
             <Link
               href="/profile"
               className="inline-flex items-center gap-1 text-screen underline-offset-4 hover:underline"

@@ -7,6 +7,7 @@ import { Avatar } from "@/components/avatar";
 import { SendIcon, XIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
+import { burst, haptic } from "@/lib/fx";
 
 type Target = { id: string; name: string; handle: string; avatar: string | null };
 
@@ -26,16 +27,20 @@ export function ShareFilmButton({ tmdbId, title, className = "btn-primary" }: { 
   };
   const close = () => ref.current?.close();
 
-  const send = () =>
+  const send = (e: React.MouseEvent<HTMLElement>) => {
+    const from = e.currentTarget.getBoundingClientRect();
     startTransition(async () => {
       if (!to) return;
       const res = await sendMessageAction({ toUserId: to, tmdbId, body: note });
       if (!res.ok) return toast(res.error, "error");
+      burst(from, { shapes: ["ticket", "star"] });
+      haptic([10, 30, 10]);
       toast(m.sentTo(title, targets?.find((x) => x.id === to)?.name ?? m.yourFriend));
       setNote("");
       setTo(null);
       close();
     });
+  };
 
   return (
     <>
