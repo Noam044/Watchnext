@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { HeartIcon, PencilIcon, SearchIcon, XIcon } from "@/components/icons";
+import { InView } from "@/components/in-view";
 import { Poster } from "@/components/poster";
 import { Stars } from "@/components/stars";
 import { Tilt } from "@/components/tilt";
@@ -88,8 +89,9 @@ export async function Library({
               </Link>
             )}
           </div>
-          <div className="mt-3 grid h-20 grid-cols-10 items-end gap-1 sm:gap-1.5">
-            {distribution.map((d) => {
+          {/* Les colonnes montent l'une après l'autre quand la répartition entre à l'écran. */}
+          <InView className="mt-3 grid h-20 grid-cols-10 items-end gap-1 sm:gap-1.5">
+            {distribution.map((d, i) => {
               const active = query.rating === d.rating;
               const dim = query.rating != null && !active;
               return (
@@ -103,15 +105,19 @@ export async function Library({
                   className="group flex h-full flex-col justify-end"
                 >
                   <span
-                    className={`block rounded-t-[3px] transition ${
-                      active ? "bg-tungsten" : dim ? "bg-velvet-700 group-hover:bg-velvet-600" : "bg-tungsten/60 group-hover:bg-tungsten"
-                    }`}
-                    style={{ height: `${Math.max(3, (d.count / maxDist) * 100)}%` }}
-                  />
+                    className="grow-y block"
+                    style={{ height: `${Math.max(3, (d.count / maxDist) * 100)}%`, transitionDelay: `${i * 60}ms` }}
+                  >
+                    <span
+                      className={`block h-full rounded-t-[3px] transition ${
+                        active ? "bg-tungsten" : dim ? "bg-velvet-700 group-hover:bg-velvet-600" : "bg-tungsten/60 group-hover:bg-tungsten"
+                      }`}
+                    />
+                  </span>
                 </Link>
               );
             })}
-          </div>
+          </InView>
           <div className="mt-1.5 grid grid-cols-10 gap-1 text-center font-mono text-[10px] text-dust-400 sm:gap-1.5">
             {distribution.map((d) => (
               <span key={d.rating}>{Number.isInteger(d.rating) ? `${d.rating}★` : "½"}</span>

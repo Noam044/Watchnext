@@ -1,3 +1,4 @@
+import type { Format } from "@number-flow/react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,10 +9,11 @@ import { CutReveal } from "@/components/cut-reveal";
 import { Filmstrip } from "@/components/filmstrip";
 import { FriendButton } from "@/components/friend-button";
 import { FullImportReminder } from "@/components/full-import-reminder";
+import { InView } from "@/components/in-view";
 import { ArrowRightIcon, ChatIcon, ExternalIcon, LockIcon, PencilIcon, UsersIcon } from "@/components/icons";
 import { Library } from "@/components/library";
 import { ScopeScreen } from "@/components/scope-screen";
-import { dateFormat, formatNumber } from "@/i18n/format";
+import { dateFormat } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "@/lib/db";
@@ -106,7 +108,13 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
             sous le nom quand la ligne est trop courte pour les deux. */}
         <div className="relative flex flex-col items-center gap-5 px-1 text-center sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:px-6 sm:text-left">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end">
-            <Avatar name={name} handle={owner.handle} src={avatarUrl(owner)} size="xl" className="-mt-12 ring-4 sm:-mt-14" />
+            <Avatar
+              name={name}
+              handle={owner.handle}
+              src={avatarUrl(owner)}
+              size="xl"
+              className="-mt-12 animate-pop ring-4 [animation-delay:200ms] sm:-mt-14"
+            />
             <div className="min-w-0 pb-1">
               <h1 className="marquee text-5xl break-words sm:text-6xl">
                 <CutReveal text={name} delay={350} />
@@ -159,16 +167,20 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
 
         {summary && (
           <dl className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-2 border-y border-velvet-800 px-1 py-4 sm:justify-start sm:gap-x-7 sm:px-6">
-            <Stat value={formatNumber(summary.watchedCount, locale)} label={p.statWatched(summary.watchedCount)} />
-            <Stat value={formatNumber(summary.ratedCount, locale)} label={p.statRated(summary.ratedCount)} />
+            {/* Chaque chiffre défile jusqu'à sa valeur, l'un après l'autre. */}
+            <Stat value={summary.watchedCount} delay={400} label={p.statWatched(summary.watchedCount)} />
+            <Stat value={summary.ratedCount} delay={520} label={p.statRated(summary.ratedCount)} />
             {summary.averageRating != null && (
               <Stat
-                value={`${formatNumber(summary.averageRating, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}★`}
+                value={summary.averageRating}
+                delay={640}
+                format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+                suffix="★"
                 label={p.statAverage}
               />
             )}
-            <Stat value={formatNumber(summary.likedCount, locale)} label={p.statLiked(summary.likedCount)} />
-            <Stat value={formatNumber(summary.watchlistCount, locale)} label={p.statWatchlist} />
+            <Stat value={summary.likedCount} delay={760} label={p.statLiked(summary.likedCount)} />
+            <Stat value={summary.watchlistCount} delay={880} label={p.statWatchlist} />
           </dl>
         )}
       </header>
@@ -200,9 +212,15 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
               {match.pct != null ? <AnimatedNumber value={match.pct} suffix=" %" delay={300} /> : "—"}
             </p>
             {match.pct != null && (
-              <div className="mt-4 h-1 rounded-full bg-velvet-800" aria-hidden>
-                <div className="h-full rounded-full bg-tungsten" style={{ width: `${match.pct}%` }} />
-              </div>
+              // La jauge se remplit quand on arrive sur la section, puis un reflet la parcourt.
+              <InView className="group/aff mt-4 h-1 overflow-hidden rounded-full bg-velvet-800" aria-hidden>
+                <div
+                  className="grow-x relative h-full overflow-hidden rounded-full bg-tungsten shadow-[0_0_12px_var(--color-tungsten)]"
+                  style={{ width: `${match.pct}%`, transitionDuration: "1.6s", transitionDelay: "300ms" }}
+                >
+                  <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/70 to-transparent group-data-shown/aff:animate-shine group-data-shown/aff:[animation-delay:1.7s]" />
+                </div>
+              </InView>
             )}
             <p className="mt-4 text-sm text-dust-300">
               {match.pct != null ? p.affinityBasis(match.ratedTogether) : p.affinityTooFew}
@@ -235,19 +253,22 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           <h2 id="gouts" className="marquee text-4xl max-sm:text-center">
             {isSelf ? p.tasteSelf : p.tasteOther}
           </h2>
-          <div className="card grid divide-y divide-velvet-800 md:grid-cols-[1.2fr_1fr_1fr] md:divide-x md:divide-y-0">
+          {/* Les barres se remplissent colonne après colonne quand la carte entre à l'écran. */}
+          <InView className="card grid divide-y divide-velvet-800 md:grid-cols-[1.2fr_1fr_1fr] md:divide-x md:divide-y-0">
             <RankList title={p.genres} items={summary.topGenres.map((g) => ({ name: loc.genre(g), score: g.score }))} />
             <RankList
               title={p.directors}
               items={summary.topDirectors.map((d) => ({ name: d.name, score: d.score, sub: p.filmsCount(d.count) }))}
               empty={p.notEnoughRated}
+              delay={250}
             />
             <RankList
               title={p.actors}
               items={summary.topActors.map((d) => ({ name: d.name, score: d.score, sub: p.filmsCount(d.count) }))}
               empty={p.notEnoughRated}
+              delay={500}
             />
-          </div>
+          </InView>
           {summary.topDecades[0] && (
             <p className="meta max-sm:text-center">
               {p.favoriteDecade} <span className="text-screen">{loc.decade(summary.topDecades[0].id)}</span>
@@ -271,11 +292,26 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
 }
 
 /** Un chiffre suivi de ce qu'il compte, lu comme une phrase : « 185 films vus ». */
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  delay,
+  format,
+  suffix,
+}: {
+  label: string;
+  value: number;
+  /** Délai avant le défilement du chiffre, en ms. */
+  delay: number;
+  format?: Format;
+  suffix?: string;
+}) {
   return (
     <div className="flex flex-row-reverse items-baseline justify-end gap-1.5">
       <dt className="text-sm text-dust-300">{label}</dt>
-      <dd className="font-display text-2xl font-extrabold tabular-nums">{value}</dd>
+      <dd className="font-display text-2xl font-extrabold tabular-nums">
+        <AnimatedNumber value={value} delay={delay} format={format} suffix={suffix} />
+      </dd>
     </div>
   );
 }
@@ -284,10 +320,13 @@ function RankList({
   title,
   items,
   empty = "—",
+  delay = 0,
 }: {
   title: string;
   items: { name: string; score: number; sub?: string }[];
   empty?: string;
+  /** Décalage de la colonne dans la cascade de remplissage, en ms. */
+  delay?: number;
 }) {
   return (
     <div className="p-5 sm:p-6">
@@ -304,7 +343,10 @@ function RankList({
                 {it.sub && <span className="meta shrink-0 text-[11px]">{it.sub}</span>}
               </div>
               <div className="h-[3px] rounded-full bg-velvet-800">
-                <div className="h-full rounded-full bg-tungsten/75" style={{ width: `${Math.round(it.score * 100)}%` }} />
+                <div
+                  className="grow-x h-full rounded-full bg-tungsten/75"
+                  style={{ width: `${Math.round(it.score * 100)}%`, transitionDelay: `${delay + i * 90}ms` }}
+                />
               </div>
             </li>
           ))}

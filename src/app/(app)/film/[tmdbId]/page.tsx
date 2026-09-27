@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ViewTransition } from "react";
+import { AnimatedNumber } from "@/components/animated-number";
 import { Avatar } from "@/components/avatar";
 import { BackButton } from "@/components/back-button";
 import { CutReveal } from "@/components/cut-reveal";
@@ -11,9 +12,11 @@ import { ProviderLogos } from "@/components/provider-logos";
 import { PublicFilm } from "@/components/public-film";
 import { ReviewText } from "@/components/review-text";
 import { FilmScreen } from "@/components/film-screen";
+import { InView } from "@/components/in-view";
 import { ShareFilmButton } from "@/components/share-film-button";
 import { Stars } from "@/components/stars";
 import { Ticket } from "@/components/ticket";
+import { Tilt } from "@/components/tilt";
 import { INTL } from "@/i18n/config";
 import { dateFormat, formatNumber, joinMeta } from "@/i18n/format";
 import { getI18n, getLocale } from "@/i18n/server";
@@ -114,19 +117,25 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
 
         <div className="relative flex gap-4 px-1 sm:gap-6 sm:px-6">
           <ViewTransition name={`poster-${film.tmdbId}`} share="morph" default="none">
-            <Poster
-              path={film.posterPath}
-              title={film.title}
-              size="w342"
-              sizes="(max-width: 640px) 112px, 176px"
-              preload
-              className="-mt-16 w-28 shrink-0 shadow-2xl shadow-black/70 ring-1 ring-white/10 sm:-mt-24 sm:w-44"
-            />
+            {/* Au survol, l'affiche s'incline vers le curseur et un reflet la suit. */}
+            <Tilt className="-mt-16 w-28 shrink-0 rounded-[5px] sm:-mt-24 sm:w-44" max={10}>
+              <Poster
+                path={film.posterPath}
+                title={film.title}
+                size="w342"
+                sizes="(max-width: 640px) 112px, 176px"
+                preload
+                className="shadow-2xl shadow-black/70 ring-1 ring-white/10"
+              />
+            </Tilt>
           </ViewTransition>
           <div className="min-w-0 pt-3 sm:pt-5">
             {recoPct != null && (
               <p className="eyebrow text-tungsten">
-                <span className="font-bold">{recoPct} %</span> {t.film.pctForYou}
+                <span className="font-bold">
+                  <AnimatedNumber value={recoPct} delay={500} suffix={"\u00a0%"} />
+                </span>{" "}
+                {t.film.pctForYou}
               </p>
             )}
             <h1 className="marquee mt-1 text-4xl text-balance sm:text-6xl">
@@ -145,8 +154,9 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
             </p>
             {genres.length > 0 && (
               <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={fp.genres}>
-                {genres.map((g) => (
-                  <li key={g} className="chip cursor-default">
+                {/* Les genres surgissent l'un après l'autre. */}
+                {genres.map((g, i) => (
+                  <li key={g} className="chip animate-pop cursor-default" style={{ animationDelay: `${650 + i * 90}ms` }}>
                     {g}
                   </li>
                 ))}
@@ -172,7 +182,14 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-10">
           {reco && (
-            <section aria-label={fp.whyLabel} className="rounded-lg border border-tungsten/30 bg-tungsten-soft p-5">
+            <section
+              aria-label={fp.whyLabel}
+              className="relative overflow-hidden rounded-lg border border-tungsten/30 bg-tungsten-soft p-5"
+            >
+              {/* Un reflet de projecteur balaie l'encart quand il entre à l'écran. */}
+              <InView aria-hidden className="group/shine pointer-events-none absolute inset-0">
+                <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-tungsten/25 to-transparent group-data-shown/shine:animate-shine group-data-shown/shine:[animation-delay:500ms]" />
+              </InView>
               <p className="eyebrow text-tungsten">{fp.recommended}</p>
               <p className="mt-2 text-base text-screen">
                 {
@@ -196,14 +213,16 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                 <div className="min-w-0 flex-1 space-y-3 py-1 pr-1">
                   <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {mine.rating != null ? (
-                      <Stars value={mine.rating} className="text-lg" />
+                      <Stars value={mine.rating} className="text-lg" animate />
                     ) : (
                       <span className="text-sm text-dust-300">{fp.watchedNoRating}</span>
                     )}
                     {mine.liked && (
-                      <span className="inline-flex items-center gap-1 text-sm text-dust-300">
-                        <HeartIcon className="size-4 text-curtain brightness-150" /> {fp.liked}
-                      </span>
+                      // Le cœur bat deux fois, après l'allumage des étoiles.
+                      <InView inline className="group/heart inline-flex items-center gap-1 text-sm text-dust-300">
+                        <HeartIcon className="size-4 text-curtain brightness-150 group-data-shown/heart:animate-heartbeat group-data-shown/heart:[animation-delay:900ms]" />{" "}
+                        {fp.liked}
+                      </InView>
                     )}
                   </p>
                   {mine.review ? (
@@ -258,8 +277,12 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                             <span className="truncate font-semibold">{displayName(f.user)}</span>
                           </Link>
                           <span className="flex shrink-0 items-center gap-2">
-                            {f.rating != null && <Stars value={f.rating} />}
-                            {f.liked && <HeartIcon className="size-3.5 text-curtain brightness-150" />}
+                            {f.rating != null && <Stars value={f.rating} animate />}
+                            {f.liked && (
+                              <InView inline className="group/heart inline-flex">
+                                <HeartIcon className="size-3.5 text-curtain brightness-150 group-data-shown/heart:animate-heartbeat group-data-shown/heart:[animation-delay:900ms]" />
+                              </InView>
+                            )}
                           </span>
                         </div>
                         {f.review && <ReviewText text={f.review} spoilers={f.reviewSpoilers} />}
@@ -283,13 +306,15 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                 {sameDirector.map((d) => (
                   <li key={d.id}>
                     <Link href={`/film/${d.tmdbId}`} className="group block">
-                      <Poster
-                        path={d.posterPath}
-                        title={d.title}
-                        size="w185"
-                        sizes="(max-width: 640px) 30vw, 140px"
-                        className={`ring-1 ring-white/5 transition group-hover:ring-screen/30 ${d.mine?.watched ? "" : "opacity-60 group-hover:opacity-100"}`}
-                      />
+                      <Tilt className="rounded-[5px]">
+                        <Poster
+                          path={d.posterPath}
+                          title={d.title}
+                          size="w185"
+                          sizes="(max-width: 640px) 30vw, 140px"
+                          className={`ring-1 ring-white/5 transition group-hover:ring-screen/30 ${d.mine?.watched ? "" : "opacity-60 group-hover:opacity-100"}`}
+                        />
+                      </Tilt>
                       <p className="mt-2 line-clamp-1 text-sm font-semibold group-hover:text-tungsten">{d.title}</p>
                     </Link>
                     <p className="mt-0.5 text-xs text-dust-400">
@@ -310,13 +335,18 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                 {fp.whereToWatch(regionName)}
               </h2>
               {streams.length || stores.length ? (
-                <div className="mt-3 space-y-4">
+                // Les plateformes glissent en place l'une après l'autre quand l'encart entre à l'écran.
+                <InView className="mt-3 space-y-4">
                   {streams.length > 0 && (
                     <div>
                       <p className="text-xs text-dust-400">{fp.offerStream}</p>
                       <ul className="mt-2 space-y-2">
-                        {streams.slice(0, 5).map((p) => (
-                          <li key={p.id} className="flex items-center gap-2.5 text-sm">
+                        {streams.slice(0, 5).map((p, i) => (
+                          <li
+                            key={p.id}
+                            className="rise-in flex items-center gap-2.5 text-sm"
+                            style={{ transitionDelay: `${150 + i * 90}ms` }}
+                          >
                             <ProviderLogos providers={[p]} mine={prefs.providers} size={26} max={1} />
                             <span className="min-w-0 truncate">{p.name}</span>
                             {prefs.providers.includes(p.id) && (
@@ -332,10 +362,12 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
                   {stores.length > 0 && (
                     <div>
                       <p className="text-xs text-dust-400">{fp.offerRentBuy}</p>
-                      <ProviderLogos providers={stores} size={26} max={7} className="mt-2 flex-wrap" />
+                      <div className="rise-in mt-2" style={{ transitionDelay: "500ms" }}>
+                        <ProviderLogos providers={stores} size={26} max={7} className="flex-wrap" />
+                      </div>
                     </div>
                   )}
-                </div>
+                </InView>
               ) : (
                 <p className="mt-2 text-sm text-dust-300">{fp.notOnline}</p>
               )}
@@ -389,7 +421,12 @@ export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) 
               <div className="p-4">
                 <dt className="eyebrow">{fp.tmdbRating}</dt>
                 <dd className="mt-1">
-                  {score(film.voteAverage)} / 10{" "}
+                  <AnimatedNumber
+                    value={film.voteAverage}
+                    delay={400}
+                    format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+                  />{" "}
+                  / 10{" "}
                   <span className="meta">{fp.votes(formatNumber(film.voteCount, locale))}</span>
                 </dd>
               </div>
