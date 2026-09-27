@@ -42,7 +42,7 @@ export function DesktopNav({ me }: { me: Me }) {
   const pathname = usePathname();
   const { t } = useI18n();
   return (
-    <nav aria-label={t.nav.main} className="ml-8 hidden items-center gap-1 md:flex">
+    <nav aria-label={t.nav.main} className="ml-4 hidden items-center gap-1 md:flex lg:ml-8">
       {LINKS.map(({ href, key }) => {
         const active = isActive(pathname, href, me.handle);
         return (
@@ -50,7 +50,7 @@ export function DesktopNav({ me }: { me: Me }) {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+            className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition ${
               active ? "bg-velvet-800 text-screen" : "text-dust-300 hover:text-screen"
             }`}
           >
@@ -70,12 +70,13 @@ export function ProfileLink({ me }: { me: Me }) {
     <Link
       href="/profile"
       aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-2.5 rounded-full p-1 text-sm transition md:pr-3 ${
+      // Le nom n'apparaît qu'à partir de 1024 px : en dessous, l'en-tête n'a pas la place avec la navigation.
+      className={`flex items-center gap-2.5 rounded-full p-1 text-sm transition lg:pr-3 ${
         active ? "bg-velvet-800" : "hover:bg-velvet-850"
       }`}
     >
-      <Avatar name={me.name} handle={me.handle} src={me.avatar} size="sm" className="order-last md:order-first" />
-      <span className="hidden max-w-36 truncate font-medium md:block">{me.name}</span>
+      <Avatar name={me.name} handle={me.handle} src={me.avatar} size="sm" />
+      <span className="hidden max-w-36 truncate font-medium lg:block">{me.name}</span>
     </Link>
   );
 }

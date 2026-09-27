@@ -156,7 +156,8 @@ function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-3">
       <dt className="text-dust-300">{label}</dt>
-      <dd className="text-right font-semibold tabular-nums">{value}</dd>
+      {/* La valeur (date, nombre) ne se coupe pas : c'est le libellé qui passe à la ligne. */}
+      <dd className="text-right font-semibold whitespace-nowrap tabular-nums">{value}</dd>
     </div>
   );
 }

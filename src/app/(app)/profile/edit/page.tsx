@@ -167,7 +167,8 @@ export default async function EditProfilePage({ searchParams }: PageProps<"/prof
           </Link>
         </p>
         <nav aria-label={s.sections} className="mt-7 lg:mt-8">
-          <ul className="overflow-hidden rounded-lg border border-velvet-800 max-lg:divide-y max-lg:divide-velvet-800 lg:rounded-none lg:border-0 lg:border-l">
+          {/* Écran large : rien n'est rogné, le filet de la section active chevauche celui de la liste. */}
+          <ul className="overflow-hidden rounded-lg border border-velvet-800 max-lg:divide-y max-lg:divide-velvet-800 lg:overflow-visible lg:rounded-none lg:border-0 lg:border-l">
             {SECTIONS.map((sec) => {
               const current = shown === sec.id;
               return (

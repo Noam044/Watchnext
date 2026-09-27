@@ -84,7 +84,7 @@ export function Thread({
 
   return (
     <>
-      <ol aria-label={m.conversationWith(friend.name)} className="flex min-h-[40vh] flex-col gap-2 py-6">
+      <ol aria-label={m.conversationWith(friend.name)} className="flex min-h-[40vh] flex-1 flex-col gap-2 py-6">
         {messages.length === 0 && (
           <li className="m-auto max-w-xs text-center text-sm text-dust-300">
             {m.emptyThread(friend.name)}

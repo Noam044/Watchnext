@@ -78,8 +78,10 @@ export default async function ThreadPage({ params, searchParams }: PageProps<"/m
   await markThreadRead(me.id, friend.id);
   localizeFilms(messages, await getLocale());
 
+  // La conversation occupe toute la hauteur visible : même courte, la zone de saisie reste en bas
+  // (hauteur de l'écran moins l'en-tête et sa bordure, les marges de la page et, sur mobile, la barre d'onglets).
   return (
-    <div className="mx-auto flex max-w-2xl flex-col">
+    <div className="mx-auto flex min-h-[calc(100dvh-12.5rem-1px-env(safe-area-inset-top)-env(safe-area-inset-bottom))] max-w-2xl flex-col sm:min-h-[calc(100dvh-13.5rem-1px-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-10.5rem-1px-env(safe-area-inset-top))]">
       <header className="flex items-center gap-3 border-b border-velvet-800 pb-4">
         <BackButton label="" />
         <Link href={`/u/${friend.handle}`} className="flex min-w-0 items-center gap-3 hover:text-tungsten">

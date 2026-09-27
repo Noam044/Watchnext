@@ -372,12 +372,15 @@ function FeatureActions({
       <Link href={`/film/${r.tmdbId}`} className={onPlay ? "btn-ghost" : "btn-primary col-span-2"}>
         <InfoIcon /> {t.film.filmPage}
       </Link>
-      <button onClick={() => onAct(r, "seen")} className="btn-quiet">
-        <EyeIcon /> {t.film.seen}
-      </button>
-      <button onClick={() => onAct(r, "hide")} className="btn-quiet">
-        <EyeOffIcon /> {t.film.notForMe}
-      </button>
+      {/* Sur écran moyen, « Déjà vu » et « Pas pour moi » passent à la ligne ensemble ; sur téléphone, cellules de la grille. */}
+      <div className="contents sm:flex sm:gap-2">
+        <button onClick={() => onAct(r, "seen")} className="btn-quiet">
+          <EyeIcon /> {t.film.seen}
+        </button>
+        <button onClick={() => onAct(r, "hide")} className="btn-quiet">
+          <EyeOffIcon /> {t.film.notForMe}
+        </button>
+      </div>
     </div>
   );
 }

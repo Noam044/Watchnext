@@ -102,8 +102,9 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
           <ScopeScreen backdropPath={null} alt="" className="-mx-4 rounded-none sm:mx-0 sm:rounded-md" />
         )}
 
-        {/* Sur téléphone, l'identité est centrée sous la bannière. */}
-        <div className="relative flex flex-col items-center gap-5 px-1 text-center sm:flex-row sm:items-end sm:justify-between sm:px-6 sm:text-left">
+        {/* Sur téléphone, l'identité est centrée sous la bannière ; sur écran moyen, les boutons passent
+            sous le nom quand la ligne est trop courte pour les deux. */}
+        <div className="relative flex flex-col items-center gap-5 px-1 text-center sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:px-6 sm:text-left">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end">
             <Avatar name={name} handle={owner.handle} src={avatarUrl(owner)} size="xl" className="-mt-12 ring-4 sm:-mt-14" />
             <div className="min-w-0 pb-1">
