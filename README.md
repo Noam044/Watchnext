@@ -6,7 +6,7 @@
 
 Film recommendations built from your **Letterboxd** history (public RSS feed or official export), enriched with **TMDB**, and every pick comes with the reason it was chosen.
 
-### [→ Try it at watchnext-films.vercel.app](https://watchnext-films.vercel.app)
+### [→ Try it now](https://watchnext-films.vercel.app)
 
 https://github.com/user-attachments/assets/7802ceac-ebc4-4c87-94cf-18f2c4353229
 
