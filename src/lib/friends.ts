@@ -86,14 +86,14 @@ export async function tasteMatch(aId: string, bId: string): Promise<TasteMatch> 
 }
 
 /** Films adorés par `ownerId` (4,5★ et plus, ou likés) que `viewerId` n'a pas vus. */
-export async function favoritesNotSeenBy(ownerId: string, viewerId: string, take = 12) {
-  const seen = await prisma.userFilm.findMany({ where: { userId: viewerId, watched: true }, select: { filmId: true } });
+export function favoritesNotSeenBy(ownerId: string, viewerId: string, take = 12) {
+  // Exclusion faite par la base (sous-requête) : pas de liste de tous les films vus du spectateur en paramètres.
   return prisma.userFilm.findMany({
     where: {
       userId: ownerId,
       watched: true,
       OR: [{ rating: { gte: 4.5 } }, { liked: true }],
-      filmId: { notIn: seen.map((s) => s.filmId) },
+      film: { userFilms: { none: { userId: viewerId, watched: true } } },
     },
     orderBy: [{ rating: { sort: "desc", nulls: "last" } }, { watchedAt: { sort: "desc", nulls: "last" } }],
     include: { film: true },

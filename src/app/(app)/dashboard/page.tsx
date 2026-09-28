@@ -34,61 +34,90 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const maxDuration = 60;
 
+/** Champs des films du programme : ceux affichés, sans les mots-clés, la distribution ni les autres pays. */
+const programmeFilmSelect = {
+  tmdbId: true,
+  title: true,
+  titleEn: true,
+  year: true,
+  posterPath: true,
+  backdropPath: true,
+  overview: true,
+  overviewEn: true,
+  genres: true,
+  directors: true,
+  voteAverage: true,
+  runtime: true,
+  originalLanguage: true,
+  providers: true,
+  providersAt: true,
+} as const;
+
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  // Synchronisation automatique du journal Letterboxd (au plus toutes les 6 h), lancée
-  // après l'envoi de la page pour ne pas la ralentir ; SyncStatus suit son avancement.
-  const syncUsername = await claimSync(user.id, AUTO_SYNC_INTERVAL);
+  // Toutes les lectures indépendantes partent ensemble ; la watchlist vient avec les films du programme.
+  const [syncUsername, watchedCount, libraryCount, recos, hiddenCount, sync, cookieStore, { t, locale }, prefs] =
+    await Promise.all([
+      // Synchronisation automatique du journal Letterboxd (au plus toutes les 6 h), réservée ici puis
+      // lancée après l'envoi de la page pour ne pas la ralentir ; SyncStatus suit son avancement.
+      claimSync(user.id, AUTO_SYNC_INTERVAL),
+      prisma.userFilm.count({ where: { userId: user.id, watched: true } }),
+      prisma.userFilm.count({ where: { userId: user.id } }),
+      prisma.recommendation.findMany({
+        where: { userId: user.id, hidden: false },
+        orderBy: { score: "desc" },
+        select: {
+          id: true,
+          reason: true,
+          details: true,
+          film: {
+            select: {
+              ...programmeFilmSelect,
+              userFilms: { where: { userId: user.id }, select: { inWatchlist: true, watched: true } },
+            },
+          },
+        },
+      }),
+      prisma.recommendation.count({ where: { userId: user.id, hidden: true } }),
+      getSyncState(user.id),
+      cookies(),
+      getI18n(),
+      getStreamingPrefs(user.id),
+    ]);
   if (syncUsername) after(() => runClaimedSync(user.id, syncUsername));
+  if (libraryCount === 0) redirect("/import?welcome=1");
+  // L'état a été lu en même temps que la réservation : une synchronisation réservée à l'instant est en cours.
+  const syncRunning = sync.running || !!syncUsername;
 
-  const [watchedCount, libraryCount, recos, hiddenCount, sync, cookieStore, { t, locale }, prefs] = await Promise.all([
-    prisma.userFilm.count({ where: { userId: user.id, watched: true } }),
-    prisma.userFilm.count({ where: { userId: user.id } }),
-    prisma.recommendation.findMany({
-      where: { userId: user.id, hidden: false },
-      orderBy: { score: "desc" },
-      include: { film: true },
-    }),
-    prisma.recommendation.count({ where: { userId: user.id, hidden: true } }),
-    getSyncState(user.id),
-    cookies(),
-    getI18n(),
-    getStreamingPrefs(user.id),
-  ]);
-  const loc = await getLocalizer(locale);
   const d = t.dashboard;
   const rssOnly = !!sync.lastRssSync && !sync.lastImportAt;
   const exportStale = isFullImportStale(sync.lastImportAt) && !cookieStore.has(EXPORT_REMINDER_COOKIE);
   // Phrase « … tes N films vus » coupée autour du nombre, qui devient un compteur animé.
   const [basedOnBefore, basedOnAfter] = d.basedOn("\u0000").split("\u0000");
 
-  if (libraryCount === 0) redirect("/import?welcome=1");
-
-  // Où voir chaque film : les offres inconnues sont chargées maintenant, les anciennes après la réponse.
-  const { refreshed, refreshLater } = await withFreshOffers(recos.map((r) => r.film));
+  type Details = { tags?: string[]; pct?: number; because?: string[]; becauseIds?: number[] };
+  const allProviders = providerCatalog(prefs.region);
+  const [loc, { refreshed, refreshLater }, because] = await Promise.all([
+    getLocalizer(locale),
+    // Où voir chaque film : les offres inconnues sont chargées maintenant, les anciennes après la réponse.
+    withFreshOffers(recos.map((r) => r.film)),
+    // Titres des films cités dans les raisons, dans la langue de l'interface.
+    becauseTitles(
+      recos.map((r) => (r.details ?? {}) as Details),
+      locale,
+    ),
+  ]);
   after(refreshLater);
-  // Titres et synopsis dans la langue de l'interface, y compris ceux cités dans les raisons.
+  // Titres et synopsis dans la langue de l'interface.
   localizeFilms(recos, locale);
   localizeFilms(refreshed, locale);
-  type Details = { tags?: string[]; pct?: number; because?: string[]; becauseIds?: number[] };
-  const because = await becauseTitles(
-    recos.map((r) => (r.details ?? {}) as Details),
-    locale,
-  );
-  const watchlist = new Set(
-    (
-      await prisma.userFilm.findMany({
-        where: { userId: user.id, inWatchlist: true, watched: false, filmId: { in: recos.map((r) => r.filmId) } },
-        select: { filmId: true },
-      })
-    ).map((w) => w.filmId),
-  );
 
   const items: RecoItem[] = recos.map((r) => {
     const film = refreshed.get(r.film.tmdbId) ?? r.film;
     const details = (r.details ?? {}) as Details;
     const text = loc.reco(r.reason, details.tags ?? [], because(details));
+    const mine = r.film.userFilms[0];
     return {
       id: r.id,
       tmdbId: film.tmdbId,
@@ -102,7 +131,7 @@ export default async function DashboardPage() {
       voteAverage: film.voteAverage,
       runtime: film.runtime,
       language: film.originalLanguage,
-      inWatchlist: watchlist.has(r.filmId),
+      inWatchlist: !!mine?.inWatchlist && !mine.watched,
       offers: offersFor(film.providers, prefs.region),
       reason: text.reason,
       tags: text.tags,
@@ -112,13 +141,13 @@ export default async function DashboardPage() {
 
   const filters = parseFilters(cookieStore.get(FILTERS_COOKIE)?.value);
   const shownIds = new Set([...items.flatMap((i) => i.offers?.stream ?? []), ...prefs.providers]);
-  const catalog = await providerCatalog(prefs.region, shownIds);
+  const catalog = (await allProviders).filter((p) => shownIds.has(p.id));
 
-  // Bande-annonce du film à l'affiche avec les filtres enregistrés (réponse TMDB mise en cache) ;
-  // les autres sont demandées au clic.
+  // Bande-annonce du film à l'affiche avec les filtres enregistrés (réponse TMDB mise en cache) : envoyée
+  // au navigateur dès qu'elle est prête, sans retarder la page ; les autres sont demandées au clic.
   const first = items.find((i) => matchesFilters(i, filters, prefs.providers));
   const featureTrailer = first
-    ? { tmdbId: first.tmdbId, key: await getTrailerKey(first.tmdbId).catch(() => null) }
+    ? { tmdbId: first.tmdbId, key: getTrailerKey(first.tmdbId).catch(() => null) }
     : null;
 
   return (
@@ -142,7 +171,7 @@ export default async function DashboardPage() {
             <div className="mt-1.5">
               <SyncStatus
                 initial={{
-                  running: sync.running,
+                  running: syncRunning,
                   lastRssSync: sync.lastRssSync?.toISOString() ?? null,
                   error: describeStoredError(sync.error, t),
                 }}

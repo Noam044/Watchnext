@@ -63,40 +63,40 @@ export async function generateMetadata({ params }: PageProps<"/film/[tmdbId]">):
 }
 
 export default async function FilmPage({ params }: PageProps<"/film/[tmdbId]">) {
-  const me = await getCurrentUser();
-  const id = parseId((await params).tmdbId);
+  const [me, { tmdbId }] = await Promise.all([getCurrentUser(), params]);
+  const id = parseId(tmdbId);
   if (!id) notFound();
   // Lien partagé ouvert sans compte : fiche publique et invitation à s'inscrire.
   if (!me) return <PublicFilm tmdbId={id} />;
-  const [data, trailerKey] = await Promise.all([getFilmPage(id, me.id), getTrailerKey(id).catch(() => null)]);
+  // Bande-annonce : envoyée au navigateur dès qu'elle est prête, sans retarder la fiche.
+  const trailerKey = getTrailerKey(id).catch(() => null);
+  const [data, { t, locale }, prefs] = await Promise.all([
+    getFilmPage(id, me.id),
+    getI18n(),
+    getStreamingPrefs(me.id),
+  ]);
   if (!data) notFound();
-  const [{ t, locale }, prefs] = await Promise.all([getI18n(), getStreamingPrefs(me.id)]);
   const { film, mine, reco, friends } = localizeFilms(data, locale);
   const fp = t.filmPage;
   const offers = offersFor(film.providers, prefs.region);
-  const catalog = offers
-    ? new Map(
-        (await providerCatalog(prefs.region, [...offers.stream, ...offers.rent, ...offers.buy])).map((p) => [p.id, p]),
-      )
-    : new Map<number, ProviderInfo>();
+  const directorRefs = refs(film.directors);
+  // Tout ce qui ne dépend que du film part en même temps.
+  const [providers, loc, sameDirector, recoBecause] = await Promise.all([
+    offers ? providerCatalog(prefs.region, [...offers.stream, ...offers.rent, ...offers.buy]) : [],
+    getLocalizer(locale),
+    directorRefs[0] ? getSameDirector(film.id, directorRefs[0].id, me.id, 10) : [],
+    becauseTitles(reco ? [reco.details as { because?: string[]; becauseIds?: number[] }] : [], locale),
+  ]);
+  localizeFilms(sameDirector, locale);
+  const catalog = new Map<number, ProviderInfo>(providers.map((p) => [p.id, p]));
   const streams = (offers?.stream ?? []).flatMap((id) => catalog.get(id) ?? []);
   const stores = [...new Set([...(offers?.rent ?? []), ...(offers?.buy ?? [])])].flatMap((id) => catalog.get(id) ?? []);
   const regionName = new Intl.DisplayNames(INTL[locale], { type: "region" }).of(prefs.region) ?? prefs.region;
-  const loc = await getLocalizer(locale);
   const dateFmt = dateFormat(locale, { day: "numeric", month: "long", year: "numeric" });
   const score = (v: number) => formatNumber(v, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   const genres = refs(film.genres).map(loc.genre);
-  const directorRefs = refs(film.directors);
   const directors = directorRefs.map((d) => d.name);
-  const sameDirector = localizeFilms(
-    directorRefs[0] ? await getSameDirector(film.id, directorRefs[0].id, me.id, 10) : [],
-    locale,
-  );
-  const recoBecause = await becauseTitles(
-    reco ? [reco.details as { because?: string[]; becauseIds?: number[] }] : [],
-    locale,
-  );
   const cast = refs(film.cast).map((c) => c.name);
   const recoPct = (reco?.details as { pct?: number } | null)?.pct;
   const friendsWatched = friends.filter((f) => f.watched);

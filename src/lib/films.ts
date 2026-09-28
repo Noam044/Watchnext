@@ -151,7 +151,11 @@ export function providersStale(f: Pick<Film, "providersAt">): boolean {
 export async function ensureFilmDetails(tmdbId: number, withProviders = false): Promise<Film | null> {
   const existing = await prisma.film.findUnique({ where: { tmdbId } });
   if (isFresh(existing, withProviders)) return existing;
+  return fetchDetails(tmdbId, existing);
+}
 
+/** Récupère les détails sur TMDB et les enregistre (`existing` : la ligne actuelle, rendue telle quelle en cas de 404). */
+async function fetchDetails(tmdbId: number, existing: Film | null): Promise<Film | null> {
   const d = await getMovieDetails(tmdbId);
   if (!d) return existing; // 404 TMDB : on garde ce qu'on a
   const data = detailsData(d);
@@ -169,7 +173,7 @@ export async function ensureManyDetails(
   const out = new Map(existing.map((f) => [f.tmdbId, f]));
   const toFetch = ids.filter((id) => !isFresh(out.get(id), withProviders));
   await mapLimit(toFetch, concurrency, async (id) => {
-    const f = await ensureFilmDetails(id, withProviders);
+    const f = await fetchDetails(id, out.get(id) ?? null);
     if (f) out.set(id, f);
   });
   return out;

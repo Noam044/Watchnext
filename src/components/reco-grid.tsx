@@ -9,6 +9,7 @@ import {
   useEffect,
   useMemo,
   useOptimistic,
+  useReducer,
   useRef,
   useState,
   useTransition,
@@ -17,6 +18,7 @@ import { hideRecommendationAction, markSeenAction } from "@/actions/library";
 import { trailerKeyAction } from "@/actions/trailer";
 import { AnimatedNumber } from "@/components/animated-number";
 import { CutReveal } from "@/components/cut-reveal";
+import { HIDDEN_EVENT } from "@/components/dashboard-actions";
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, InfoIcon, PlayIcon, XIcon } from "@/components/icons";
 import { Poster } from "@/components/poster";
 import { ProviderLogos } from "@/components/provider-logos";
@@ -79,6 +81,13 @@ function useStreams(r: RecoItem) {
 /** Films affichés dans le programme, puis à chaque clic sur « Afficher plus ». */
 const PAGE = 20;
 
+/**
+ * Films retirés du programme (« Déjà vu », « Pas pour moi ») depuis le chargement de l'app. Le serveur ne
+ * renvoie pas la page après ces actions : la liste reçue les contient encore, y compris celle qu'un retour
+ * arrière réaffiche depuis le cache du navigateur. D'où ce registre hors du composant.
+ */
+const removed = new Map<string, Kind>();
+
 function counted<K>(keys: K[]) {
   const counts = new Map<K, number>();
   for (const k of keys) counts.set(k, (counts.get(k) ?? 0) + 1);
@@ -93,14 +102,21 @@ export function RecoProgramme({
   initialFilters,
 }: {
   items: RecoItem[];
-  /** Bande-annonce déjà connue du film à l'affiche (avec les filtres enregistrés). */
-  featureTrailer?: { tmdbId: number; key: string | null } | null;
+  /** Bande-annonce du film à l'affiche (avec les filtres enregistrés), demandée par le serveur avec la page. */
+  featureTrailer?: { tmdbId: number; key: Promise<string | null> } | null;
   catalog: ProviderInfo[];
   myProviders: number[];
   initialFilters: RecoFilters;
 }) {
-  const [optimistic, removeItem] = useOptimistic(items, (state, id: string) => state.filter((i) => i.id !== id));
+  const [, commitRemoval] = useReducer((n: number) => n + 1, 0);
+  const remaining = items.filter((i) => !removed.has(i.id));
+  const [optimistic, removeItem] = useOptimistic(remaining, (state, id: string) => state.filter((i) => i.id !== id));
   const [, startTransition] = useTransition();
+  // Films masqués que le serveur ne compte pas encore : ajoutés au bouton « Réafficher » (DashboardActions).
+  const hiddenPending = items.filter((i) => removed.get(i.id) === "hide").length;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(HIDDEN_EVENT, { detail: hiddenPending }));
+  }, [hiddenPending]);
   const [filters, setFilters] = useState(initialFilters);
   const [limit, setLimit] = useState(PAGE);
   const [sheet, setSheet] = useState<RecoItem | null>(null);
@@ -123,7 +139,11 @@ export function RecoProgramme({
       if (!res.ok) {
         if (kind === "seen") countSeen(-1);
         toast(res.error ?? t.film.actionFailed, "error");
-      } else toast(kind === "seen" ? t.film.addedToWatched(r.title) : t.film.wontSuggest(r.title));
+        return;
+      }
+      removed.set(r.id, kind);
+      startTransition(commitRemoval);
+      toast(kind === "seen" ? t.film.addedToWatched(r.title) : t.film.wontSuggest(r.title));
     });
   };
 
@@ -263,18 +283,26 @@ function Feature({
   onAct,
 }: {
   r: RecoItem;
-  /** Clé YouTube connue (null : aucune bande-annonce) ; undefined : demandée au premier clic. */
-  trailerKey: string | null | undefined;
+  /** Clé YouTube en cours d'envoi par le serveur (null : aucune bande-annonce) ; undefined : demandée au premier clic. */
+  trailerKey: Promise<string | null> | undefined;
   onAct: Act;
 }) {
   const { t } = useI18n();
-  const [trailerKey, setTrailerKey] = useState(known);
+  const [trailerKey, setTrailerKey] = useState<string | null | undefined>(undefined);
+  // La clé arrive après la page (elle ne la retarde pas) : le bouton disparaît si le film n'a pas de bande-annonce.
+  useEffect(() => {
+    let live = true;
+    known?.then((key) => live && setTrailerKey(key));
+    return () => {
+      live = false;
+    };
+  }, [known]);
   const [playing, setPlaying] = useState(false);
   const [loading, startLoading] = useTransition();
   const close = useCallback(() => setPlaying(false), []);
   const play = () =>
     startLoading(async () => {
-      const key = trailerKey === undefined ? await trailerKeyAction(r.tmdbId) : trailerKey;
+      const key = trailerKey === undefined ? await (known ?? trailerKeyAction(r.tmdbId)) : trailerKey;
       setTrailerKey(key);
       if (key) setPlaying(true);
       else toast(t.film.noTrailer, "error");

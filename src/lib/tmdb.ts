@@ -149,6 +149,11 @@ async function cached<T>(
   return data;
 }
 
+/** Purge quotidienne (tâche planifiée) : une réponse expirée n'est jamais relue, elle serait redemandée à TMDB. */
+export function purgeExpiredCache() {
+  return prisma.tmdbCache.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+}
+
 export async function searchMovie(query: string, opts: { year?: number; primaryYear?: boolean } = {}) {
   const params: Record<string, string | number | undefined> = {
     query,
@@ -179,13 +184,19 @@ export async function discover(params: Record<string, string | number | undefine
   return page?.results ?? [];
 }
 
-export async function getGenreMap(lang = language()): Promise<Map<number, string>> {
-  const res = await cached<{ genres: { id: number; name: string }[] }>(
-    "/genre/movie/list",
-    { language: lang },
-    30 * DAY,
+/** Listes des genres déjà lues par ce processus, par langue : elles ne changent presque jamais. */
+const genreMaps = new Map<string, { at: number; map: Promise<Map<number, string>> }>();
+
+export function getGenreMap(lang = language()): Promise<Map<number, string>> {
+  const hit = genreMaps.get(lang);
+  if (hit && Date.now() - hit.at < DAY) return hit.map;
+  const map = cached<{ genres: { id: number; name: string }[] }>("/genre/movie/list", { language: lang }, 30 * DAY).then(
+    (res) => new Map((res?.genres ?? []).map((g) => [g.id, g.name])),
   );
-  return new Map((res?.genres ?? []).map((g) => [g.id, g.name]));
+  genreMaps.set(lang, { at: Date.now(), map });
+  // Un échec (TMDB indisponible) n'est pas gardé : le prochain appel réessaie.
+  map.catch(() => genreMaps.delete(lang));
+  return map;
 }
 
 /** Films populaires de la semaine (page d'accueil), dans la langue demandée. */

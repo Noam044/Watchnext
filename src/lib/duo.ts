@@ -2,8 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { refs } from "@/lib/films";
 import { closestLiked, quality, toPct } from "@/lib/reco/engine";
-import { buildProfile, filmFeatures, filmWeight, profileSimilarity } from "@/lib/reco/profile";
-import type { Film } from "@/generated/prisma/client";
+import { buildProfile, filmFeatures, filmWeight, profileSimilarity, tasteFilmSelect } from "@/lib/reco/profile";
+import type { Film, Prisma } from "@/generated/prisma/client";
 
 export type DuoPick = {
   film: Film;
@@ -12,11 +12,28 @@ export type DuoPick = {
   mePct: number;
   friendPct: number;
   /** Film aimé par chacun qui explique la proposition, s'il y en a un. */
-  meBecause: Film | null;
-  friendBecause: Film | null;
+  meBecause: LibraryFilm | null;
+  friendBecause: LibraryFilm | null;
   inMyWatchlist: boolean;
   inFriendWatchlist: boolean;
 };
+
+/** Films des bibliothèques : le profil de goûts, plus le titre pour les explications. */
+const libraryFilmSelect = { id: true, title: true, titleEn: true, ...tasteFilmSelect } as const;
+type LibraryFilm = Prisma.FilmGetPayload<{ select: typeof libraryFilmSelect }>;
+
+const libraryOf = (userId: string) =>
+  prisma.userFilm.findMany({
+    where: { userId },
+    select: {
+      filmId: true,
+      watched: true,
+      inWatchlist: true,
+      rating: true,
+      liked: true,
+      film: { select: libraryFilmSelect },
+    },
+  });
 
 /** Un même réalisateur n'occupe pas plus de deux places. */
 function diversify(list: DuoPick[]) {
@@ -38,8 +55,8 @@ function diversify(list: DuoPick[]) {
  */
 export async function getDuoPicks(meId: string, friendId: string, take = 25) {
   const [mine, theirs, recos, hidden] = await Promise.all([
-    prisma.userFilm.findMany({ where: { userId: meId }, include: { film: true } }),
-    prisma.userFilm.findMany({ where: { userId: friendId }, include: { film: true } }),
+    libraryOf(meId),
+    libraryOf(friendId),
     prisma.recommendation.findMany({
       where: { userId: { in: [meId, friendId] }, hidden: false },
       select: { filmId: true },

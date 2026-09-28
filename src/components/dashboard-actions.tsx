@@ -2,15 +2,25 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { regenerateAction, syncRssAction, unhideAllAction } from "@/actions/library";
 import { RefreshIcon, SparkIcon, UploadIcon } from "@/components/icons";
 import { toast } from "@/components/toaster";
 import { useI18n } from "@/i18n/client";
 import { burst, haptic } from "@/lib/fx";
 
-export function DashboardActions({ username, hiddenCount }: { username: string | null; hiddenCount: number }) {
+/** Événement émis par le programme : films masqués pendant la visite, pas encore comptés par le serveur. */
+export const HIDDEN_EVENT = "watchnext:hidden";
+
+export function DashboardActions({ username, hiddenCount: saved }: { username: string | null; hiddenCount: number }) {
   const router = useRouter();
+  const [pendingHidden, setPendingHidden] = useState(0);
+  useEffect(() => {
+    const onHidden = (e: Event) => setPendingHidden((e as CustomEvent<number>).detail);
+    window.addEventListener(HIDDEN_EVENT, onHidden);
+    return () => window.removeEventListener(HIDDEN_EVENT, onHidden);
+  }, []);
+  const hiddenCount = saved + pendingHidden;
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<"sync" | "calc" | null>(null);
   const { t } = useI18n();
@@ -19,11 +29,11 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
   const from = useRef<DOMRect | null>(null);
   const aim = (e: React.MouseEvent<HTMLElement>) => (from.current = e.currentTarget.getBoundingClientRect());
 
+  // Un calcul réussi renvoie déjà la page à jour (revalidatePath dans regenerateAction) : pas de router.refresh().
   const run = (fn: () => Promise<void>) =>
     startTransition(async () => {
       await fn();
       setStep(null);
-      router.refresh();
     });
 
   const regenerate = async (prefix = "") => {
@@ -33,8 +43,11 @@ export function DashboardActions({ username, hiddenCount }: { username: string |
       burst(from.current, { shapes: ["spark", "star"] });
       haptic([10, 30, 10]);
       toast(`${prefix}${d.recalcDone(res.data.count)}`);
+    } else {
+      toast(res.error, "error");
+      // Synchronisation ou réaffichage déjà faits : la page doit quand même les montrer.
+      router.refresh();
     }
-    else toast(res.error, "error");
   };
 
   const resync = () =>

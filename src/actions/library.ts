@@ -13,8 +13,8 @@ export async function syncRssAction(
 ): Promise<ActionResult<{ username: string; found: number; imported: number }>> {
   const user = await requireUser();
   try {
+    // Pas de revalidation ici : les deux écrans qui synchronisent enchaînent avec regenerateAction, qui revalide.
     const data = await syncRss(user.id, username);
-    revalidatePath("/dashboard");
     return { ok: true, data };
   } catch (e) {
     return toErrorResult(e, (await getI18n()).t);
@@ -40,15 +40,16 @@ export async function hideRecommendationAction(recoId: string): Promise<ActionRe
   const user = await requireUser();
   const reco = await ownReco(user.id, recoId);
   if (!reco) return { ok: false, error: (await getI18n()).t.dashboard.recoNotFound };
+  // Pas de revalidatePath : le programme retire déjà la carte côté client (voir reco-grid), et
+  // revalider renverrait tout le tableau de bord recalculé à chaque clic.
   await prisma.recommendation.update({ where: { id: reco.id }, data: { hidden: true } });
-  revalidatePath("/dashboard");
   return { ok: true };
 }
 
 export async function unhideAllAction(): Promise<ActionResult> {
   const user = await requireUser();
+  // Toujours suivi de regenerateAction, qui revalide le tableau de bord.
   await prisma.recommendation.deleteMany({ where: { userId: user.id, hidden: true } });
-  revalidatePath("/dashboard");
   return { ok: true };
 }
 
@@ -64,6 +65,6 @@ export async function markSeenAction(recoId: string, liked = false): Promise<Act
     }),
     prisma.recommendation.delete({ where: { id: reco.id } }),
   ]);
-  revalidatePath("/dashboard");
+  // Comme pour hideRecommendationAction : la carte est retirée côté client, sans revalidation.
   return { ok: true };
 }

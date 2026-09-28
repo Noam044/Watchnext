@@ -6,6 +6,7 @@ import { useLayoutEffect, useRef } from "react";
 import { Avatar } from "@/components/avatar";
 import { useI18n } from "@/i18n/client";
 import { ChatIcon, ScreenIcon, UploadIcon, UserIcon, UsersIcon } from "@/components/icons";
+import { useNotificationCounts } from "@/components/notification-poller";
 
 const LINKS = [
   { href: "/dashboard", key: "toWatch", Icon: ScreenIcon },
@@ -14,12 +15,12 @@ const LINKS = [
   { href: "/import", key: "import", Icon: UploadIcon },
 ] as const;
 
-type Me = { name: string; handle: string; avatar: string | null; pendingRequests: number; unreadMessages: number };
+type Me = { name: string; handle: string; avatar: string | null };
 
 /** Pastille de chaque onglet : demandes d'ami en attente, messages non lus. */
-function badgeFor(href: string, me: Me) {
-  if (href === "/friends") return me.pendingRequests;
-  if (href === "/messages") return me.unreadMessages;
+function badgeFor(href: string, counts: ReturnType<typeof useNotificationCounts>) {
+  if (href === "/friends") return counts.pendingRequests;
+  if (href === "/messages") return counts.unreadMessages;
   return 0;
 }
 
@@ -44,6 +45,7 @@ export function DesktopNav({ me }: { me: Me }) {
   const { t } = useI18n();
   const nav = useRef<HTMLElement>(null);
   const pill = useRef<HTMLSpanElement>(null);
+  const counts = useNotificationCounts();
   const activeHref = LINKS.find(({ href }) => isActive(pathname, href, me.handle))?.href ?? null;
 
   // Pastille de l'onglet actif : elle glisse (en ressort) jusqu'au nouvel onglet à chaque changement de page.
@@ -65,7 +67,7 @@ export function DesktopNav({ me }: { me: Me }) {
     const onResize = () => place(false);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [activeHref, me.pendingRequests, me.unreadMessages]);
+  }, [activeHref, counts.pendingRequests, counts.unreadMessages]);
 
   return (
     <nav ref={nav} aria-label={t.nav.main} className="relative isolate ml-4 hidden items-center gap-1 md:flex lg:ml-8">
@@ -86,7 +88,7 @@ export function DesktopNav({ me }: { me: Me }) {
             }`}
           >
             {t.nav[key]}
-            <Badge count={badgeFor(href, me)} />
+            <Badge count={badgeFor(href, counts)} />
           </Link>
         );
       })}
@@ -116,6 +118,7 @@ export function ProfileLink({ me }: { me: Me }) {
 export function MobileTabBar({ me }: { me: Me }) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const counts = useNotificationCounts();
   const tabs = [...LINKS, { href: "/profile", key: "profile", Icon: UserIcon }] as const;
   const activeIndex = tabs.findIndex(({ href }) => isActive(pathname, href, me.handle));
   return (
@@ -146,9 +149,9 @@ export function MobileTabBar({ me }: { me: Me }) {
                 {/* L'icône de l'onglet qui devient actif rebondit. */}
                 <span className={`relative ${active ? "animate-pop" : ""}`}>
                   <Icon className="size-5.5" />
-                  {badgeFor(href, me) > 0 && (
+                  {badgeFor(href, counts) > 0 && (
                     <span className="absolute -top-1 -right-2">
-                      <Badge count={badgeFor(href, me)} />
+                      <Badge count={badgeFor(href, counts)} />
                     </span>
                   )}
                 </span>

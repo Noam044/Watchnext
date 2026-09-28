@@ -7,6 +7,7 @@ import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const hanken = Hanken_Grotesk({ variable: "--font-hanken", subsets: ["latin"] });
+// next/font ne connaît pas les mesures de Big Shoulders : son repli ajusté est déclaré dans globals.css.
 const shoulders = Big_Shoulders({ variable: "--font-shoulders", subsets: ["latin"], axes: ["opsz"] });
 const courier = Courier_Prime({ variable: "--font-courier", subsets: ["latin"], weight: ["400", "700"] });
 

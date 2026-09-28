@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
-import { ensureFilmDetails, matchFilm, upsertListItems } from "@/lib/films";
+import { ensureFilmDetails, ensureManyDetails, matchFilm, upsertListItems } from "@/lib/films";
 import { mapLimit } from "@/lib/limit";
 import { mergeUserFilm } from "@/lib/library";
 import { fetchLetterboxdRss, normalizeUsername } from "@/lib/letterboxd/rss";
@@ -12,10 +12,12 @@ export async function syncRss(userId: string, rawUsername: string) {
   const username = normalizeUsername(rawUsername);
   const entries = await fetchLetterboxdRss(username);
 
+  // Films du flux lus en une requête ; seuls ceux sans détails frais sont demandés à TMDB.
+  const films = await ensureManyDetails(entries.map((e) => e.tmdbId));
   let imported = 0;
   let changed = 0;
   await mapLimit(entries, 6, async (e) => {
-    const film = await ensureFilmDetails(e.tmdbId);
+    const film = films.get(e.tmdbId);
     if (!film) return;
     const merged = await mergeUserFilm(userId, film.id, {
       watched: true,

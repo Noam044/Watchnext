@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { backfillEnglishTitles } from "@/lib/films";
 import { mapLimit } from "@/lib/limit";
 import { purgeOldHits } from "@/lib/rate-limit";
+import { purgeExpiredCache } from "@/lib/tmdb";
 import { CRON_SYNC_INTERVAL, claimSync, runClaimedSync } from "@/lib/sync";
 
 // Tâche planifiée Vercel (vercel.json) : synchronise chaque jour le flux RSS de tous les comptes.
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
   }
 
   const started = Date.now();
-  await purgeOldHits();
+  await Promise.all([purgeOldHits(), purgeExpiredCache()]);
   const due = await prisma.letterboxdProfile.findMany({
     where: {
       username: { not: null },

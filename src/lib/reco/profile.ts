@@ -10,7 +10,12 @@ export type Feature = { type: FeatureType; id: number; name: string };
 /** Nombre d'acteurs principaux pris en compte. */
 const TOP_CAST = 5;
 
-export function filmFeatures(film: Pick<Film, "genres" | "directors" | "cast" | "keywords" | "year">): Feature[] {
+/** Champs d'un film utilisés par le profil de goûts. */
+export type TasteFilm = Pick<Film, "genres" | "directors" | "cast" | "keywords" | "year">;
+/** Sélection Prisma correspondante : évite de lire les lignes Film complètes (synopsis, offres…) pour un profil. */
+export const tasteFilmSelect = { genres: true, directors: true, cast: true, keywords: true, year: true } as const;
+
+export function filmFeatures(film: TasteFilm): Feature[] {
   const f: Feature[] = [];
   const add = (type: FeatureType, list: NamedRef[]) => {
     for (const r of list) f.push({ type, id: r.id, name: r.name });
@@ -47,7 +52,7 @@ export type TasteProfile = {
   top: Record<FeatureType, { id: number; name: string; score: number; count: number }[]>;
 };
 
-type Rated = { film: Film; weight: number };
+type Rated = { film: TasteFilm; weight: number };
 
 /**
  * Agrège les caractéristiques des films vus, pondérées par la note.

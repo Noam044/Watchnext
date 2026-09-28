@@ -12,6 +12,7 @@ import {
   filmWeight,
   profileSimilarity,
   type FeatureType,
+  type TasteFilm,
   type TasteProfile,
 } from "@/lib/reco/profile";
 import type { Film, Prisma } from "@/generated/prisma/client";
@@ -153,7 +154,8 @@ export async function generateRecommendations(userId: string) {
   // 3. Filtrage (votes minimum, films sortis) et pré-score sur les données "liste"
   const listItems = [...candidates.values()].flatMap((c) => (c.item ? [c.item] : []));
   const films = await upsertListItems(listItems);
-  for (const [id, c] of candidates) c.film = films.get(id) ?? library.find((uf) => uf.film.tmdbId === id)?.film;
+  const libraryFilms = new Map(library.map((uf) => [uf.film.tmdbId, uf.film]));
+  for (const [id, c] of candidates) c.film = films.get(id) ?? libraryFilms.get(id);
 
   const pool = [...candidates.entries()].filter(([, c]) => {
     const f = c.film;
@@ -243,7 +245,11 @@ function diversify<T extends { film: Film }>(list: T[]) {
 }
 
 /** Films aimés les plus proches d'un film (même réalisateur, acteurs, thèmes…), du plus proche au moins proche. */
-export function closestLiked(film: Film, rated: { film: Film; weight: number }[], take = 2): Film[] {
+export function closestLiked<F extends TasteFilm & { id: string }>(
+  film: TasteFilm & { id: string },
+  rated: { film: F; weight: number }[],
+  take = 2,
+): F[] {
   const weights: Record<FeatureType, number> = { director: 3, cast: 1.2, keyword: 1, genre: 0.3, decade: 0.1 };
   const candKeys = new Map(filmFeatures(film).map((f) => [featureKey(f), weights[f.type]]));
   return rated

@@ -44,17 +44,21 @@ export async function generateMetadata({ params }: PageProps<"/u/[handle]">): Pr
 
 
 export default async function ProfilePage({ params, searchParams }: PageProps<"/u/[handle]">) {
-  const me = await requireUser();
-  const owner = await getUser((await params).handle);
+  const [me, owner, sp, { t, locale }] = await Promise.all([
+    requireUser(),
+    params.then((p) => getUser(p.handle)),
+    searchParams,
+    getI18n(),
+  ]);
   if (!owner) notFound();
 
   const name = displayName(owner);
   const isSelf = owner.id === me.id;
   const relation = await getRelation(me.id, owner.id);
   const visible = canViewLibrary(relation, owner.publicProfile);
-  const query = parseLibraryQuery(await searchParams);
+  const query = parseLibraryQuery(sp);
 
-  const [emblem, summary, counts, page, match, favorites, rssOnly, { t, locale }] = await Promise.all([
+  const [emblem, summary, counts, page, match, favorites, rssOnly, loc] = await Promise.all([
     resolveEmblem(owner),
     visible ? getProfileSummary(owner.id) : null,
     visible ? getLibraryCounts(owner.id) : null,
@@ -62,12 +66,11 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
     !isSelf && visible ? tasteMatch(me.id, owner.id) : null,
     !isSelf && visible ? favoritesNotSeenBy(owner.id, me.id) : null,
     isSelf ? needsFullImport(owner.id) : false,
-    getI18n(),
+    getLocalizer(locale),
   ]);
   // Titres des films (bannière, pellicule, bibliothèque) dans la langue de l'interface.
   localizeFilms([emblem, page, favorites], locale);
   const p = t.profile;
-  const loc = await getLocalizer(locale);
   const monthFmt = dateFormat(locale, { month: "long", year: "numeric" });
 
   return (

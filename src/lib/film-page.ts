@@ -9,9 +9,8 @@ import { friendIds } from "@/lib/friends";
  * avis de ses amis (seuls les amis voient les notes et critiques les uns des autres).
  */
 export async function getFilmPage(tmdbId: number, viewerId: string) {
-  const film = await ensureFilmDetails(tmdbId, true);
+  const [film, ids] = await Promise.all([ensureFilmDetails(tmdbId, true), friendIds(viewerId)]);
   if (!film) return null;
-  const ids = await friendIds(viewerId);
   const [mine, reco, friends] = await Promise.all([
     prisma.userFilm.findUnique({ where: { userId_filmId: { userId: viewerId, filmId: film.id } } }),
     prisma.recommendation.findUnique({ where: { userId_filmId: { userId: viewerId, filmId: film.id } } }),

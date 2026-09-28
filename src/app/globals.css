@@ -1,6 +1,22 @@
 @import "tailwindcss";
 
 /*
+ * Repli de Big Shoulders pendant son chargement : next/font ne connaît pas ses mesures et n'en génère pas.
+ * Arial gras ramené à la largeur moyenne des capitales de Big Shoulders ExtraBold (les titres sont en
+ * majuscules), avec les mêmes hauteurs de ligne : les titres ne sautent pas quand la police arrive.
+ * Valeurs calculées sur src/assets/fonts/big-shoulders-latin-800-normal.woff et Arial Bold.
+ */
+@font-face {
+  font-family: "Big Shoulders Metric Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Arial");
+  font-weight: 100 900;
+  size-adjust: 71.88%;
+  ascent-override: 137.11%;
+  descent-override: 29.84%;
+  line-gap-override: 0%;
+}
+
+/*
  * Identité « La salle » : velours bordeaux presque noir, lumière d'écran ivoire,
  * ampoules tungstène pour l'accent. Le vert « sortie de secours » est réservé aux confirmations.
  */
@@ -23,7 +39,7 @@
   --color-bad: #ff7b6e;
 
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-shoulders), "Arial Narrow", ui-sans-serif, sans-serif;
+  --font-display: var(--font-shoulders), "Big Shoulders Metric Fallback", "Arial Narrow", ui-sans-serif, sans-serif;
   --font-mono: var(--font-courier), ui-monospace, "Courier New", monospace;
 
   /* Ressort : léger dépassement puis retour, pour les récompenses (même courbe que SPRING dans lib/fx.ts) */

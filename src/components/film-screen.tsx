@@ -1,6 +1,6 @@
 "use client";
 
-import { ViewTransition, useCallback, useState } from "react";
+import { Suspense, ViewTransition, use, useCallback, useState } from "react";
 import { ScopeScreen } from "@/components/scope-screen";
 import { PlayOverlay, TrailerFrame } from "@/components/trailer";
 
@@ -16,16 +16,17 @@ export function FilmScreen({
   posterPath: string | null;
   tmdbId: number;
   title: string;
-  trailerKey: string | null;
+  /** Clé YouTube envoyée par le serveur après la page (null : aucune bande-annonce). */
+  trailerKey: Promise<string | null>;
 }) {
-  const [playing, setPlaying] = useState(false);
-  const close = useCallback(() => setPlaying(false), []);
+  const [playing, setPlaying] = useState<string | null>(null);
+  const close = useCallback(() => setPlaying(null), []);
 
-  if (playing && trailerKey) {
+  if (playing) {
     return (
       // Marge basse : l'affiche, qui remonte d'habitude sur l'écran, reste sous la vidéo.
       <div className="-mx-4 pb-16 sm:mx-0 sm:pb-24">
-        <TrailerFrame videoKey={trailerKey} title={title} onClose={close} />
+        <TrailerFrame videoKey={playing} title={title} onClose={close} />
       </div>
     );
   }
@@ -42,8 +43,16 @@ export function FilmScreen({
         imageClassName="transition-transform duration-[8s] ease-out group-hover/screen:scale-105"
       >
         <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-velvet-950/90 via-velvet-950/10 to-transparent" />
-        {trailerKey && <PlayOverlay onPlay={() => setPlaying(true)} />}
+        {/* Le bouton lecture apparaît quand la bande-annonce est connue, sans retarder la fiche. */}
+        <Suspense fallback={null}>
+          <TrailerButton trailerKey={trailerKey} onPlay={setPlaying} />
+        </Suspense>
       </ScopeScreen>
     </ViewTransition>
   );
+}
+
+function TrailerButton({ trailerKey, onPlay }: { trailerKey: Promise<string | null>; onPlay: (key: string) => void }) {
+  const key = use(trailerKey);
+  return key ? <PlayOverlay onPlay={() => onPlay(key)} /> : null;
 }
