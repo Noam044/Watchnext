@@ -6,13 +6,9 @@
 
 Film recommendations built from your **Letterboxd** history (public RSS feed or official export), enriched with **TMDB**, and every pick comes with the reason it was chosen.
 
-### [→ Try it live at watchnext-films.vercel.app](https://watchnext-films.vercel.app)
+### [→ Try it at watchnext-films.vercel.app](https://watchnext-films.vercel.app)
 
-<a href="docs/demo.mp4">
-  <img src="docs/demo-poster.jpg" alt="Watchnext demo: a recommendation card showing Tungsten Summer, a 94% match because you liked Night Harbour and Velvet Hours" width="820">
-</a>
-
-<sub>▶ <a href="docs/demo.mp4">Watch the 24-second demo</a></sub>
+https://github.com/user-attachments/assets/7802ceac-ebc4-4c87-94cf-18f2c4353229
 
 <br>
 
