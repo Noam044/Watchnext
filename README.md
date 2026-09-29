@@ -8,7 +8,7 @@ Film recommendations built from your **Letterboxd** history (public RSS feed or 
 
 ### [→ Try it now](https://watchnext-films.vercel.app)
 
-https://github.com/user-attachments/assets/7802ceac-ebc4-4c87-94cf-18f2c4353229
+https://github.com/user-attachments/assets/6fa2c288-c48a-4fe4-9892-a2ab89756181
 
 <br>
 
