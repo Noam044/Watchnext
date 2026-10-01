@@ -178,11 +178,7 @@ export async function generateRecommendations(userId: string) {
 
   const scored = preScored.map(({ id, c }) => {
     const film = detailed.get(id) ?? c.film!;
-    const features = filmFeatures(film);
-    const sim = profileSimilarity(profile, features);
-    const q = quality(film);
-    const sup = supportScore(c.support);
-    const score = 0.55 * sim.score + 0.25 * q + 0.2 * sup + (c.inWatchlist ? 0.08 : 0);
+    const { score, sim, quality: q, support: sup } = scoreCandidate(profile, film, c.support, c.inWatchlist);
     const { reason, details } = explain(film, c, profile, rated, seedFilms);
     return {
       film,
@@ -219,6 +215,19 @@ export async function generateRecommendations(userId: string) {
   return { count: top.length, candidates: candidates.size };
 }
 
+/** Score final d'un candidat détaillé : 55 % profil, 25 % qualité, 20 % soutien, + bonus watchlist. */
+export function scoreCandidate(
+  profile: TasteProfile,
+  film: TasteFilm & Pick<Film, "voteAverage" | "voteCount">,
+  support: number,
+  inWatchlist: boolean,
+) {
+  const sim = profileSimilarity(profile, filmFeatures(film));
+  const q = quality(film);
+  const sup = supportScore(support);
+  return { score: 0.55 * sim.score + 0.25 * q + 0.2 * sup + (inWatchlist ? 0.08 : 0), sim, quality: q, support: sup };
+}
+
 export function quality(f: Pick<Film, "voteAverage" | "voteCount">) {
   return clamp01((bayesian(f.voteAverage, f.voteCount) - 5.5) / 2.5);
 }
@@ -233,7 +242,7 @@ export function toPct(score: number) {
 }
 
 /** Évite qu'un même réalisateur monopolise le haut de la liste (max 3). */
-function diversify<T extends { film: Film }>(list: T[]) {
+export function diversify<T extends { film: Pick<Film, "directors"> }>(list: T[]) {
   const perDirector = new Map<number, number>();
   return list.filter(({ film }) => {
     const d = refs(film.directors)[0];
@@ -265,9 +274,9 @@ export function closestLiked<F extends TasteFilm & { id: string }>(
 }
 
 /** Construit l'explication : « Parce que tu as aimé X et Y » + étiquettes. */
-function explain(
+export function explain(
   film: Film,
-  c: Candidate,
+  c: Pick<Candidate, "seeds" | "inWatchlist">,
   profile: TasteProfile,
   rated: { film: Film; weight: number }[],
   seedFilms: Map<number, { film: Film; weight: number }>,

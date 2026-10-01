@@ -11,6 +11,9 @@ recommendation engine and the schema; this file only keeps what is easy to get w
 - `npm run typecheck` runs `next typegen` first: `PageProps`, `LayoutProps` and `RouteContext` are
   generated global types, so a bare `tsc` fails on a fresh checkout.
 - Unit tests only match `src/**/*.test.ts`; `server-only` is aliased to a stub in `vitest.config.mts`.
+- `npm run eval` scores the recommendation engine on hand-labelled personas (`evals/reco/`). Run it
+  after touching weights in `src/lib/reco/`; a known engine flaw is recorded as `knownIssues` and
+  turns the eval red once fixed, so the entry can be removed.
 
 ## Database and deploys
 
