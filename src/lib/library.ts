@@ -5,6 +5,8 @@ export type IncomingFilm = {
   watched: boolean;
   inWatchlist: boolean;
   rating: number | null;
+  /** Date de la note (visionnage qui la porte, ou date de ratings.csv). */
+  ratedAt?: Date | null;
   liked: boolean;
   watchedAt: Date | null;
   review?: string | null;
@@ -25,6 +27,18 @@ function pickReview(
   return { review: inc.review, reviewSpoilers: inc.reviewSpoilers ?? false, reviewedAt: incAt ?? old?.reviewedAt ?? null };
 }
 
+/**
+ * La note la plus récente l'emporte : réimporter un vieil export n'écrase pas une note plus
+ * récente venue du flux RSS. Sans date, une nouvelle note remplace l'ancienne.
+ */
+function pickRating(old: { rating: number | null; ratedAt: Date | null } | null, inc: IncomingFilm) {
+  const keep = { rating: old?.rating ?? null, ratedAt: old?.ratedAt ?? null };
+  if (inc.rating == null) return keep;
+  const incAt = inc.ratedAt ?? null;
+  if (old?.rating != null && old.ratedAt && incAt && incAt < old.ratedAt) return keep;
+  return { rating: inc.rating, ratedAt: incAt ?? old?.ratedAt ?? null };
+}
+
 function maxDate(a: Date | null, b: Date | null) {
   if (!a) return b;
   if (!b) return a;
@@ -42,7 +56,7 @@ export async function mergeUserFilm(userId: string, filmId: string, inc: Incomin
     watched,
     // Letterboxd retire un film de la watchlist quand il est vu.
     inWatchlist: !watched && ((old?.inWatchlist ?? false) || inc.inWatchlist),
-    rating: inc.rating ?? old?.rating ?? null,
+    ...pickRating(old, inc),
     liked: (old?.liked ?? false) || inc.liked,
     watchedAt: maxDate(old?.watchedAt ?? null, inc.watchedAt),
     ...pickReview(old, inc),
@@ -52,6 +66,7 @@ export async function mergeUserFilm(userId: string, filmId: string, inc: Incomin
     old.watched !== data.watched ||
     old.inWatchlist !== data.inWatchlist ||
     old.rating !== data.rating ||
+    old.ratedAt?.getTime() !== data.ratedAt?.getTime() ||
     old.liked !== data.liked ||
     old.watchedAt?.getTime() !== data.watchedAt?.getTime() ||
     old.review !== data.review ||

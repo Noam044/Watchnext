@@ -94,6 +94,8 @@ describe("parseRss", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ tmdbId: 670, rating: 4, liked: true, review: "La scène du couloir.", reviewSpoilers: true });
     expect(entries[0].watchedAt?.toISOString().slice(0, 10)).toBe("2026-01-02");
+    // La note vient du visionnage de 2024 : elle garde sa date, pas celle du dernier visionnage.
+    expect(entries[0].ratedAt?.toISOString().slice(0, 10)).toBe("2024-05-01");
   });
 
   it("refuse un document qui n'est pas un flux RSS", () => {

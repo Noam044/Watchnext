@@ -10,6 +10,8 @@ export type ExportEntry = {
   watched: boolean;
   inWatchlist: boolean;
   rating: number | null;
+  /** Date de la note : visionnage du journal qui la porte, ou date de ratings.csv. */
+  ratedAt: Date | null;
   liked: boolean;
   watchedAt: Date | null;
   review: string | null;
@@ -104,6 +106,7 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
         watched: false,
         inWatchlist: false,
         rating: null,
+        ratedAt: null,
         liked: false,
         watchedAt: null,
         review: null,
@@ -146,11 +149,12 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
         case "diary": {
           e.watched = true;
           const d = parseDate(row["Watched Date"]) ?? parseDate(row["Date"]);
+          const rating = parseRating(row["Rating"]);
           if (d && (!e.watchedAt || d > e.watchedAt)) {
             e.watchedAt = d;
-            e.rating = parseRating(row["Rating"]) ?? e.rating;
-          } else {
-            e.rating ??= parseRating(row["Rating"]);
+            if (rating != null) [e.rating, e.ratedAt] = [rating, d];
+          } else if (e.rating == null && rating != null) {
+            [e.rating, e.ratedAt] = [rating, d];
           }
           break;
         }
@@ -166,11 +170,18 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
           }
           break;
         }
-        case "ratings":
+        case "ratings": {
           e.watched = true;
-          e.rating = parseRating(row["Rating"]) ?? e.rating;
+          // Note actuelle au moment de l'export : au moins aussi récente que celles du journal.
+          const rating = parseRating(row["Rating"]);
+          if (rating != null) {
+            const d = parseDate(row["Date"]);
+            e.rating = rating;
+            e.ratedAt = d && e.ratedAt ? (d > e.ratedAt ? d : e.ratedAt) : (d ?? e.ratedAt);
+          }
           if (uri) e.letterboxdUri ??= uri;
           break;
+        }
         case "likes":
           // Aimer un film sur Letterboxd le marque aussi comme vu.
           e.liked = true;

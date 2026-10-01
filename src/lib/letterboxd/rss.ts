@@ -7,6 +7,8 @@ export type RssEntry = {
   title: string;
   year: number | null;
   rating: number | null;
+  /** Date du visionnage qui porte la note. */
+  ratedAt: Date | null;
   liked: boolean;
   watchedAt: Date | null;
   rewatch: boolean;
@@ -97,13 +99,16 @@ export function parseRss(xml: string): RssEntry[] {
     const ratingRaw = str(item["letterboxd:memberRating"]);
     const { review, spoilers } = parseReview(str(item["description"]));
     const dateRaw = str(item["letterboxd:watchedDate"]);
+    const watchedAt = dateRaw ? new Date(`${dateRaw}T12:00:00Z`) : null;
+    const rating = ratingRaw ? Number(ratingRaw) : null;
     const entry: RssEntry = {
       tmdbId,
       title,
       year: Number(str(item["letterboxd:filmYear"])) || null,
-      rating: ratingRaw ? Number(ratingRaw) : null,
+      rating,
+      ratedAt: rating != null ? watchedAt : null,
       liked: str(item["letterboxd:memberLike"]).toLowerCase() === "yes",
-      watchedAt: dateRaw ? new Date(`${dateRaw}T12:00:00Z`) : null,
+      watchedAt,
       rewatch: str(item["letterboxd:rewatch"]).toLowerCase() === "yes",
       review,
       reviewSpoilers: spoilers || /\(contains spoilers\)/i.test(str(item["title"])),
@@ -114,7 +119,10 @@ export function parseRss(xml: string): RssEntry[] {
     const prev = byId.get(tmdbId);
     if (prev) {
       prev.liked ||= entry.liked;
-      prev.rating ??= entry.rating;
+      if (prev.rating == null && entry.rating != null) {
+        prev.rating = entry.rating;
+        prev.ratedAt = entry.ratedAt;
+      }
       // Critique la plus récente : celle d'une entrée plus ancienne ne sert que s'il n'y en a pas.
       if (!prev.review && entry.review) {
         prev.review = entry.review;

@@ -26,6 +26,7 @@ const existing = (over: Partial<UserFilm> = {}): UserFilm =>
     watched: false,
     inWatchlist: false,
     rating: null,
+    ratedAt: null,
     liked: false,
     watchedAt: null,
     review: null,
@@ -70,6 +71,31 @@ describe("mergeUserFilm", () => {
     await mergeUserFilm("u1", "f1", incoming({ watched: true }));
     expect(written()).toMatchObject({ watched: true, inWatchlist: false });
     expect(db.deleteMany).toHaveBeenCalledWith({ where: { userId: "u1", filmId: "f1", hidden: false } });
+  });
+
+  it("garde la note la plus récente : réimporter un vieil export n'écrase pas une note plus récente", async () => {
+    const rss = existing({ watched: true, rating: 4.5, ratedAt: day("2025-09-01"), watchedAt: day("2025-09-01") });
+
+    db.findUnique.mockResolvedValue(rss);
+    const res = await mergeUserFilm("u1", "f1", incoming({ watched: true, rating: 3, ratedAt: day("2024-02-01"), watchedAt: day("2024-02-01") }));
+    expect(res.changed).toBe(false);
+    expect(db.upsert).not.toHaveBeenCalled();
+
+    db.findUnique.mockResolvedValue(rss);
+    await mergeUserFilm("u1", "f1", incoming({ watched: true, rating: 5, ratedAt: day("2026-01-10"), watchedAt: day("2026-01-10") }));
+    expect(written()).toMatchObject({ rating: 5, ratedAt: day("2026-01-10") });
+  });
+
+  it("accepte une note sans date, mais ne l'efface jamais faute de note", async () => {
+    db.findUnique.mockResolvedValue(existing({ watched: true, rating: 2, ratedAt: day("2025-01-01") }));
+    await mergeUserFilm("u1", "f1", incoming({ watched: true, rating: 3.5, liked: true }));
+    expect(written()).toMatchObject({ rating: 3.5, ratedAt: day("2025-01-01") });
+
+    vi.clearAllMocks();
+    db.upsert.mockImplementation(async ({ update }) => update);
+    db.findUnique.mockResolvedValue(existing({ watched: true, rating: 2, ratedAt: day("2025-01-01") }));
+    await mergeUserFilm("u1", "f1", incoming({ watched: true, liked: true }));
+    expect(written()).toMatchObject({ rating: 2, ratedAt: day("2025-01-01"), liked: true });
   });
 
   it("garde la date de visionnage la plus récente", async () => {

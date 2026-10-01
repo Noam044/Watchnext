@@ -132,7 +132,7 @@ Images are served straight from TMDB's CDN at the closest available size (`src/l
 1. **Weight of each watched film**: `(rating − 2.75) / 2.25`, so 5★ → +1, 3★ → +0.11 and ½★ → −1. A like adds +0.35. A watched but unrated film counts +0.12, or +0.8 if liked. Poorly rated films therefore count against their features.
 2. **Taste profile** over genres, directors, top 5 cast members, TMDB keywords and decade.
    - Raw affinity of each feature: `Σ weight / √(n + 2)`, so recurrence matters without letting "Drama" crush everything else.
-   - Affinities are then normalised to [−1, 1] within each family.
+   - Affinities are then normalised to [−1, 1] within each family, dividing by the family's strongest affinity but never by less than 1: about two 5★ films must share a feature before it reaches full strength, so a handful of unrated films doesn't pass for a strong taste.
 3. **Candidates**:
    - TMDB `/recommendations` and `/similar` for the 12 best-rated films, with a boost for recent watches.
    - `/discover` on favourite genres (alone and combined), top 3 directors and top 5 keywords.
@@ -204,7 +204,7 @@ Key decisions:
 | `Message` | `senderId` → `recipientId`, `body` and/or `filmId` (shared film), `readAt` |
 | `ImportJob` / `ImportEntry` | full-import tracking. `NOT_FOUND` entries make up the list of films not found. |
 
-Merge rules: `watched` and `liked` accumulate. The most recent rating wins, as does the most recent watch date. A watched film leaves the watchlist and the recommendations.
+Merge rules: `watched` and `liked` accumulate. The most recent rating wins (`ratedAt`: the diary viewing that carries it, or the `ratings.csv` date), so re-importing an old export never overwrites a newer rating; the most recent watch date wins too. A watched film leaves the watchlist and the recommendations.
 
 ### Security and robustness
 

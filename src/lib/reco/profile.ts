@@ -55,10 +55,17 @@ export type TasteProfile = {
 type Rated = { film: TasteFilm; weight: number };
 
 /**
+ * Plancher de la normalisation : il faut environ deux films à 5★ partageant une caractéristique
+ * pour qu'elle atteigne une affinité de 1. Sans lui, trois films vus sans note (poids 0,12)
+ * donneraient un profil aussi tranché qu'une grande bibliothèque notée.
+ */
+const MIN_NORMALIZER = 1;
+
+/**
  * Agrège les caractéristiques des films vus, pondérées par la note.
  * affinité brute = Σ poids / √(n + 2) : récompense la récurrence sans laisser
  * les caractéristiques ultra-fréquentes (ex. « Drame ») écraser le reste,
- * puis normalisation par le max absolu de chaque famille.
+ * puis normalisation par le max absolu de chaque famille (au moins MIN_NORMALIZER).
  */
 export function buildProfile(rated: Rated[]): TasteProfile {
   const sum = new Map<string, number>();
@@ -85,7 +92,7 @@ export function buildProfile(rated: Rated[]): TasteProfile {
 
   const affinity = new Map<string, number>();
   for (const [k, v] of raw) {
-    const m = maxAbs.get(k.split(":")[0] as FeatureType) || 1;
+    const m = Math.max(maxAbs.get(k.split(":")[0] as FeatureType) ?? 0, MIN_NORMALIZER);
     affinity.set(k, v / m);
   }
 

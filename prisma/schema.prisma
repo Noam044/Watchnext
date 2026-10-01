@@ -141,6 +141,8 @@ model UserFilm {
   inWatchlist    Boolean   @default(false)
   /// Note Letterboxd de 0.5 à 5
   rating         Float?
+  /// Date de la note (visionnage ou notation Letterboxd) : la note la plus récente l'emporte
+  ratedAt        DateTime?
   liked          Boolean   @default(false)
   watchedAt      DateTime?
   /// Critique écrite sur Letterboxd (la plus récente), avec son éventuel avertissement de spoiler
@@ -229,6 +231,7 @@ model ImportEntry {
   watched       Boolean     @default(false)
   inWatchlist   Boolean     @default(false)
   rating        Float?
+  ratedAt       DateTime?
   liked         Boolean     @default(false)
   watchedAt     DateTime?
   review        String?

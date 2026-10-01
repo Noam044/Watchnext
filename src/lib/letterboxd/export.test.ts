@@ -47,6 +47,8 @@ describe("parseLetterboxdExport", () => {
     // ratings.csv (note actuelle) l'emporte sur le journal ; la date la plus récente du journal est gardée.
     expect(byTitle["Fight Club"]).toMatchObject({ watched: true, rating: 4.5, letterboxdUri: "https://boxd.it/a" });
     expect(byTitle["Fight Club"].watchedAt?.toISOString().slice(0, 10)).toBe("2025-06-01");
+    // La note de ratings.csv est datée par sa propre colonne Date, plus récente que le journal.
+    expect(byTitle["Fight Club"].ratedAt?.toISOString().slice(0, 10)).toBe("2025-06-02");
     // Un film vu sort de la watchlist ; un like vaut visionnage.
     expect(byTitle["Oldboy"]).toMatchObject({ watched: true, liked: true, inWatchlist: false });
     expect(byTitle["Paprika"]).toMatchObject({ watched: false, inWatchlist: true });

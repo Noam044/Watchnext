@@ -53,6 +53,16 @@ describe("buildProfile / profileSimilarity", () => {
     expect(profile.top.director[0]).toMatchObject({ id: fincher.id, count: 2 });
   });
 
+  it("reste prudent avec peu d'indices : des films vus sans note ne font pas un goût affirmé", () => {
+    const weak = buildProfile(
+      [1, 2, 3].map((id) => ({ film: film(id, { genres: [thriller], directors: [fincher] }), weight: filmWeight({ rating: null, liked: false }) })),
+    );
+    expect(weak.affinity.get("genre:53")).toBeGreaterThan(0);
+    expect(weak.affinity.get("genre:53")).toBeLessThan(0.25);
+    // Deux films très bien notés suffisent, eux, à une affinité presque maximale.
+    expect(profile.affinity.get("genre:53")).toBeGreaterThan(0.9);
+  });
+
   it("rapproche un thriller de Fincher, éloigne une comédie", () => {
     const close = profileSimilarity(profile, filmFeatures(film(4, { genres: [thriller], directors: [fincher] }))).score;
     const far = profileSimilarity(profile, filmFeatures(film(5, { genres: [comedy] }))).score;

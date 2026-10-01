@@ -304,21 +304,18 @@ export const PERSONAS: Persona[] = [
       { title: "The Godfather" },
       { title: "Parasite" },
       { title: "Interstellar" },
+      { title: "Memento" },
+      { title: "In the Mood for Love" },
       { title: "Moonfall" },
       { title: "Transformers: Age of Extinction" },
       { title: "27 Dresses" },
     ],
     // Sans goûts marqués, la qualité doit primer.
-    good: ["The Godfather", "Parasite", "Interstellar"],
+    good: ["The Godfather", "Parasite", "Interstellar", "Memento", "In the Mood for Love"],
     bad: ["Moonfall", "Transformers: Age of Extinction"],
-    above: [["The Godfather", "Moonfall"]],
-    knownIssues: [
-      {
-        check: "bad",
-        why:
-          "buildProfile normalise chaque famille par son maximum : trois films vus sans note (poids 0,12) " +
-          "donnent des affinités de 1, comme un profil très marqué. Transformers 4 passe devant The Godfather.",
-      },
+    above: [
+      ["The Godfather", "Moonfall"],
+      ["The Godfather", "Transformers: Age of Extinction"],
     ],
   },
 ];
