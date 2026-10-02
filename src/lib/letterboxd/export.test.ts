@@ -69,6 +69,27 @@ describe("parseLetterboxdExport", () => {
     expect(entries[0].review).toBe("Nouvelle critique");
   });
 
+  it("ignore les CSV des sous-dossiers likes/ et lists/ qui partagent un nom racine", () => {
+    const { entries, used } = parseLetterboxdExport([
+      {
+        name: "export/reviews.csv",
+        content: csv([
+          ["Date", "Name", "Year", "Letterboxd URI", "Rating", "Rewatch", "Review", "Tags", "Watched Date"],
+          ["2024-01-01", "Oldboy", "2003", "u", "4", "", "Ma critique", "", "2024-01-01"],
+        ]),
+      },
+      { name: "export/likes/reviews.csv", content: csv([["Date", "Content"], ["2024-02-01", "https://boxd.it/x"]]) },
+      { name: "export/likes/lists.csv", content: csv([["Date", "Content"], ["2024-02-01", "https://boxd.it/y"]]) },
+      {
+        name: "export/lists/watchlist.csv",
+        content: "Letterboxd list export v7\nDate,Name,Tags,URL,Description\n2024-01-01,Ma liste,,u,",
+      },
+    ]);
+    expect(used).toEqual(["export/reviews.csv"]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ title: "Oldboy", review: "Ma critique" });
+  });
+
   it("refuse un CSV qui ne vient pas de Letterboxd", () => {
     expect(() => parseLetterboxdExport([{ name: "notes.csv", content: "a,b\n1,2" }])).toThrow();
     expect(() => parseLetterboxdExport([{ name: "ratings.csv", content: "Titre,Note\nX,3" }])).toThrow();

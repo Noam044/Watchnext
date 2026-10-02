@@ -45,13 +45,22 @@ export function filesFromZip(buffer: Uint8Array): ExportFile[] {
   return Object.entries(entries).map(([name, data]) => ({ name, content: strFromU8(data) }));
 }
 
+// Sous-dossiers de l'export : fichiers supprimés ou orphelins, likes et listes. Leurs CSV peuvent
+// porter le même nom qu'un fichier racine (likes/reviews.csv = critiques d'autrui likées).
+const SUBFOLDER = /(^|\/)(deleted|orphaned|likes|lists)\//i;
+const DISCARDED = /(^|\/)(deleted|orphaned)\//i;
+
 function kindOf(file: ExportFile, headers: string[]): Kind | null {
   // Chemin relatif à la racine de l'export (l'archive peut contenir un dossier parent).
   const path = file.name.replace(/\\/g, "/").toLowerCase();
-  if (/(^|\/)(deleted|orphaned)\//.test(path)) return null;
+  if (DISCARDED.test(path)) return null;
   for (const [suffix, kind] of Object.entries(KNOWN)) {
-    if (suffix.includes("/") ? path.endsWith(suffix) : path.split("/").pop() === suffix) return kind;
+    if (suffix.includes("/") && (path === suffix || path.endsWith(`/${suffix}`))) return kind;
   }
+  // Seul likes/films.csv est exploitable parmi les sous-dossiers.
+  if (SUBFOLDER.test(path)) return null;
+  const name = path.split("/").pop()!;
+  if (name in KNOWN) return KNOWN[name];
   // Nom inattendu (fichier renommé) : on devine d'après les colonnes quand c'est possible.
   if (headers.includes("Review")) return "reviews";
   if (headers.includes("Watched Date")) return "diary";
@@ -125,7 +134,7 @@ export function parseLetterboxdExport(files: ExportFile[]): { entries: ExportEnt
       return { file, ...csv, kind: kindOf(file, csv.headers) };
     })
     .filter((p) => {
-      if (!p.kind && !/(^|\/)(deleted|orphaned)\//i.test(p.file.name)) unknown.push(p.file.name);
+      if (!p.kind && !SUBFOLDER.test(p.file.name.replace(/\\/g, "/"))) unknown.push(p.file.name);
       return p.kind;
     })
     .sort((a, b) => order.indexOf(a.kind!) - order.indexOf(b.kind!));
